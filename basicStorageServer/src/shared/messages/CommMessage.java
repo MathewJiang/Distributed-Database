@@ -7,22 +7,11 @@ import com.google.gson.JsonSyntaxException;
 public class CommMessage {
 	// CONNECT/DISCONNECT requests should come with an empty message field.
 	public enum OptCode {
-		CONNECT, /* Connect - session */
-		DISCONNECT, /* Disconnect - session */
 		PUT, /* Put - key value storage */
 		GET, /* Get - key value storage */
 	}
 	
-	// States specific to CONNECT requests.
-	public enum OptState {
-		CONNECT_SUCCESS,
-		CONNECT_FAIL,
-		MESSAGE_STATUS, /* Refer to message.status */
-	}
-	
 	public OptCode opt;
-	
-	public OptState state;
 	
 	public RequestKVMessage message;
 	
