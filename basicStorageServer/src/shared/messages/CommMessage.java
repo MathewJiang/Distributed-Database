@@ -6,13 +6,15 @@ import com.google.gson.JsonSyntaxException;
 
 public class CommMessage implements KVMessage {
 	
+	// Operation in this CommMessage.
+	public OptCode opt;
+	
 	public enum OptCode {
 		PUT, /* Put - key value storage */
 		GET, /* Get - key value storage */
 	}
 	
-	public OptCode opt;
-	
+	// Status and data of this CommMessage.
 	private StatusType status;
 	private String key;
 	private String value;
