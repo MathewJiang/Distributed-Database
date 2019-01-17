@@ -18,6 +18,13 @@ public class CommMessage implements KVMessage {
 	private StatusType status;
 	private String key;
 	private String value;
+	
+	public CommMessage(StatusType status, OptCode opt, String key, String value) {
+		this.status = status;
+		this.opt = opt;
+		this.key = key;
+		this.value = value;
+	}
 
 	@Override
 	public String getKey() {
@@ -57,5 +64,31 @@ public class CommMessage implements KVMessage {
 	public static CommMessage deserialize(byte[] data) throws JsonSyntaxException{
 		Gson gson = new GsonBuilder().serializeNulls().create();
 		return gson.fromJson(new String(data), CommMessage.class);
+	}
+	
+	
+	@Override
+	public String toString() {
+		StringBuilder id = new StringBuilder();
+		id.append("{ CommMessage Object: ");
+		id.append("{ opt: ");
+		
+		if (this.opt == OptCode.PUT) {
+			id.append("PUT");
+		} else if (this.opt == OptCode.GET) {
+			id.append("GET");
+		}
+		id.append(" }");
+		
+		id.append("{ key: ");
+		id.append(this.key);
+		id.append(" }");
+		
+		id.append("{ value: ");
+		id.append(this.value);
+		id.append(" }");
+		
+		
+		return id.toString();
 	}
 }
