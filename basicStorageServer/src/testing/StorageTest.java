@@ -47,9 +47,19 @@ public class StorageTest {
     	Disk.clearStorage();
 		
     	final long startTime = System.currentTimeMillis();
-    	Disk.putKV("a", "1209");
+    	try {
+			Disk.putKV("a", "1209");
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
     	for(int i = 0; i < num_files; i++) {
-    		Disk.putKV(((Integer)i).toString(), ((Integer)i).toString());
+    		try {
+				Disk.putKV(((Integer)i).toString(), ((Integer)i).toString());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
     	}
     	
     	try {

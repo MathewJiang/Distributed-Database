@@ -75,9 +75,20 @@ public class Disk {
 			search.createNewFile();
 		}
 		
-		PrintWriter key_file = new PrintWriter(dest);
-		key_file.println(value);
-		key_file.close();
+		if(value.equals("null")) {
+			File delete = new File(dest);
+			delete.delete();
+		}
+		
+		try {
+			PrintWriter key_file = new PrintWriter(dest);
+			key_file.println(value);
+			key_file.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return;
 	}
 	
 	public static int key_count() {
