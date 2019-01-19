@@ -10,6 +10,8 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import app_kvClient.Disk;
+
 
 public class KVServer extends Thread implements IKVServer{
 	private static Logger logger = Logger.getRootLogger();
@@ -121,7 +123,8 @@ public class KVServer extends Thread implements IKVServer{
     public void run() {
         
     	running = initializeServer();
-        
+        Disk.init();
+    	
         if(serverSocket != null) {
 	        while(isRunning()){
 	            try {
