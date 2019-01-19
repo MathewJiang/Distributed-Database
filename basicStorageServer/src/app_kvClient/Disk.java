@@ -17,7 +17,7 @@ public class Disk {
 		System.out.println(line);
 	}
 	
-	public static boolean is_init() {
+	public static boolean if_init() {
 		if(db_dir=="") {
 			return false;
 		}
