@@ -15,6 +15,13 @@ public class Disk {
 		System.out.println(line);
 	}
 	
+	public static boolean if_init() {
+		if(db_dir=="") {
+			return false;
+		}
+		return true;
+	}
+	
 	public static void test_and_set_db() {
 		// mkdir at local dir if not being created
 		db_dir = path + "/kvdb";
@@ -41,6 +48,7 @@ public class Disk {
 			
 		} else {
 			// we don't have this key
+			echo("Trying to search");
 			throw new Exception();
 		}
 		
@@ -56,6 +64,7 @@ public class Disk {
 	}
 	
 	public static void putKV(String key, String value){
+		echo("Disk putKV("+key+","+value+')');
 		String dest = db_dir+"/"+key;
 		File search = new File(dest);
 		if(search.exists()) {
@@ -82,14 +91,25 @@ public class Disk {
 		return;
 	}
 	
+	public static int key_count() {
+		db_dir = path + "/kvdb";
+		File db = new File(db_dir);
+		String[] entries = db.list();
+		return entries.length;
+	}
+	
 	public static void clearStorage(){
 		db_dir = path + "/kvdb";
 		File db = new File(db_dir);
-		
 		String[] entries = db.list();
-		//echo("Removing files under db_dir");
+		echo("Removing files under db_dir " + db_dir);
 		for(int i = 0; i < entries.length; i++){
-		    File curr = new File(entries[i]);
+		    File curr = new File(db_dir + '/' + entries[i]);
+		    /*if(curr.isFile()) {
+		    	echo(curr.getAbsolutePath() + " is file");
+		    } else {
+		    	echo(curr.getAbsolutePath() + " is not file");
+		    }*/
 		    curr.delete();
 		}
 		//echo("Removed files under db_dir");
