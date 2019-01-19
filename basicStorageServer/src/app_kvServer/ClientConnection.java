@@ -10,6 +10,7 @@ import org.apache.log4j.*;
 import app_kvClient.Disk;
 
 import shared.messages.CommMessage;
+import shared.messages.KVMessage.StatusType;
 
 
 /**
