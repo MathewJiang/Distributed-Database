@@ -128,6 +128,7 @@ public class KVServer extends Thread implements IKVServer{
         
     	running = initializeServer();
         Disk.init();
+        Disk.clearStorage();
     	
         if(serverSocket != null) {
 	        while(isRunning()){

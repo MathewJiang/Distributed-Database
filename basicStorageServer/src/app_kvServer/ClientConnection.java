@@ -60,22 +60,14 @@ public class ClientConnection implements Runnable {
 					String value = latestMsg.getValue();
 					
 					if (op.equals(StatusType.PUT)) {
-						if (!value.equals("null")) {
-							//put option
-							try {
-								handlePUT(key, value);
-								responseMsg.setStatus(StatusType.PUT_SUCCESS);
-							} catch (IOException e) {
-								responseMsg.setStatus(StatusType.PUT_ERROR);
-							}
-						} else {
-							//delete option
-							try {
-								handlePUT(key, value);
-								responseMsg.setStatus(StatusType.PUT_SUCCESS);
-							} catch (IOException e) {
-								responseMsg.setStatus(StatusType.PUT_ERROR);
-							}
+						try {
+							StatusType status = handlePUT(key, value);
+							
+							responseMsg.setKey(key);
+							responseMsg.setValue(value);
+							responseMsg.setStatus(status);
+						} catch (IOException e) {
+							responseMsg.setStatus(StatusType.PUT_ERROR);
 						}
 					} else if (op.equals(StatusType.GET)) {
 						try {
@@ -224,22 +216,13 @@ public class ClientConnection implements Runnable {
 	 * handlePUT
 	 * store the <key, value> pairs in persistent disk
 	 */
-	private void handlePUT(String key, String value) throws IOException {
+	private StatusType handlePUT(String key, String value) throws IOException {
 		if (!Disk.isInit()) {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init();		//FIXME: should raise a warning/error
 		}
 		
-		Disk.putKV(key, value);
-	}
-	
-	private void handleDELETE(String key, String value) throws IOException {
-		if (!Disk.isInit()) {
-			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
-			Disk.init();		//FIXME: should raise a warning/error
-		}
-		
-		Disk.putKV(key, value);
+		return Disk.putKV(key, value);
 	}
 	
 	private String handleGET(String key) throws Exception {

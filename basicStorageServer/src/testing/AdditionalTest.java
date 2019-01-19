@@ -30,7 +30,7 @@ public class AdditionalTest extends TestCase {
 			Disk.echo("Disk init failed");
 		}
 		
-		StorageTest.testFuncFifoCache();
+//		StorageTest.testFuncFifoCache();
 	}
 	
 }

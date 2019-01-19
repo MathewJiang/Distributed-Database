@@ -1,11 +1,12 @@
 package app_kvServer;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
 
 import app_kvClient.Disk;
 
@@ -34,7 +35,7 @@ public class fifoCache {
 		return result;
 	}
 	
-	public static KVMessage.StatusType putKV(String key, String value){
+	public static StatusType putKV(String key, String value) throws IOException{
 		if(value.equals("null")) {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
@@ -56,17 +57,17 @@ public class fifoCache {
 		
 		if(hashmap.containsKey(key)) {
 			if(hashmap.get(key).equals(value)) {
-				return KVMessage.StatusType.PUT_UPDATE; // if NOP needed, change this to new enum
+				return StatusType.PUT_UPDATE; // if NOP needed, change this to new enum
 			} else {
 				hashmap.put(key,value);
-				return KVMessage.StatusType.PUT_UPDATE;
+				return StatusType.PUT_UPDATE;
 			}
 		} 
 		hashmap.put(key,value);
-		return KVMessage.StatusType.PUT_SUCCESS;
+		return StatusType.PUT_SUCCESS;
 	}
 	
-	public static void flush_to_disk() {
+	public static void flush_to_disk() throws IOException {
 		Iterator<Map.Entry<String, String>> it = hashmap.entrySet().iterator();
 	    while (it.hasNext()) {
 	    	Map.Entry<String, String> pair = (Map.Entry<String, String>) it.next();
