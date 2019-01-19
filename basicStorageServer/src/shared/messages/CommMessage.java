@@ -19,6 +19,14 @@ public class CommMessage implements KVMessage {
 	private String key;
 	private String value;
 	
+	
+	public CommMessage() {
+		this.status = null;
+		this.opt = null;
+		this.key = null;
+		this.value = null;
+	}
+	
 	public CommMessage(StatusType status, OptCode opt, String key, String value) {
 		this.status = status;
 		this.opt = opt;

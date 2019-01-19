@@ -86,6 +86,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			}
 			
 		}
+		
 //		else if (tokens[0].equals("send")) {
 //			if(tokens.length >= 2) {
 //				if(client != null && client.isRunning()){
@@ -103,8 +104,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 //			} else {
 //				printError("No message passed!");
 //			}
-//			
 //		}
+		
 		else if(tokens[0].equals("disconnect")) {
 			disconnect();
 			
@@ -164,14 +165,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 		}
 	}
 	
-	private void sendMessage(String msg){
-		try {
-			client.sendMessage(new TextMessage(msg));
-		} catch (IOException e) {
-			printError("Unable to send message!");
-			disconnect();
-		}
-	}
 	
 	private void sendCommMessage(CommMessage msg) {
 		try {
@@ -252,14 +245,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			return Level.OFF.toString();
 		} else {
 			return LogSetup.UNKNOWN_LEVEL;
-		}
-	}
-	
-	@Override
-	public void handleNewMessage(TextMessage msg) {
-		if(!stop) {
-			System.out.println(msg.getMsg());
-			System.out.print(PROMPT);
 		}
 	}
 	
