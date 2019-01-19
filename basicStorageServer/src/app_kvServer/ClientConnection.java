@@ -49,19 +49,9 @@ public class ClientConnection implements Runnable {
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
 			
-			sendCommMessage(new CommMessage(StatusType.GET, OptCode.GET, "Connection to MSRG Echo server established: " 
-					+ clientSocket.getLocalAddress() + " / "
-					+ clientSocket.getLocalPort(), "null"));
-			
-//			sendMessage(new TextMessage(
-//					"Connection to MSRG Echo server established: " 
-//					+ clientSocket.getLocalAddress() + " / "
-//					+ clientSocket.getLocalPort()));
-			
 			while(isOpen) {
 				try {
 					CommMessage latestMsg = receiveCommMessage();
-					//TextMessage latestMsg = receiveMessage();
 					sendCommMessage(latestMsg);
 					
 				/* connection either terminated by the client or lost due to 

@@ -122,6 +122,15 @@ public class Client extends Thread {
 	 * @throws IOException some I/O error regarding the output stream 
 	 */
 	public void sendCommMessage(CommMessage cmd_msg) throws IOException {
+		
+		if (output == null) {
+			output = clientSocket.getOutputStream();
+		}
+		if (input == null) {
+			input = clientSocket.getInputStream();
+		}
+		
+		
 		byte[] msgBytes = CommMessage.serialize(cmd_msg);
 		output.write(msgBytes, 0, msgBytes.length);
 		output.flush();
@@ -130,6 +139,13 @@ public class Client extends Thread {
 	
 	
 	public CommMessage receiveCommMessage() throws IOException {
+		
+		if (output == null) {
+			output = clientSocket.getOutputStream();
+		}
+		if (input == null) {
+			input = clientSocket.getInputStream();
+		}
 		
 		int index = 0;
 		byte[] msgBytes = null, tmp = null;
