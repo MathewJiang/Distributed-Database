@@ -64,6 +64,17 @@ public class Disk {
 		return result;
 	}
 	
+	public static boolean inStorage(String key){
+		
+		String src = db_dir+"/"+key;
+		File search = new File(src);
+		if(search.exists()) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 	public static KVMessage.StatusType putKV(String key, String value){
 		echo("Disk putKV("+key+","+value+')');
 		String dest = db_dir+"/"+key;

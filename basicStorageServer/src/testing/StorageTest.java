@@ -88,6 +88,9 @@ public class StorageTest {
 		}
 		fifoCache.putKV("ECE344","DEADBEEF");
 		fifoCache.putKV("ECE454","GOL");
+		
+		Disk.echo("disk has "+Disk.key_count()+" entires");
+		
 		String test;
 		try {
 			test = fifoCache.getKV("Apple");
@@ -122,7 +125,7 @@ public class StorageTest {
 			Disk.echo("Expected");
 		}
 		Disk.echo("disk has "+Disk.key_count()+" entires");
-		fifoCache.flush_to_disk();
+		//fifoCache.flush_to_disk();
 	}
 	
 	public static void append(String file_path, String content) {

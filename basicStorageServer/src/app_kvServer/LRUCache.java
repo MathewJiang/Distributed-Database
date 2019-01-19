@@ -24,26 +24,41 @@ public class LRUCache {
 		queue = new LinkedList<>();
 	}
 	
+	public static void clearCache(){
+		hashmap.clear();
+	}
+	
+	public static boolean inCache(String key) {
+		if(hashmap.containsKey(key)) {
+			return true;
+		} 
+		return false;
+	}
+	
 	public static String getKV(String key) throws Exception {
 		String result;
 		if(hashmap.containsKey(key)) {
 			result = hashmap.get(key);
+		} else {
+			result = Disk.getKV(key);
+	
+			// result get successfully here
+			if(hashmap.size()>=cache_size) {
+				// well, should be only ==
+				// we need to evict one from the key list
+				String removing_key = queue.remove();
+				// Need to write it to disk
+				Disk.putKV(removing_key, hashmap.get(removing_key));
+				// remove it from cache
+				hashmap.remove(removing_key);
+			}
+			queue.add(key);
+			hashmap.put(key,result);
 		}
-
-		result = Disk.getKV(key);
-
-		// result get successfully here
-		if(hashmap.size()>=cache_size) {
-			// well, should be only ==
-			// we need to evict one from the key list
-			String removing_key = queue.remove();
-			// Need to write it to disk
-			Disk.putKV(removing_key, hashmap.get(removing_key));
-			// remove it from cache
-			hashmap.remove(removing_key);
-		}
+		
+		queue.remove(key);
 		queue.add(key);
-		hashmap.put(key,result);
+		
 		return result;
 	}
 	
