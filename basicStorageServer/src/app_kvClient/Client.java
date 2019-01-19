@@ -129,7 +129,7 @@ public class Client extends Thread {
     }
 	
 	
-	private CommMessage receiveCommMessage() throws IOException {
+	public CommMessage receiveCommMessage() throws IOException {
 		
 		int index = 0;
 		byte[] msgBytes = null, tmp = null;

@@ -12,6 +12,28 @@ import org.apache.log4j.Logger;
 
 
 public class KVServer extends Thread implements IKVServer{
+	private static Logger logger = Logger.getRootLogger();
+	
+	private int port;
+	private int cacheSize;
+	private String strategy;
+    private ServerSocket serverSocket;
+    private boolean running;
+    
+    /**
+     * Constructs a (Echo-) Server object which listens to connection attempts 
+     * at the given port.
+     * 
+     * @param port a port number which the Server is listening to in order to 
+     * 		establish a socket connection to a client. The port number should 
+     * 		reside in the range of dynamic ports, i.e 49152 - 65535.
+     */
+    public KVServer(int port){
+        this.port = port;
+        
+        this.start();
+    }
+	
 	/**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -24,18 +46,27 @@ public class KVServer extends Thread implements IKVServer{
 	 */
 	public KVServer(int port, int cacheSize, String strategy) {
 		// TODO Auto-generated method stub
+		this.port = port;
+		this.cacheSize = cacheSize;
+		this.strategy = strategy;
+		
+		this.start();
 	}
 	
 	@Override
 	public int getPort(){
 		// TODO Auto-generated method stub
-		return -1;
+		return port;
 	}
 
 	@Override
     public String getHostname(){
 		// TODO Auto-generated method stub
-		return null;
+		if (serverSocket == null) {
+			return null;
+		} else {
+			return serverSocket.getInetAddress().getHostName();
+		}
 	}
 
 	@Override
@@ -46,8 +77,7 @@ public class KVServer extends Thread implements IKVServer{
 
 	@Override
     public int getCacheSize(){
-		// TODO Auto-generated method stub
-		return -1;
+		return cacheSize;
 	}
 
 	@Override
@@ -83,44 +113,12 @@ public class KVServer extends Thread implements IKVServer{
 		// TODO Auto-generated method stub
 	}
 
-//	@Override
-//    public void run(){
-//		// TODO Auto-generated method stub
-//	}
-
-	@Override
-    public void kill(){
-		// TODO Auto-generated method stub
-	}
-
-	@Override
-    public void close(){
-		// TODO Auto-generated method stub
-	}
-	
-	
-	private static Logger logger = Logger.getRootLogger();
-	
-	private int port;
-    private ServerSocket serverSocket;
-    private boolean running;
-    
-    /**
-     * Constructs a (Echo-) Server object which listens to connection attempts 
-     * at the given port.
-     * 
-     * @param port a port number which the Server is listening to in order to 
-     * 		establish a socket connection to a client. The port number should 
-     * 		reside in the range of dynamic ports, i.e 49152 - 65535.
-     */
-    public KVServer(int port){
-        this.port = port;
-    }
 
     /**
      * Initializes and starts the server. 
      * Loops until the the server should be closed.
      */
+	@Override
     public void run() {
         
     	running = initializeServer();
@@ -144,6 +142,27 @@ public class KVServer extends Thread implements IKVServer{
         }
         logger.info("Server stopped.");
     }
+
+	@Override
+    public void kill(){
+		running = false;
+		logger.info("Server being killed");
+		System.exit(1);
+	}
+
+	@Override
+    public void close(){
+		running = false;
+        try {
+			serverSocket.close();
+		} catch (IOException e) {
+			logger.error("Error! " +
+					"Unable to close socket on port: " + port, e);
+		}
+	}
+	
+	
+
     
     private boolean isRunning() {
         return this.running;
