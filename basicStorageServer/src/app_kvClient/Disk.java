@@ -80,6 +80,11 @@ public class Disk {
 			}
 		}
 		
+		if(value.equals("null")) {
+			File delete = new File(dest);
+			delete.delete();
+		}
+		
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
 			key_file.println(value);

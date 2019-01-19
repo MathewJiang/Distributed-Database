@@ -33,6 +33,10 @@ public class fifoCache {
 	}
 	
 	public static void putKV(String key, String value){
+		if(value.equals("null")) {
+			hashmap.remove(key);
+			queue.remove(key);
+		}
 		if(hashmap.size()>=cache_size) {
 			// well, should be only ==
 			// we need to evict one from the key list
