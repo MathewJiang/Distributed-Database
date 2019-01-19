@@ -48,7 +48,7 @@ public class Disk {
 			
 		} else {
 			// we don't have this key
-			echo("Trying to search");
+			//TODO: throw a more specific exception
 			throw new Exception();
 		}
 		
@@ -63,8 +63,8 @@ public class Disk {
 		return result;
 	}
 	
-	public static void putKV(String key, String value){
-		echo("Disk putKV("+key+","+value+')');
+	
+	public static void putKV(String key, String value) throws IOException{
 		String dest = db_dir+"/"+key;
 		File search = new File(dest);
 		if(search.exists()) {
@@ -72,12 +72,12 @@ public class Disk {
 			
 		} else {
 			// we don't have this key, put add the file
-			try {
-				search.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			search.createNewFile();
+		}
+		
+		if(value.equals("null")) {
+			File delete = new File(dest);
+			delete.delete();
 		}
 		
 		try {
@@ -120,8 +120,10 @@ public class Disk {
 		String pwd_debug_info = "Working directory is " + path;
 		echo(pwd_debug_info);
 		test_and_set_db();
-		
-		
+	}
+	
+	public static boolean isInit() {
+		return (db_dir.length() != 0);
 	}
 
 }

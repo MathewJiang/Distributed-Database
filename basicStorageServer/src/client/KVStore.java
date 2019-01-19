@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import shared.CommMessageBuilder;
 import shared.messages.CommMessage;
 import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
 
 public class KVStore extends Thread implements KVCommInterface,
 		ClientSocketListener {
@@ -265,7 +266,24 @@ public class KVStore extends Thread implements KVCommInterface,
 
 	@Override
 	public KVMessage get(String key) throws Exception {
-		// TODO Auto-generated method stub
+		try {
+			CommMessage cm = new CommMessage(StatusType.GET, key.toString(), null);
+			sendCommMessage(cm);
+			
+			CommMessage latestMsg = receiveCommMessage();
+			return latestMsg;
+		} catch (IOException ioe) {
+			logger.error("Connection lost!");
+			try {
+				tearDownConnection();
+				for(ClientSocketListener listener : listeners) {
+					listener.handleStatus(
+							SocketStatus.CONNECTION_LOST);
+				}
+			} catch (IOException e) {
+				logger.error("Unable to close connection!");
+			}
+		}
 		return null;
 	}
 }

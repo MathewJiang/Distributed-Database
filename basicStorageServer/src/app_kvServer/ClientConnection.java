@@ -7,6 +7,8 @@ import java.net.Socket;
 
 import org.apache.log4j.*;
 
+import app_kvClient.Disk;
+
 import shared.messages.CommMessage;
 
 
@@ -50,7 +52,43 @@ public class ClientConnection implements Runnable {
 			while(isOpen) {
 				try {
 					CommMessage latestMsg = receiveCommMessage();
-					sendCommMessage(latestMsg);
+					CommMessage responseMsg = new CommMessage();
+					
+					StatusType op = latestMsg.getStatus();
+					String key = latestMsg.getKey();
+					String value = latestMsg.getValue();
+					
+					if (op.equals(StatusType.PUT)) {
+						if (!value.equals("null")) {
+							//put option
+							try {
+								handlePUT(key, value);
+								responseMsg.setStatus(StatusType.PUT_SUCCESS);
+							} catch (IOException e) {
+								responseMsg.setStatus(StatusType.PUT_ERROR);
+							}
+						} else {
+							//delete option
+							try {
+								handlePUT(key, value);
+								responseMsg.setStatus(StatusType.PUT_SUCCESS);
+							} catch (IOException e) {
+								responseMsg.setStatus(StatusType.PUT_ERROR);
+							}
+						}
+					} else if (op.equals(StatusType.GET)) {
+						try {
+							value = handleGET(key);
+							
+							responseMsg.setKey(key);
+							responseMsg.setValue(value);
+							responseMsg.setStatus(StatusType.GET_SUCCESS);
+						} catch (Exception e) {
+							value = null;
+							responseMsg.setStatus(StatusType.GET_ERROR);
+						}
+					}
+					sendCommMessage(responseMsg);
 					
 				/* connection either terminated by the client or lost due to 
 				 * network problems*/	
@@ -113,7 +151,6 @@ public class ClientConnection implements Runnable {
 
 		while(/*read != 13  && */ read != 10 && read !=-1 && reading) {/* CR, LF, error */
 			/* if buffer filled, copy to msg array */
-//			System.out.println(read);
 			if(index == BUFFER_SIZE) {
 				if(msgBytes == null){
 					tmp = new byte[BUFFER_SIZE];
@@ -172,9 +209,45 @@ public class ClientConnection implements Runnable {
 				+ clientSocket.getInetAddress().getHostAddress() + ":" 
 				+ clientSocket.getPort() + ">: '" 
 				+ cm.toString().trim() + "'");
+		
+		
 		return cm;
     }
 	
 
+	/**********************************
+	 * Helper methods
+	 **********************************/
+	
+	/*
+	 * handlePUT
+	 * store the <key, value> pairs in persistent disk
+	 */
+	private void handlePUT(String key, String value) throws IOException {
+		if (!Disk.isInit()) {
+			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
+			Disk.init();		//FIXME: should raise a warning/error
+		}
+		
+		Disk.putKV(key, value);
+	}
+	
+	private void handleDELETE(String key, String value) throws IOException {
+		if (!Disk.isInit()) {
+			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
+			Disk.init();		//FIXME: should raise a warning/error
+		}
+		
+		Disk.putKV(key, value);
+	}
+	
+	private String handleGET(String key) throws Exception {
+		if (!Disk.isInit()) {
+			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
+		}
+		
+		return Disk.getKV(key);
+		
+	}
 	
 }

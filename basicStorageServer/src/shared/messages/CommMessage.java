@@ -11,6 +11,17 @@ public class CommMessage implements KVMessage {
 	private String key;
 	private String value;
 
+	public CommMessage() {
+		this.status = null;
+		this.key = null;
+		this.value = null;
+	}
+	
+	public CommMessage(StatusType status, String key, String value) {
+		this.status = status;
+		this.key = key;
+		this.value = value;
+	}
 	@Override
 	public String getKey() {
 		return this.key;
