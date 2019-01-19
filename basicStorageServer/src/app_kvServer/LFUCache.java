@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -62,7 +63,7 @@ public class LFUCache {
 		return result;
 	}
 	
-	public static KVMessage.StatusType putKV(String key, String value){
+	public static KVMessage.StatusType putKV(String key, String value) throws IOException{
 		if(value.equals("null")) {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
@@ -94,7 +95,7 @@ public class LFUCache {
 		return KVMessage.StatusType.PUT_SUCCESS;
 	}
 	
-	public static void flush_to_disk() {
+	public static void flush_to_disk() throws IOException {
 		Iterator<Map.Entry<String, String>> it = hashmap.entrySet().iterator();
 	    while (it.hasNext()) {
 	    	Map.Entry<String, String> pair = (Map.Entry<String, String>) it.next();

@@ -1,5 +1,7 @@
 package app_kvServer;
 
+import java.io.IOException;
+
 import app_kvClient.Disk;
 import shared.messages.KVMessage;
 
@@ -38,7 +40,7 @@ public class Storage {
 		}
 	}
 	
-	public static KVMessage.StatusType putKV(String key, String value){
+	public static KVMessage.StatusType putKV(String key, String value) throws IOException{
 		switch(mode) {
 			case 0:
 				return fifoCache.putKV(key,value);
@@ -50,10 +52,7 @@ public class Storage {
 				return KVMessage.StatusType.PUT_ERROR; // never reach here if mode is configured legally
 		}
 	}
-	public static boolean inStorage(String key) {
-		return Disk.inStorage(key);
-	}
-	
+
 	public static void clearStorage() {
 		Disk.clearStorage();
 	}
@@ -84,6 +83,8 @@ public class Storage {
 				return false;
 		}
 	}
-	
+	public static boolean inStorage(String key) {
+		return Disk.inStorage(key);
+	}
 
 }

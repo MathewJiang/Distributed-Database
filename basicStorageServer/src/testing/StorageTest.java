@@ -81,13 +81,18 @@ public class StorageTest {
 		Disk.init();
 		Disk.clearStorage();
 		fifoCache.set_cache_size(5);
-		fifoCache.putKV("iPhone","XS");
-		fifoCache.putKV("Apple","iPad");
-		for(int i =0; i<10;i++) {
-			fifoCache.putKV(((Integer)i).toString(), ((Integer)(i+1)).toString());
+		
+		try {
+			fifoCache.putKV("iPhone","XS");
+			fifoCache.putKV("Apple","iPad");
+			for(int i =0; i<10;i++) {
+				fifoCache.putKV(((Integer)i).toString(), ((Integer)(i+1)).toString());
+			}
+			fifoCache.putKV("ECE344","DEADBEEF");
+			fifoCache.putKV("ECE454","GOL");
+		} catch (Exception e) {
+			// to do
 		}
-		fifoCache.putKV("ECE344","DEADBEEF");
-		fifoCache.putKV("ECE454","GOL");
 		
 		Disk.echo("disk has "+Disk.key_count()+" entires");
 		

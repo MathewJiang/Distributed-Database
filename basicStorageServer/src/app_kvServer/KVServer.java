@@ -1,9 +1,11 @@
 package app_kvServer;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Properties;
 
 import logger.LogSetup;
 
@@ -15,6 +17,8 @@ import app_kvClient.Disk;
 
 public class KVServer extends Thread implements IKVServer{
 	private static Logger logger = Logger.getRootLogger();
+	
+	private static String configPath = "resources/config/config.properties";
 	
 	private int port;
 	private int cacheSize;
@@ -124,6 +128,7 @@ public class KVServer extends Thread implements IKVServer{
         
     	running = initializeServer();
         Disk.init();
+        Disk.clearStorage();
     	
         if(serverSocket != null) {
 	        while(isRunning()){
@@ -209,10 +214,19 @@ public class KVServer extends Thread implements IKVServer{
 				System.out.println("Usage: Server <port>!");
 			} else {
 				int port = Integer.parseInt(args[0]);
-				new KVServer(port).start();
+				KVServer server = new KVServer(port);
+
+				// Read configuration file for cache & server configs.
+				Properties props = new Properties();
+				props.load(new FileInputStream(configPath));
+				server.cacheSize = Integer.parseInt(props.getProperty("cache_limit"));
+				server.strategy = props.getProperty("cache_policy");
+				
+				// Start server.
+				server.start();
 			}
 		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize logger!");
+			System.out.println("Error! Unable to initialize server!");
 			e.printStackTrace();
 			System.exit(1);
 		} catch (NumberFormatException nfe) {

@@ -50,3 +50,29 @@
 2019-01-19 15:39:56,918 INFO  [Thread-2] root: Comm RECEIVE 	<127.0.0.1:37192>: '{ CommMessage Object: { Status: PUT }{ key: 19 }{ value: 19 }'
 2019-01-19 15:39:56,919 INFO  [Thread-2] root: Comm SEND 	<127.0.0.1:37192>: '{ CommMessage Object: { Status: PUT }{ key: 19 }{ value: 19 }'
 2019-01-19 15:41:03,728 ERROR [Thread-2] root: Error! Connection lost!
+2019-01-19 17:35:48,578 INFO  [Thread-0] root: Initialize server ...
+2019-01-19 17:35:48,580 INFO  [Thread-0] root: Server listening on port: 5001
+2019-01-19 17:36:11,295 INFO  [Thread-0] root: Connected to localhost on port 38186
+2019-01-19 17:36:14,331 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:38186>: '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 1 }'
+2019-01-19 17:36:14,337 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:38186>: '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: null }{ value: null }'
+2019-01-19 17:36:25,182 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:38186>: '{ CommMessage Object: { Status: PUT }{ key: 2 }{ value: 2 }'
+2019-01-19 17:36:25,185 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:38186>: '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: null }{ value: null }'
+2019-01-19 17:36:34,374 ERROR [Thread-1] root: Error! Connection lost!
+2019-01-19 17:55:56,155 INFO  [Thread-0] root: Initialize server ...
+2019-01-19 17:55:56,158 INFO  [Thread-0] root: Server listening on port: 5001
+2019-01-19 17:56:04,913 INFO  [Thread-0] root: Connected to localhost on port 38620
+2019-01-19 17:56:07,793 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:38620>: '{ CommMessage Object: { Status: PUT }{ key: 5 }{ value: 5 }'
+2019-01-19 17:57:25,977 INFO  [Thread-0] root: Initialize server ...
+2019-01-19 17:57:25,980 INFO  [Thread-0] root: Server listening on port: 5001
+2019-01-19 17:57:33,674 INFO  [Thread-0] root: Connected to localhost on port 38636
+2019-01-19 17:57:35,839 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:38636>: '{ CommMessage Object: { Status: PUT }{ key: 10 }{ value: 10 }'
+2019-01-19 17:57:35,846 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:38636>: '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: null }{ value: null }'
+2019-01-19 17:57:37,385 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:38636>: '{ CommMessage Object: { Status: GET }{ key: 10 }{ value: null }'
+2019-01-19 17:57:37,386 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:38636>: '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 10 }{ value: 10 }'
+2019-01-19 17:57:47,513 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:38636>: '{ CommMessage Object: { Status: GET }{ key: 10 }{ value: null }'
+2019-01-19 17:57:47,514 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:38636>: '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 10 }{ value: 10 }'
+2019-01-19 17:58:01,057 ERROR [Thread-1] root: Error! Connection lost!
+2019-01-19 17:58:09,553 INFO  [Thread-0] root: Connected to localhost on port 38640
+2019-01-19 17:58:11,356 INFO  [Thread-2] root: Comm RECEIVE 	<127.0.0.1:38640>: '{ CommMessage Object: { Status: GET }{ key: 10 }{ value: null }'
+2019-01-19 17:58:11,357 INFO  [Thread-2] root: Comm SEND 	<127.0.0.1:38640>: '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 10 }{ value: 10 }'
+2019-01-19 17:58:17,121 ERROR [Thread-2] root: Error! Connection lost!

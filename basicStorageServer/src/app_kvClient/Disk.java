@@ -7,7 +7,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileReader;
 
-import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
+
 
 public class Disk {
 	static String path = "";
@@ -75,47 +76,44 @@ public class Disk {
 		}
 	}
 	
-	public static KVMessage.StatusType putKV(String key, String value){
-		echo("Disk putKV("+key+","+value+')');
-		String dest = db_dir+"/"+key;
+	public static StatusType putKV(String key, String value) throws IOException{
+		String dest = db_dir + "/" + key;
 		File search = new File(dest);
+		boolean foundEntry  = false;
 		
-		if(value.equals("null")) {
-			File delete_file = new File(dest);
-			if(!delete_file.delete()) {
-				return KVMessage.StatusType.DELETE_ERROR;
-			}
-			return KVMessage.StatusType.DELETE_SUCCESS;
-		}
-		
-		boolean is_update = false;
 		if(search.exists()) {
 			// we have this key, put update the value
-			is_update = true;
-			
+			foundEntry = true;
 		} else {
 			// we don't have this key, put add the file
-			try {
-				search.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			search.createNewFile();
 		}
 		
+
+		if(value.equals("null")) {
+			if (foundEntry) {
+				File delete = new File(dest);
+				delete.delete();
+				return StatusType.DELETE_SUCCESS;
+			} else {
+				return StatusType.DELETE_ERROR;
+			}
+		}
 		
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
 			key_file.println(value);
 			key_file.close();
+			if (foundEntry) {
+				return StatusType.PUT_UPDATE;
+			} else {
+				return StatusType.PUT_SUCCESS;
+			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return StatusType.PUT_ERROR;
 		}
-		if(is_update) {
-			return KVMessage.StatusType.PUT_UPDATE;
-		}
-		return KVMessage.StatusType.PUT_SUCCESS;
 	}
 	
 	public static int key_count() {
