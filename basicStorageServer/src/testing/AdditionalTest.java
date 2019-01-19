@@ -33,7 +33,4 @@ public class AdditionalTest extends TestCase {
 		StorageTest.testFuncFifoCache();
 	}
 	
-	
-	
-	
 }
