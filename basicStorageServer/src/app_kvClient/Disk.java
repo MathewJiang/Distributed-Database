@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.FileReader;
 
+import shared.messages.KVMessage;
 
 public class Disk {
 	static String path = "";
@@ -48,7 +49,7 @@ public class Disk {
 			
 		} else {
 			// we don't have this key
-			//TODO: throw a more specific exception
+			echo("Trying to search");
 			throw new Exception();
 		}
 		
@@ -63,22 +64,34 @@ public class Disk {
 		return result;
 	}
 	
-	
-	public static void putKV(String key, String value) throws IOException{
+	public static KVMessage.StatusType putKV(String key, String value){
+		echo("Disk putKV("+key+","+value+')');
 		String dest = db_dir+"/"+key;
 		File search = new File(dest);
+		
+		if(value.equals("null")) {
+			File delete_file = new File(dest);
+			if(!delete_file.delete()) {
+				return KVMessage.StatusType.DELETE_ERROR;
+			}
+			return KVMessage.StatusType.DELETE_SUCCESS;
+		}
+		
+		boolean is_update = false;
 		if(search.exists()) {
 			// we have this key, put update the value
+			is_update = true;
 			
 		} else {
 			// we don't have this key, put add the file
-			search.createNewFile();
+			try {
+				search.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
-		if(value.equals("null")) {
-			File delete = new File(dest);
-			delete.delete();
-		}
 		
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
@@ -88,7 +101,10 @@ public class Disk {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return;
+		if(is_update) {
+			return KVMessage.StatusType.PUT_UPDATE;
+		}
+		return KVMessage.StatusType.PUT_SUCCESS;
 	}
 	
 	public static int key_count() {
@@ -120,10 +136,8 @@ public class Disk {
 		String pwd_debug_info = "Working directory is " + path;
 		echo(pwd_debug_info);
 		test_and_set_db();
-	}
-	
-	public static boolean isInit() {
-		return (db_dir.length() != 0);
+		
+		
 	}
 
 }
