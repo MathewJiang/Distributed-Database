@@ -130,28 +130,22 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			}
 			break;
 
-		// case "get":
+		case "get":
+			if (tokens.length != 2) printError("Incorrect num of arguments; Must be passing in as: get <key>");
+			if (backend != null && backend.isRunning()) {
+				try {
+					backend.get(tokens[1]);
+				} catch (Exception e) {
+					printError("Error getting key " + tokens[1] +": " + e.toString());
+				}
+			}
+			break;
 
 		default:
 			printError("Unknown command");
 			printHelp();
 			return;
 		}
-
-		// else if (tokens[0].equals("get")) {
-		// if (tokens.length == 2) {
-		// if (client != null && client.isRunning()) {
-		// StringBuilder key = new StringBuilder();
-		// key.append(tokens[1]);
-		//
-		// //FIXME: may be incorrect to set the value to null
-		// CommMessage cm = new CommMessage(StatusType.GET, OptCode.GET,
-		// key.toString(), null);
-		// sendCommMessage(cm);
-		// }
-		// } else {
-		// printError("Incorrect num of arguments; Must be passing in as: get <key>");
-		// }
 	}
 
 	private void connect(String address, int port) throws UnknownHostException,

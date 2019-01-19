@@ -29,3 +29,21 @@
 2019-01-19 17:36:34,374 INFO  [main] root: try to close connection ...
 2019-01-19 17:36:34,374 INFO  [main] root: tearing down the connection ...
 2019-01-19 17:36:34,374 INFO  [main] root: connection closed!
+2019-01-19 17:56:04,910 INFO  [main] root: Connection established
+2019-01-19 17:56:07,763 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 5 }{ value: 5 }'
+2019-01-19 17:57:33,671 INFO  [main] root: Connection established
+2019-01-19 17:57:35,806 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 10 }{ value: 10 }'
+2019-01-19 17:57:35,847 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: null }{ value: null }'
+2019-01-19 17:57:37,385 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 10 }{ value: null }'
+2019-01-19 17:57:37,387 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 10 }{ value: 10 }'
+2019-01-19 17:57:47,513 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 10 }{ value: null }'
+2019-01-19 17:57:47,515 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 10 }{ value: 10 }'
+2019-01-19 17:58:01,056 INFO  [main] root: try to close connection ...
+2019-01-19 17:58:01,057 INFO  [main] root: tearing down the connection ...
+2019-01-19 17:58:01,057 INFO  [main] root: connection closed!
+2019-01-19 17:58:09,552 INFO  [main] root: Connection established
+2019-01-19 17:58:11,355 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 10 }{ value: null }'
+2019-01-19 17:58:11,359 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 10 }{ value: 10 }'
+2019-01-19 17:58:17,121 INFO  [main] root: try to close connection ...
+2019-01-19 17:58:17,121 INFO  [main] root: tearing down the connection ...
+2019-01-19 17:58:17,121 INFO  [main] root: connection closed!
