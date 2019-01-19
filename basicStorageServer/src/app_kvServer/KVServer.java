@@ -30,7 +30,6 @@ public class KVServer extends Thread implements IKVServer{
      */
     public KVServer(int port){
         this.port = port;
-        
         this.start();
     }
 	
@@ -160,9 +159,6 @@ public class KVServer extends Thread implements IKVServer{
 					"Unable to close socket on port: " + port, e);
 		}
 	}
-	
-	
-
     
     private boolean isRunning() {
         return this.running;
@@ -222,8 +218,4 @@ public class KVServer extends Thread implements IKVServer{
 			System.exit(1);
 		}
     }
-	
-	
-	
-	
 }

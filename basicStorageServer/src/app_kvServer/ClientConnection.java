@@ -8,7 +8,6 @@ import java.net.Socket;
 import org.apache.log4j.*;
 
 import shared.messages.CommMessage;
-import shared.messages.CommMessage.OptCode;
 import shared.messages.KVMessage.StatusType;
 
 

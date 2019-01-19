@@ -6,33 +6,10 @@ import com.google.gson.JsonSyntaxException;
 
 public class CommMessage implements KVMessage {
 	
-	// Operation in this CommMessage.
-	public OptCode opt;
-	
-	public enum OptCode {
-		PUT, /* Put - key value storage */
-		GET, /* Get - key value storage */
-	}
-	
 	// Status and data of this CommMessage.
 	private StatusType status;
 	private String key;
 	private String value;
-	
-	
-	public CommMessage() {
-		this.status = null;
-		this.opt = null;
-		this.key = null;
-		this.value = null;
-	}
-	
-	public CommMessage(StatusType status, OptCode opt, String key, String value) {
-		this.status = status;
-		this.opt = opt;
-		this.key = key;
-		this.value = value;
-	}
 
 	@Override
 	public String getKey() {
@@ -79,13 +56,8 @@ public class CommMessage implements KVMessage {
 	public String toString() {
 		StringBuilder id = new StringBuilder();
 		id.append("{ CommMessage Object: ");
-		id.append("{ opt: ");
-		
-		if (this.opt == OptCode.PUT) {
-			id.append("PUT");
-		} else if (this.opt == OptCode.GET) {
-			id.append("GET");
-		}
+		id.append("{ Status: ");
+		id.append(this.status);
 		id.append(" }");
 		
 		id.append("{ key: ");
