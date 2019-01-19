@@ -36,7 +36,6 @@ public class KVServer extends Thread implements IKVServer{
      */
     public KVServer(int port){
         this.port = port;
-        this.start();
     }
 	
 	/**
