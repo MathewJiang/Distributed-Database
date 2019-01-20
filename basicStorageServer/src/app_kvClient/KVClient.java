@@ -131,7 +131,10 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			break;
 
 		case "get":
-			if (tokens.length != 2) printError("Incorrect num of arguments; Must be passing in as: get <key>");
+			if (tokens.length != 2) {
+				printError("Incorrect num of arguments; Must be passing in as: get <key>");
+				return;
+			}
 			if (backend != null && backend.isRunning()) {
 				try {
 					backend.get(tokens[1]);
@@ -246,7 +249,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	}
 
 	private void printError(String error) {
-		System.out.println(PROMPT + "Error! " + error);
+		logger.error(PROMPT + "Error! " + error);
 	}
 
 	/**
@@ -257,9 +260,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	 */
 	public static void main(String[] args) {
 		try {
-			new LogSetup("logs/client.log", Level.OFF);
+			new LogSetup("logs/client.log", Level.ALL);
 			KVClient app = new KVClient();
-			app.setLevel(Level.ALL.toString());
 			app.run();
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
