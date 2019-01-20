@@ -9,9 +9,24 @@ public class Storage {
 	static int mode;
 	// mode 0 FIFO, 1 LRU, 2 LFU
 	
-	public static void init() {
+	public static void init(int cache_size) {
 		Disk.init();
 		Disk.clearStorage();
+		
+		switch(mode) {
+			case 0:
+				fifoCache.set_cache_size(cache_size);
+				break;
+			case 1:
+				LRUCache.set_cache_size(cache_size);
+				break;
+			case 2:
+				LFUCache.set_cache_size(cache_size);
+				break;
+			default:
+				return;
+		}
+		
 	}
 	
 	public static boolean set_mode(String mode_str) {
@@ -61,10 +76,13 @@ public class Storage {
 		switch(mode) {
 			case 0:
 				fifoCache.clearCache();
+				break;
 			case 1:
 				LRUCache.clearCache();
+				break;
 			case 2:
 				LFUCache.clearCache();
+				break;
 			default:
 				// do nothing
 				return;
@@ -74,11 +92,11 @@ public class Storage {
 	public static boolean inCache(String key) {
 		switch(mode) {
 			case 0:
-				fifoCache.inCache(key);
+				return fifoCache.inCache(key);
 			case 1:
-				LRUCache.inCache(key);
+				return LRUCache.inCache(key);
 			case 2:
-				LFUCache.inCache(key);
+				return LFUCache.inCache(key);
 			default:
 				return false;
 		}

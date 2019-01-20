@@ -217,12 +217,19 @@ public class ClientConnection implements Runnable {
 	 * store the <key, value> pairs in persistent disk
 	 */
 	private StatusType handlePUT(String key, String value) throws IOException {
+		/*if (!Disk.if_init()) {
+			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
+			Disk.init();		//FIXME: should raise a warning/error
+		}
+		
+		return Disk.putKV(key, value);*/
+		
 		if (!Disk.if_init()) {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init();		//FIXME: should raise a warning/error
 		}
 		
-		return Disk.putKV(key, value);
+		return Storage.putKV(key, value);
 	}
 	
 	private String handleGET(String key) throws Exception {
@@ -230,7 +237,7 @@ public class ClientConnection implements Runnable {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
 		
-		return Disk.getKV(key);
+		return Storage.getKV(key);
 		
 	}
 	

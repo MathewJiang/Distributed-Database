@@ -127,8 +127,9 @@ public class KVServer extends Thread implements IKVServer{
     public void run() {
         
     	running = initializeServer();
-        Disk.init();
-        Disk.clearStorage();
+    	Storage.set_mode("LRU");
+        Storage.init(5);
+        
     	
         if(serverSocket != null) {
 	        while(isRunning()){
@@ -224,6 +225,7 @@ public class KVServer extends Thread implements IKVServer{
 				
 				// Start server.
 				server.start();
+				
 			}
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize server!");
