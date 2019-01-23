@@ -12,7 +12,8 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import app_kvClient.Disk;
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.Storage;
 
 
 public class KVServer extends Thread implements IKVServer{

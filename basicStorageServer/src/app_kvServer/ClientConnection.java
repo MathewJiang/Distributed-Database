@@ -7,8 +7,8 @@ import java.net.Socket;
 
 import org.apache.log4j.*;
 
-import app_kvClient.Disk;
-
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.Storage;
 import shared.messages.CommMessage;
 import shared.messages.KVMessage.StatusType;
 

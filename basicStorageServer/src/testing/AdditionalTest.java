@@ -6,9 +6,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import org.junit.Test;
 
-import app_kvClient.Disk;
-import app_kvServer.fifoCache;
-
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.FIFOCache;
 import junit.framework.TestCase;
 
 

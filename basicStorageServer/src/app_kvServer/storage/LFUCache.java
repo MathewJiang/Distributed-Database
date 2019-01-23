@@ -1,4 +1,4 @@
-package app_kvServer;
+package app_kvServer.storage;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Queue;
 
 import shared.messages.KVMessage;
-import app_kvClient.Disk;
 
-public class LRUCache {
+public class LFUCache {
+
 	static int cache_size = -1;
 	static Map<String, String> hashmap;
 	static Queue<String> queue;
@@ -56,7 +56,6 @@ public class LRUCache {
 			queue.add(key);
 			hashmap.put(key,result);
 		}
-		
 		queue.remove(key);
 		queue.add(key);
 		
@@ -68,7 +67,6 @@ public class LRUCache {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
 				queue.remove(key);
-				return KVMessage.StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);
 			}
@@ -104,4 +102,5 @@ public class LRUCache {
 	        it.remove();
 	    }
 	}
+
 }

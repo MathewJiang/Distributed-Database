@@ -9,8 +9,8 @@ import java.io.OutputStream;
 
 import org.junit.Test;
 
-import app_kvClient.Disk;
-import app_kvServer.fifoCache;
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.FIFOCache;
 
 public class StorageTest {
 
@@ -80,16 +80,16 @@ public class StorageTest {
 	public static void testFuncFifoCache() {
 		Disk.init();
 		Disk.clearStorage();
-		fifoCache.set_cache_size(5);
+		FIFOCache.set_cache_size(5);
 		
 		try {
-			fifoCache.putKV("iPhone","XS");
-			fifoCache.putKV("Apple","iPad");
+			FIFOCache.putKV("iPhone","XS");
+			FIFOCache.putKV("Apple","iPad");
 			for(int i =0; i<10;i++) {
-				fifoCache.putKV(((Integer)i).toString(), ((Integer)(i+1)).toString());
+				FIFOCache.putKV(((Integer)i).toString(), ((Integer)(i+1)).toString());
 			}
-			fifoCache.putKV("ECE344","DEADBEEF");
-			fifoCache.putKV("ECE454","GOL");
+			FIFOCache.putKV("ECE344","DEADBEEF");
+			FIFOCache.putKV("ECE454","GOL");
 		} catch (Exception e) {
 			// to do
 		}
@@ -98,7 +98,7 @@ public class StorageTest {
 		
 		String test;
 		try {
-			test = fifoCache.getKV("Apple");
+			test = FIFOCache.getKV("Apple");
 			if(test == "Apple") {
 				Disk.echo("Key is not lost");
 			}

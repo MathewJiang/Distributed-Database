@@ -1,8 +1,7 @@
-package app_kvServer;
+package app_kvServer.storage;
 
 import java.io.IOException;
 
-import app_kvClient.Disk;
 import shared.messages.KVMessage;
 
 public class Storage {
@@ -15,7 +14,7 @@ public class Storage {
 		
 		switch(mode) {
 			case 0:
-				fifoCache.set_cache_size(cache_size);
+				FIFOCache.set_cache_size(cache_size);
 				break;
 			case 1:
 				LRUCache.set_cache_size(cache_size);
@@ -45,7 +44,7 @@ public class Storage {
 	public static String getKV(String key) throws Exception {
 		switch(mode) {
 			case 0:
-				return fifoCache.getKV(key);
+				return FIFOCache.getKV(key);
 			case 1:
 				return LRUCache.getKV(key);
 			case 2:
@@ -58,7 +57,7 @@ public class Storage {
 	public static KVMessage.StatusType putKV(String key, String value) throws IOException{
 		switch(mode) {
 			case 0:
-				return fifoCache.putKV(key,value);
+				return FIFOCache.putKV(key,value);
 			case 1:
 				return LRUCache.putKV(key,value);
 			case 2:
@@ -75,7 +74,7 @@ public class Storage {
 	public static void clearCache() {
 		switch(mode) {
 			case 0:
-				fifoCache.clearCache();
+				FIFOCache.clearCache();
 				break;
 			case 1:
 				LRUCache.clearCache();
@@ -92,7 +91,7 @@ public class Storage {
 	public static boolean inCache(String key) {
 		switch(mode) {
 			case 0:
-				return fifoCache.inCache(key);
+				return FIFOCache.inCache(key);
 			case 1:
 				return LRUCache.inCache(key);
 			case 2:

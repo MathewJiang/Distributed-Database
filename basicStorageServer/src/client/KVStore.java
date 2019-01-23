@@ -10,13 +10,13 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import client.ClientSocketListener.SocketStatus;
 import shared.CommMessageBuilder;
 import shared.messages.CommMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
-public class KVStore extends Thread implements KVCommInterface,
-		ClientSocketListener {
+public class KVStore extends Thread implements KVCommInterface {
 
 	private Logger logger = Logger.getRootLogger();
 	private Set<ClientSocketListener> listeners;
@@ -209,18 +209,6 @@ public class KVStore extends Thread implements KVCommInterface,
 
 		logger.info("Receive message:\t '" + msg.toString() + "'");
 		return msg;
-	}
-
-	@Override
-	public void handleNewCommMessage(CommMessage cm) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void handleStatus(SocketStatus status) {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
