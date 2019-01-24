@@ -89,11 +89,9 @@ public class InteractionTest extends TestCase {
 		try {
 			kvClient.put(key, value);
 			response = kvClient.put(key, "null");
-			
 		} catch (Exception e) {
 			ex = e;
 		}
-
 		assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
 	}
 	
@@ -128,7 +126,4 @@ public class InteractionTest extends TestCase {
 
 		assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
 	}
-	
-
-
 }
