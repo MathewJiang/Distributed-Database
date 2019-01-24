@@ -1,8 +1,6 @@
 package client;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashSet;
@@ -25,9 +23,6 @@ public class KVStore extends Thread implements KVCommInterface {
 	private boolean running;
 
 	private Socket clientSocket;
-	private OutputStream output;
-	private InputStream input;
-
 	private String address;
 	private int port;
 
@@ -42,12 +37,13 @@ public class KVStore extends Thread implements KVCommInterface {
 	 */
 	public void run() {
 		try {
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
+			clientSocket.getOutputStream();
+			clientSocket.getInputStream();
 			ConnectionUtil conn = new ConnectionUtil();
 			while (isRunning()) {
 				try {
-					CommMessage latestMsg = conn.receiveCommMessage(input);
+					CommMessage latestMsg = conn
+							.receiveCommMessage(clientSocket.getInputStream());
 					for (ClientSocketListener listener : listeners) {
 						listener.handleNewCommMessage(latestMsg);
 					}
@@ -118,7 +114,6 @@ public class KVStore extends Thread implements KVCommInterface {
 	 * @throws IOException
 	 *             some I/O error regarding the output stream
 	 */
-	
 
 	@Override
 	public void connect() throws UnknownHostException, IOException {
@@ -136,12 +131,14 @@ public class KVStore extends Thread implements KVCommInterface {
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
 		try {
-			CommMessage cm = new CommMessageBuilder().setStatus(KVMessage.StatusType.PUT).setKey(key).setValue(value)
-					.build();
+			CommMessage cm = new CommMessageBuilder()
+					.setStatus(KVMessage.StatusType.PUT).setKey(key)
+					.setValue(value).build();
 			ConnectionUtil conn = new ConnectionUtil();
 			conn.sendCommMessage(clientSocket.getOutputStream(), cm);
 
-			CommMessage latestMsg = conn.receiveCommMessage(clientSocket.getInputStream());
+			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
+					.getInputStream());
 			return latestMsg;
 		} catch (IOException ioe) {
 			if (isRunning()) {
@@ -162,11 +159,13 @@ public class KVStore extends Thread implements KVCommInterface {
 	@Override
 	public KVMessage get(String key) throws Exception {
 		try {
-			CommMessage cm = new CommMessage(StatusType.GET, key.toString(), null);
+			CommMessage cm = new CommMessage(StatusType.GET, key.toString(),
+					null);
 			ConnectionUtil conn = new ConnectionUtil();
 			conn.sendCommMessage(clientSocket.getOutputStream(), cm);
 
-			CommMessage latestMsg = conn.receiveCommMessage(clientSocket.getInputStream());
+			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
+					.getInputStream());
 			return latestMsg;
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");

@@ -12,7 +12,6 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
@@ -58,7 +57,6 @@ public class KVServer extends Thread implements IKVServer {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = parseCacheStrategy(strategy);
-		this.start();
 	}
 
 	@Override
@@ -135,10 +133,12 @@ public class KVServer extends Thread implements IKVServer {
 					ClientConnection connection = new ClientConnection(client);
 					new Thread(connection).start();
 
-					logger.info(
-							"Connected to " + client.getInetAddress().getHostName() + " on port " + client.getPort());
+					logger.info("Connected to "
+							+ client.getInetAddress().getHostName()
+							+ " on port " + client.getPort());
 				} catch (IOException e) {
-					logger.error("Error! " + "Unable to establish connection. \n", e);
+					logger.error("Error! "
+							+ "Unable to establish connection. \n", e);
 				}
 			}
 		}
@@ -158,7 +158,8 @@ public class KVServer extends Thread implements IKVServer {
 		try {
 			serverSocket.close();
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port, e);
+			logger.error("Error! " + "Unable to close socket on port: " + port,
+					e);
 		}
 	}
 
@@ -174,7 +175,8 @@ public class KVServer extends Thread implements IKVServer {
 		try {
 			serverSocket.close();
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port, e);
+			logger.error("Error! " + "Unable to close socket on port: " + port,
+					e);
 		}
 	}
 
@@ -182,7 +184,9 @@ public class KVServer extends Thread implements IKVServer {
 		logger.info("Initialize server ...");
 		try {
 			serverSocket = new ServerSocket(port);
-			logger.info("Server listening on port: " + serverSocket.getLocalPort());
+			port = serverSocket.getLocalPort();
+			logger.info("Server listening on port: "
+					+ serverSocket.getLocalPort());
 			return true;
 		} catch (IOException e) {
 			logger.error("Error! Cannot open server socket:");
@@ -225,8 +229,10 @@ public class KVServer extends Thread implements IKVServer {
 				// Read configuration file for cache & server configs.
 				Properties props = new Properties();
 				props.load(new FileInputStream(configPath));
-				server.cacheSize = Integer.parseInt(props.getProperty("cache_limit"));
-				server.strategy = parseCacheStrategy(props.getProperty("cache_policy"));
+				server.cacheSize = Integer.parseInt(props
+						.getProperty("cache_limit"));
+				server.strategy = parseCacheStrategy(props
+						.getProperty("cache_policy"));
 
 				// Start server.
 				server.start();

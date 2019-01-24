@@ -40,7 +40,7 @@ public class ConnectionUtil {
 		boolean reading = true;
 
 		while (read != 13 && reading) {/* carriage return */
-			/* if buffer filled, copy to msg array */
+			/* if buffer filled, copy to message array */
 			if (index == BUFFER_SIZE) {
 				if (msgBytes == null) {
 					tmp = new byte[BUFFER_SIZE];
