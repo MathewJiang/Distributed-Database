@@ -24,9 +24,6 @@ public class ClientConnection implements Runnable {
 	private static Logger logger = Logger.getRootLogger();
 
 	private boolean isOpen;
-	private static final int BUFFER_SIZE = 1024;
-	private static final int DROP_SIZE = 128 * BUFFER_SIZE;
-	private static final byte terminateByte = '\n';
 
 	private Socket clientSocket;
 	private InputStream input;
