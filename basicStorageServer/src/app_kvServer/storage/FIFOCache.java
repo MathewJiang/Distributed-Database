@@ -1,4 +1,5 @@
 package app_kvServer.storage;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -60,15 +61,20 @@ public class FIFOCache {
 	}
 	
 	public static StatusType putKV(String key, String value) throws IOException{
-		if(value.equals("null")) {
+		
+		//deletion
+		if(value == null || value.equals("")) {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
 				queue.remove(key);
+				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);
 			}
 		}
-		if(hashmap.size()>=cache_size) {
+		
+		
+		if(hashmap.size() >= cache_size) {
 			// well, should be only ==
 			// we need to evict one from the key list
 			String removing_key = queue.remove();

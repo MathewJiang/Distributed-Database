@@ -1,9 +1,11 @@
 package shared.messages;
 
+import shared.messages.KVMessage.StatusType;
+
 public class CommMessageBuilder {
 	private CommMessage msg = new CommMessage();
 	
-	public CommMessageBuilder setStatus(KVMessage.StatusType status) {
+	public CommMessageBuilder setStatus(StatusType status) {
 		msg.setStatus(status);
 		return this;
 	}

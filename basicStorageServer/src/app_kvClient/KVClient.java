@@ -121,8 +121,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 		case "put":
 			System.out.println("[debug]m1-client put: tokens size: " + tokens.length);
-			if (tokens.length != 3) {
-				printError("Incorrect num of arguments; Must be passing in as: put <key> <value> pairs");
+			if (tokens.length != 3 && tokens.length != 2) {
+				printError("Incorrect num of arguments; Must be passing in as: put <key> <value>; or put <key> for deletion");
 				return;
 			}
 			if (backend == null || !backend.isRunning()) {
@@ -130,7 +130,11 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				return;
 			}
 			try {
-				backend.put(tokens[1], tokens[2]);
+				if (tokens.length == 2) {
+					backend.put(tokens[1], null);
+				} else {
+					backend.put(tokens[1], tokens[2]);
+				}
 			} catch (Exception e) {
 				printError("Put Error: " + e.toString());
 			}

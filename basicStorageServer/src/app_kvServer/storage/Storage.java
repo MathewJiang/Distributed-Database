@@ -3,7 +3,7 @@ package app_kvServer.storage;
 import java.io.IOException;
 
 import app_kvServer.IKVServer.CacheStrategy;
-import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
 
 public class Storage {
 	static int mode;
@@ -59,7 +59,7 @@ public class Storage {
 		}
 	}
 
-	public static KVMessage.StatusType putKV(String key, String value) throws IOException {
+	public static StatusType putKV(String key, String value) throws IOException {
 		switch (mode) {
 		case 0:
 			return FIFOCache.putKV(key, value);
@@ -68,7 +68,7 @@ public class Storage {
 		case 2:
 			return LFUCache.putKV(key, value);
 		default:
-			return KVMessage.StatusType.PUT_ERROR; // never reach here if mode
+			return StatusType.PUT_ERROR; // never reach here if mode
 													// is configured legally
 		}
 	}
