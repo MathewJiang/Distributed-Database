@@ -12,6 +12,10 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.FIFOCache;
+import app_kvServer.storage.LFUCache;
+import app_kvServer.storage.LRUCache;
 import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
@@ -57,6 +61,7 @@ public class KVServer extends Thread implements IKVServer {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = parseCacheStrategy(strategy);
+		
 	}
 
 	@Override
@@ -85,35 +90,112 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public boolean inStorage(String key) {
-		// TODO Auto-generated method stub
-		return false;
+		try {
+			if (inCache(key)) {
+				return true;
+			}
+			Disk.getKV(key);
+		} catch (Exception e) {
+			return false;
+		}
+		
+		return true;
 	}
 
 	@Override
 	public boolean inCache(String key) {
 		// TODO Auto-generated method stub
+		/*
+		 * Q: how do we deal with: multiple clients connect with diff cache policy?
+		 * POtential solution: we might need different cache object
+		 */
+		
+		int curMode = Storage.getMode();
+		String result = null;
+		
+		switch (curMode) {
+		case 0: 
+		{
+			try {
+				result = FIFOCache.getKV(key);
+			} catch (Exception e) {
+				return false;
+			}
+			
+			if (result != null && !result.equals("")) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		case 1:
+		{
+			try {
+				result = LRUCache.getKV(key);
+			} catch (Exception e) {
+				return false;
+			}
+			
+			if (result != null && !result.equals("")) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		case 2:
+		{
+			try {
+				result = LFUCache.getKV(key);
+			} catch (Exception e) {
+				return false;
+			}
+			
+			if (result != null && !result.equals("")) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		default:
+			System.out.println("[KVServer]inCache(): Cache Mode not set");
+			break;
+		}
+		
 		return false;
 	}
 
 	@Override
 	public String getKV(String key) throws Exception {
-		// TODO Auto-generated method stub
-		return "";
+		if (!Disk.if_init()) {
+			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
+		}
+
+		return Storage.getKV(key);
 	}
 
 	@Override
 	public void putKV(String key, String value) throws Exception {
-		// TODO Auto-generated method stub
+		if (!Disk.if_init()) {
+			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
+			Disk.init(); //FIXME: should raise a warning/error
+		}
+
+		System.out.println("[KVServer.java; putKV]key: " + key + " value: " + value);
+		Storage.putKV(key, value);
 	}
 
 	@Override
 	public void clearCache() {
-		// TODO Auto-generated method stub
+		System.out.println("[KVServer.java]Enter clearCache");
+		Storage.clearCache();
+		
 	}
 
 	@Override
 	public void clearStorage() {
-		// TODO Auto-generated method stub
+		System.out.println("[KVServer.java]Enter clearStorage");
+		Storage.clearCache();
+		Storage.clearStorage();
 	}
 
 	/**
@@ -125,6 +207,11 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
+		
+		//DELETME: 
+//		Storage.clearStorage();
+//		kill();
+		
 
 		if (serverSocket != null) {
 			while (isRunning()) {
@@ -156,6 +243,7 @@ public class KVServer extends Thread implements IKVServer {
 	public void close() {
 		running = false;
 		try {
+			Storage.flush();
 			serverSocket.close();
 		} catch (IOException e) {
 			logger.error("Error! " + "Unable to close socket on port: " + port,
@@ -198,15 +286,17 @@ public class KVServer extends Thread implements IKVServer {
 	}
 
 	public static CacheStrategy parseCacheStrategy(String str) {
+		str = str.toUpperCase();
+		
 		switch (str) {
-		case "FIFO":
-			return CacheStrategy.FIFO;
-		case "LRU":
-			return CacheStrategy.LRU;
-		case "LFU":
-			return CacheStrategy.LFU;
-		default:
-			return CacheStrategy.None;
+			case "FIFO":
+				return CacheStrategy.FIFO;
+			case "LRU":
+				return CacheStrategy.LRU;
+			case "LFU":
+				return CacheStrategy.LFU;
+			default:
+				return CacheStrategy.None;
 		}
 	}
 
@@ -219,6 +309,7 @@ public class KVServer extends Thread implements IKVServer {
 	public static void main(String[] args) {
 		try {
 			new LogSetup("logs/server.log", Level.ALL);
+			
 			if (args.length != 1) {
 				System.out.println("Error! Invalid number of arguments!");
 				System.out.println("Usage: Server <port>!");
@@ -226,6 +317,9 @@ public class KVServer extends Thread implements IKVServer {
 				int port = Integer.parseInt(args[0]);
 				KVServer server = new KVServer(port);
 
+				System.out.println("Working Directory = " +
+			              System.getProperty("user.dir"));
+				
 				// Read configuration file for cache & server configs.
 				Properties props = new Properties();
 				props.load(new FileInputStream(configPath));
@@ -236,7 +330,6 @@ public class KVServer extends Thread implements IKVServer {
 
 				// Start server.
 				server.start();
-
 			}
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize server!");

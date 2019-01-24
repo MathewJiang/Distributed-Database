@@ -85,7 +85,7 @@ public class LFUCache {
 		
 		if(hashmap.containsKey(key)) {
 			if(hashmap.get(key).equals(value)) {
-				return StatusType.PUT_UPDATE; // if NOP needed, change this to new enum
+				return StatusType.PUT_SUCCESS; // if NOP needed, change this to new enum
 			} else {
 				hashmap.put(key,value);
 				return StatusType.PUT_UPDATE;
@@ -99,7 +99,7 @@ public class LFUCache {
 		Iterator<Map.Entry<String, String>> it = hashmap.entrySet().iterator();
 	    while (it.hasNext()) {
 	    	Map.Entry<String, String> pair = (Map.Entry<String, String>) it.next();
-	    	Disk.putKV(pair.getKey(), pair.getValue());
+	    	Disk.floodKV(pair.getKey(), pair.getValue());
 	        it.remove();
 	    }
 	}

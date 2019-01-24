@@ -25,7 +25,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	private int serverPort;
 
 	@Override
-	public void newConnection(String hostname, int port) throws UnknownHostException, IOException {
+	public void newConnection(String hostname, int port)
+			throws UnknownHostException, IOException {
 		backend = new KVStore(hostname, port);
 		backend.connect();
 		backend.addListener(this);
@@ -63,6 +64,19 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				printError("CLI does not respond - Application terminated ");
 			}
 		}
+	}
+
+	private String[] parsePutInput(String[] input) {
+		String[] result = new String[3];
+		result[0] = input[0];
+		result[1] = input[1];
+		StringBuilder sb = new StringBuilder();
+		for (int i = 2; i < input.length; i++) {
+			sb.append(input[i] + " ");
+		}
+		sb.deleteCharAt(sb.length() - 1);
+		result[2] = sb.toString();
+		return result;
 	}
 
 	private void handleCommand(String cmdLine) {
@@ -108,7 +122,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 					printError("No valid log level!");
 					printPossibleLogLevels();
 				} else {
-					System.out.println(PROMPT + "Log level changed to level " + level);
+					System.out.println(PROMPT + "Log level changed to level "
+							+ level);
 				}
 			} else {
 				printError("Invalid number of parameters!");
@@ -120,10 +135,14 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			break;
 
 		case "put":
-			System.out.println("[debug]m1-client put: tokens size: " + tokens.length);
-			if (tokens.length != 3 && tokens.length != 2) {
+			System.out.println("[debug]m1-client put: tokens size: "
+					+ tokens.length);
+			if (tokens.length < 2) {
 				printError("Incorrect num of arguments; Must be passing in as: put <key> <value>; or put <key> for deletion");
 				return;
+			}
+			if (tokens.length > 3) {
+				tokens = parsePutInput(tokens);
 			}
 			if (backend == null || !backend.isRunning()) {
 				printError("Not connected!");
@@ -149,7 +168,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				try {
 					backend.get(tokens[1]);
 				} catch (Exception e) {
-					printError("Error getting key " + tokens[1] + ": " + e.toString());
+					printError("Error getting key " + tokens[1] + ": "
+							+ e.toString());
 				}
 			}
 			break;
@@ -186,7 +206,8 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 	private void printPossibleLogLevels() {
 		System.out.println(PROMPT + "Possible log levels are:");
-		System.out.println(PROMPT + "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF");
+		System.out.println(PROMPT
+				+ "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF");
 	}
 
 	private String setLevel(String levelString) {
@@ -232,10 +253,12 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 		} else if (status == SocketStatus.DISCONNECTED) {
 			System.out.print(PROMPT);
-			System.out.println("Connection terminated: " + serverAddress + " / " + serverPort);
+			System.out.println("Connection terminated: " + serverAddress
+					+ " / " + serverPort);
 
 		} else if (status == SocketStatus.CONNECTION_LOST) {
-			System.out.println("Connection lost: " + serverAddress + " / " + serverPort);
+			System.out.println("Connection lost: " + serverAddress + " / "
+					+ serverPort);
 			System.out.print(PROMPT);
 		}
 	}

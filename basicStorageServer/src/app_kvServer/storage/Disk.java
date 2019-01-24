@@ -77,6 +77,9 @@ public class Disk {
 	}
 	
 	public static StatusType putKV(String key, String value) throws IOException{
+		if (key == null || key.equals("")) {
+			System.out.println("!!!!!!!!!!!!!!!!!![debug/put]key is NULL!");
+		}
 		String dest = db_dir + "/" + key;
 		File search = new File(dest);
 		boolean foundEntry  = false;
@@ -102,10 +105,29 @@ public class Disk {
 		
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
+			
 			key_file.println(value);
 			key_file.close();
+			
 			if (foundEntry) {
-				return StatusType.PUT_UPDATE;
+				
+				FileReader fr = new FileReader(dest);
+				BufferedReader fh = new BufferedReader(fr);
+				
+				String result = "";
+				String line;
+				while((line = fh.readLine()) != null){
+					result += line;
+				}
+				
+				fh.close();
+				fr.close();
+				
+				if (result.equals(value)) {
+					return StatusType.PUT_SUCCESS;
+				} else {
+					return StatusType.PUT_UPDATE;
+				}
 			} else {
 				return StatusType.PUT_SUCCESS;
 			}
@@ -113,6 +135,35 @@ public class Disk {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return StatusType.PUT_ERROR;
+		}
+	}
+	
+	public static void floodKV(String key, String value) throws IOException{
+		if (key == null || key.equals("")) {
+			System.out.println("!!!!!!!!!!!!!!!!!![debug/flood]key is NULL!");
+		}
+		String dest = db_dir + "/" + key;
+		File search = new File(dest);
+		boolean foundEntry  = false;
+		
+		if(search.exists()) {
+			// we have this key, put update the value
+			foundEntry = true;
+		} else {
+			// we don't have this key, put add the file
+			search.createNewFile();
+		}
+		
+		try {
+			PrintWriter key_file = new PrintWriter(dest);
+			
+			key_file.println(value);
+			key_file.close();
+
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
 		}
 	}
 	
@@ -145,8 +196,8 @@ public class Disk {
 		String pwd_debug_info = "Working directory is " + path;
 		echo(pwd_debug_info);
 		test_and_set_db();
-		
-		
 	}
+	
+
 
 }

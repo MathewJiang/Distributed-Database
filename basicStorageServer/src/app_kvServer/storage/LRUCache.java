@@ -63,12 +63,15 @@ public class LRUCache {
 	}
 	
 	public static StatusType putKV(String key, String value) throws IOException{
+		echo("DEBUG putKV key \"" + key+"\" value \"" + value + "\"");
 		if(value == null || value.equals("")) {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
 				queue.remove(key);
+				echo("DEBUG in hashmap putKV key " + key+" value " + value);
 				return StatusType.DELETE_SUCCESS;
 			} else {
+				echo("DEBUG in disk putKV key " + key+" value " + value);
 				return Disk.putKV(key, value);
 			}
 		}
@@ -85,7 +88,7 @@ public class LRUCache {
 		
 		if(hashmap.containsKey(key)) {
 			if(hashmap.get(key).equals(value)) {
-				return StatusType.PUT_UPDATE; // if NOP needed, change this to new enum
+				return StatusType.PUT_SUCCESS; // if NOP needed, change this to new enum
 			} else {
 				hashmap.put(key,value);
 				return StatusType.PUT_UPDATE;
@@ -99,7 +102,7 @@ public class LRUCache {
 		Iterator<Map.Entry<String, String>> it = hashmap.entrySet().iterator();
 	    while (it.hasNext()) {
 	    	Map.Entry<String, String> pair = (Map.Entry<String, String>) it.next();
-	    	Disk.putKV(pair.getKey(), pair.getValue());
+	    	Disk.floodKV(pair.getKey(), pair.getValue());
 	        it.remove();
 	    }
 	}
