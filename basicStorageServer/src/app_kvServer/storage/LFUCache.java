@@ -7,7 +7,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-import shared.messages.KVMessage;
+import shared.messages.KVMessage.StatusType;
 
 public class LFUCache {
 
@@ -62,16 +62,17 @@ public class LFUCache {
 		return result;
 	}
 	
-	public static KVMessage.StatusType putKV(String key, String value) throws IOException{
-		if(value.equals("null")) {
+	public static StatusType putKV(String key, String value) throws IOException{
+		if(value == null || value.equals("")) {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
 				queue.remove(key);
+				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);
 			}
 		}
-		if(hashmap.size()>=cache_size) {
+		if(hashmap.size() >= cache_size) {
 			// well, should be only ==
 			// we need to evict one from the key list
 			String removing_key = queue.remove();
@@ -84,14 +85,14 @@ public class LFUCache {
 		
 		if(hashmap.containsKey(key)) {
 			if(hashmap.get(key).equals(value)) {
-				return KVMessage.StatusType.PUT_UPDATE; // if NOP needed, change this to new enum
+				return StatusType.PUT_UPDATE; // if NOP needed, change this to new enum
 			} else {
 				hashmap.put(key,value);
-				return KVMessage.StatusType.PUT_UPDATE;
+				return StatusType.PUT_UPDATE;
 			}
 		} 
 		hashmap.put(key,value);
-		return KVMessage.StatusType.PUT_SUCCESS;
+		return StatusType.PUT_SUCCESS;
 	}
 	
 	public static void flush_to_disk() throws IOException {
