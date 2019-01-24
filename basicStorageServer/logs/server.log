@@ -104,3 +104,42 @@
 2019-01-19 18:31:08,502 INFO  [Thread-0] root: Server listening on port: 5001
 2019-01-19 18:33:39,862 INFO  [Thread-0] root: Initialize server ...
 2019-01-19 18:33:39,864 INFO  [Thread-0] root: Server listening on port: 5001
+2019-01-23 18:41:01,022 INFO  [Thread-0] root: Initialize server ...
+2019-01-23 18:41:01,029 INFO  [Thread-0] root: Server listening on port: 5000
+2019-01-23 18:41:07,837 INFO  [Thread-0] root: Connected to localhost on port 58143
+2019-01-23 18:41:09,597 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:58143>: '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 1 }'
+2019-01-23 18:41:09,610 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:58143>: '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 1 }{ value: 1 }'
+2019-01-23 18:41:12,308 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:58143>: '{ CommMessage Object: { Status: GET }{ key: 1 }{ value: null }'
+2019-01-23 18:41:12,309 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:58143>: '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 1 }{ value: 1 }'
+2019-01-23 18:50:34,101 ERROR [Thread-1] root: Error! Connection lost!
+2019-01-23 18:50:39,672 INFO  [Thread-0] root: Initialize server ...
+2019-01-23 18:50:39,679 INFO  [Thread-0] root: Server listening on port: 5000
+2019-01-23 18:50:51,580 INFO  [Thread-0] root: Connected to localhost on port 58182
+2019-01-23 18:50:54,419 INFO  [Thread-1] root: Comm RECEIVE 	<127.0.0.1:58182>: '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 2 }'
+2019-01-23 18:50:54,431 INFO  [Thread-1] root: Comm SEND 	<127.0.0.1:58182>: '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 1 }{ value: 2 }'
+2019-01-23 18:50:54,431 ERROR [Thread-1] root: Error! Connection lost!
+2019-01-23 19:08:38,960 INFO  [Thread-0] root: Initialize server ...
+2019-01-23 19:08:38,966 INFO  [Thread-0] root: Server listening on port: 5000
+2019-01-23 19:08:43,906 INFO  [Thread-0] root: Connected to localhost on port 58213
+2019-01-23 19:11:56,264 INFO  [Thread-0] root: Initialize server ...
+2019-01-23 19:11:56,270 INFO  [Thread-0] root: Server listening on port: 5000
+2019-01-23 19:12:02,420 INFO  [Thread-0] root: Connected to localhost on port 58218
+2019-01-23 19:12:05,325 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: PUT }{ key: 12 }{ value: 12 }'
+2019-01-23 19:12:05,335 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:12:08,844 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: GET }{ key: 12 }{ value: null }'
+2019-01-23 19:12:08,845 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:31,348 INFO  [Thread-0] root: Initialize server ...
+2019-01-23 19:14:31,355 INFO  [Thread-0] root: Server listening on port: 5000
+2019-01-23 19:14:41,576 INFO  [Thread-0] root: Connected to localhost on port 58241
+2019-01-23 19:14:42,662 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: GET }{ key: 12 }{ value: null }'
+2019-01-23 19:14:42,676 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: GET_ERROR }{ key: null }{ value: null }'
+2019-01-23 19:14:49,918 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: PUT }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:49,919 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:51,175 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: GET }{ key: 12 }{ value: null }'
+2019-01-23 19:14:51,175 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:56,254 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: GET }{ key: 1 }{ value: null }'
+2019-01-23 19:14:56,256 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: GET_ERROR }{ key: null }{ value: null }'
+2019-01-23 19:14:58,311 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 123124124 }'
+2019-01-23 19:14:58,311 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 1 }{ value: 123124124 }'
+2019-01-23 19:14:59,599 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: GET }{ key: 1 }{ value: null }'
+2019-01-23 19:14:59,600 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 1 }{ value: 123124124 }'

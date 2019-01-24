@@ -73,3 +73,36 @@
 2019-01-19 18:11:03,567 INFO  [main] root: try to close connection ...
 2019-01-19 18:11:03,567 INFO  [main] root: tearing down the connection ...
 2019-01-19 18:11:03,568 INFO  [main] root: connection closed!
+2019-01-23 18:41:07,835 INFO  [main] root: Connection established
+2019-01-23 18:41:09,551 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 1 }'
+2019-01-23 18:41:09,615 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 1 }{ value: 1 }'
+2019-01-23 18:41:12,307 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 1 }{ value: null }'
+2019-01-23 18:41:12,309 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 1 }{ value: 1 }'
+2019-01-23 18:50:45,684 ERROR [main] root: m1-client> Error! Invalid number of parameters!
+2019-01-23 18:50:51,577 INFO  [main] root: Connection established
+2019-01-23 18:50:54,372 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 2 }'
+2019-01-23 19:08:43,904 INFO  [main] root: Connection established
+2019-01-23 19:08:46,084 ERROR [main] root: m1-client> Error! Put Error: java.lang.NullPointerException
+2019-01-23 19:09:20,285 ERROR [main] root: m1-client> Error! Error getting key 1: java.lang.NullPointerException
+2019-01-23 19:12:02,418 INFO  [main] root: Connection established
+2019-01-23 19:12:05,281 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 12 }{ value: 12 }'
+2019-01-23 19:12:05,341 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:12:08,842 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 12 }{ value: null }'
+2019-01-23 19:12:08,845 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:41,574 INFO  [main] root: Connection established
+2019-01-23 19:14:42,617 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 12 }{ value: null }'
+2019-01-23 19:14:42,681 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_ERROR }{ key: null }{ value: null }'
+2019-01-23 19:14:49,918 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:49,920 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:51,174 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 12 }{ value: null }'
+2019-01-23 19:14:51,176 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 12 }{ value: 12 }'
+2019-01-23 19:14:56,253 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 1 }{ value: null }'
+2019-01-23 19:14:56,257 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_ERROR }{ key: null }{ value: null }'
+2019-01-23 19:14:58,310 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 1 }{ value: 123124124 }'
+2019-01-23 19:14:58,312 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 1 }{ value: 123124124 }'
+2019-01-23 19:14:59,597 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 1 }{ value: null }'
+2019-01-23 19:14:59,601 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 1 }{ value: 123124124 }'
+2019-01-23 19:15:02,397 ERROR [main] root: m1-client> Error! Unknown command
+2019-01-23 19:15:03,381 INFO  [main] root: try to close connection ...
+2019-01-23 19:15:03,381 INFO  [main] root: tearing down the connection ...
+2019-01-23 19:15:03,381 INFO  [main] root: connection closed!

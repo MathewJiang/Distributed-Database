@@ -1,7 +1,4 @@
-package shared;
-
-import shared.messages.CommMessage;
-import shared.messages.KVMessage;
+package shared.messages;
 
 public class CommMessageBuilder {
 	private CommMessage msg = new CommMessage();

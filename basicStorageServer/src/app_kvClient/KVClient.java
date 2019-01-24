@@ -10,7 +10,6 @@ import org.apache.log4j.Logger;
 import shared.messages.CommMessage;
 
 import logger.LogSetup;
-import client.ClientSocketListener;
 import client.KVCommInterface;
 import client.KVStore;
 

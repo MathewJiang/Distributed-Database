@@ -1,4 +1,4 @@
-package client;
+package app_kvClient;
 
 import shared.messages.CommMessage;
 

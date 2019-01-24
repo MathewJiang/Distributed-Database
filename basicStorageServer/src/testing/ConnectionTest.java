@@ -24,7 +24,6 @@ public class ConnectionTest extends TestCase {
 		assertNull(ex);
 	}
 	
-	
 	public void testUnknownHost() {
 		Exception ex = null;
 		KVStore kvClient = new KVStore("unknown", 50000);

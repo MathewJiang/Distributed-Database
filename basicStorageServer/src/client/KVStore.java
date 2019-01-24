@@ -10,9 +10,11 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import client.ClientSocketListener.SocketStatus;
-import shared.CommMessageBuilder;
+import app_kvClient.ClientSocketListener;
+import app_kvClient.ClientSocketListener.SocketStatus;
+import shared.ConnectionUtil;
 import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
@@ -29,9 +31,6 @@ public class KVStore extends Thread implements KVCommInterface {
 	private String address;
 	private int port;
 
-	private static final int BUFFER_SIZE = 1024;
-	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
-
 	public KVStore(String address, int port) {
 		this.address = address;
 		this.port = port;
@@ -45,9 +44,10 @@ public class KVStore extends Thread implements KVCommInterface {
 		try {
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
+			ConnectionUtil conn = new ConnectionUtil();
 			while (isRunning()) {
 				try {
-					CommMessage latestMsg = receiveCommMessage();
+					CommMessage latestMsg = conn.receiveCommMessage(input);
 					for (ClientSocketListener listener : listeners) {
 						listener.handleNewCommMessage(latestMsg);
 					}
@@ -92,8 +92,6 @@ public class KVStore extends Thread implements KVCommInterface {
 		setRunning(false);
 		logger.info("tearing down the connection ...");
 		if (clientSocket != null) {
-			// input.close();
-			// output.close();
 			clientSocket.close();
 			clientSocket = null;
 			logger.info("connection closed!");
@@ -120,96 +118,7 @@ public class KVStore extends Thread implements KVCommInterface {
 	 * @throws IOException
 	 *             some I/O error regarding the output stream
 	 */
-	public void sendCommMessage(CommMessage message) throws IOException {
-		if (output == null) {
-			output = clientSocket.getOutputStream();
-		}
-		if (input == null) {
-			input = clientSocket.getInputStream();
-		}
-
-		byte[] msgBytes = CommMessage.serialize(message);
-		output.write(msgBytes, 0, msgBytes.length);
-		output.flush();
-		logger.info("Send message:\t '" + message.toString() + "'");
-	}
-
-	public CommMessage receiveCommMessage() throws IOException {
-
-		if (output == null) {
-			output = clientSocket.getOutputStream();
-		}
-		if (input == null) {
-			input = clientSocket.getInputStream();
-		}
-
-		int index = 0;
-		byte[] msgBytes = null, tmp = null;
-		byte[] bufferBytes = new byte[BUFFER_SIZE];
-
-		/* read first char from stream */
-		byte read = (byte) input.read();
-		boolean reading = true;
-
-		while (read != 13 && reading) {/* carriage return */
-			/* if buffer filled, copy to msg array */
-			if (index == BUFFER_SIZE) {
-				if (msgBytes == null) {
-					tmp = new byte[BUFFER_SIZE];
-					System.arraycopy(bufferBytes, 0, tmp, 0, BUFFER_SIZE);
-				} else {
-					tmp = new byte[msgBytes.length + BUFFER_SIZE];
-					System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
-					System.arraycopy(bufferBytes, 0, tmp, msgBytes.length,
-							BUFFER_SIZE);
-				}
-
-				msgBytes = tmp;
-				bufferBytes = new byte[BUFFER_SIZE];
-				index = 0;
-			}
-
-			/* only read valid characters, i.e. letters and numbers */
-			if ((read > 31 && read < 127)) {
-				bufferBytes[index] = read;
-				index++;
-			}
-
-			/* stop reading is DROP_SIZE is reached */
-			if (msgBytes != null && msgBytes.length + index >= DROP_SIZE) {
-				reading = false;
-			}
-
-			if (read == 125) {
-				// FIXME: hardcoding the terminating value
-				// if reaches the end of gson obj
-				reading = false;
-			} else {
-				/* read next char from stream */
-				read = (byte) input.read();
-			}
-		}
-
-		if (msgBytes == null) {
-			tmp = new byte[index];
-			System.arraycopy(bufferBytes, 0, tmp, 0, index);
-		} else {
-			tmp = new byte[msgBytes.length + index];
-			System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
-			System.arraycopy(bufferBytes, 0, tmp, msgBytes.length, index);
-		}
-
-		msgBytes = tmp;
-
-		/* build final String */
-		CommMessage msg = CommMessage.deserialize(msgBytes);
-		if (msg == null) {
-			throw new IOException();
-		}
-
-		logger.info("Receive message:\t '" + msg.toString() + "'");
-		return msg;
-	}
+	
 
 	@Override
 	public void connect() throws UnknownHostException, IOException {
@@ -221,20 +130,18 @@ public class KVStore extends Thread implements KVCommInterface {
 
 	@Override
 	public void disconnect() {
-		// TODO Auto-generated method stub
 		closeConnection();
-
 	}
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
 		try {
-			CommMessage cm = new CommMessageBuilder()
-					.setStatus(KVMessage.StatusType.PUT).setKey(key)
-					.setValue(value).build();
-			sendCommMessage(cm);
+			CommMessage cm = new CommMessageBuilder().setStatus(KVMessage.StatusType.PUT).setKey(key).setValue(value)
+					.build();
+			ConnectionUtil conn = new ConnectionUtil();
+			conn.sendCommMessage(clientSocket.getOutputStream(), cm);
 
-			CommMessage latestMsg = receiveCommMessage();
+			CommMessage latestMsg = conn.receiveCommMessage(clientSocket.getInputStream());
 			return latestMsg;
 		} catch (IOException ioe) {
 			if (isRunning()) {
@@ -256,17 +163,17 @@ public class KVStore extends Thread implements KVCommInterface {
 	public KVMessage get(String key) throws Exception {
 		try {
 			CommMessage cm = new CommMessage(StatusType.GET, key.toString(), null);
-			sendCommMessage(cm);
-			
-			CommMessage latestMsg = receiveCommMessage();
+			ConnectionUtil conn = new ConnectionUtil();
+			conn.sendCommMessage(clientSocket.getOutputStream(), cm);
+
+			CommMessage latestMsg = conn.receiveCommMessage(clientSocket.getInputStream());
 			return latestMsg;
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
 			try {
 				tearDownConnection();
-				for(ClientSocketListener listener : listeners) {
-					listener.handleStatus(
-							SocketStatus.CONNECTION_LOST);
+				for (ClientSocketListener listener : listeners) {
+					listener.handleStatus(SocketStatus.CONNECTION_LOST);
 				}
 			} catch (IOException e) {
 				logger.error("Unable to close connection!");
