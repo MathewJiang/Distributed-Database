@@ -104,64 +104,7 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public boolean inCache(String key) {
-		// TODO Auto-generated method stub
-		/*
-		 * Q: how do we deal with: multiple clients connect with diff cache policy?
-		 * POtential solution: we might need different cache object
-		 */
-		
-		int curMode = Storage.getMode();
-		String result = null;
-		
-		switch (curMode) {
-		case 0: 
-		{
-			try {
-				result = FIFOCache.getKV(key);
-			} catch (Exception e) {
-				return false;
-			}
-			
-			if (result != null && !result.equals("")) {
-				return true;
-			} else {
-				return false;
-			}
-		}
-		case 1:
-		{
-			try {
-				result = LRUCache.getKV(key);
-			} catch (Exception e) {
-				return false;
-			}
-			
-			if (result != null && !result.equals("")) {
-				return true;
-			} else {
-				return false;
-			}
-		}
-		case 2:
-		{
-			try {
-				result = LFUCache.getKV(key);
-			} catch (Exception e) {
-				return false;
-			}
-			
-			if (result != null && !result.equals("")) {
-				return true;
-			} else {
-				return false;
-			}
-		}
-		default:
-			System.out.println("[KVServer]inCache(): Cache Mode not set");
-			break;
-		}
-		
-		return false;
+		return Storage.inCache(key);
 	}
 
 	@Override

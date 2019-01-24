@@ -120,6 +120,7 @@ public class Storage {
 	}
 
 	public static boolean inCache(String key) {
+		Disk.echo("LRU: inCache \"" + key + "\"");
 		switch (mode) {
 			case 0:
 				return FIFOCache.inCache(key);
@@ -133,6 +134,7 @@ public class Storage {
 	}
 
 	public static boolean inStorage(String key) {
+		Disk.echo("LRU: inStorage \"" + key + "\"");
 		return Disk.inStorage(key);
 	}
 	
