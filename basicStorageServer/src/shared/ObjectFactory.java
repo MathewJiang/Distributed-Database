@@ -17,7 +17,6 @@ public final class ObjectFactory {
      * Creates a KVServer object for auto-testing purposes
      */
 	public static IKVServer createKVServerObject(int port, int cacheSize, String strategy) {
-		System.out.println("!!!!!!!!!!!!!!!!!!!!!!!![debug]cacheSize is" + cacheSize + ", strategy: " + strategy);
 		return new KVServer(port, cacheSize, strategy);
 	}
 }

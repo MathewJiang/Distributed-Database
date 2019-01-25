@@ -61,7 +61,7 @@ public class KVServer extends Thread implements IKVServer {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = parseCacheStrategy(strategy);
-		
+
 	}
 
 	@Override
@@ -98,7 +98,6 @@ public class KVServer extends Thread implements IKVServer {
 		} catch (Exception e) {
 			return false;
 		}
-		
 		return true;
 	}
 
@@ -120,23 +119,19 @@ public class KVServer extends Thread implements IKVServer {
 	public void putKV(String key, String value) throws Exception {
 		if (!Disk.if_init()) {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
-			Disk.init(); //FIXME: should raise a warning/error
+			Disk.init(); // FIXME: should raise a warning/error
 		}
-
-		System.out.println("[KVServer.java; putKV]key: " + key + " value: " + value);
 		Storage.putKV(key, value);
 	}
 
 	@Override
 	public void clearCache() {
-		System.out.println("[KVServer.java]Enter clearCache");
 		Storage.clearCache();
-		
+
 	}
 
 	@Override
 	public void clearStorage() {
-		System.out.println("[KVServer.java]Enter clearStorage");
 		Storage.clearCache();
 		Storage.clearStorage();
 	}
@@ -150,11 +145,6 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
-		
-		//DELETME: 
-//		Storage.clearStorage();
-//		kill();
-		
 
 		if (serverSocket != null) {
 			while (isRunning()) {
@@ -197,20 +187,7 @@ public class KVServer extends Thread implements IKVServer {
 	private boolean isRunning() {
 		return this.running;
 	}
-
-	/**
-	 * Stops the server insofar that it won't listen at the given port any more.
-	 */
-	public void stopServer() {
-		running = false;
-		try {
-			serverSocket.close();
-		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port,
-					e);
-		}
-	}
-
+	
 	private boolean initializeServer() {
 		logger.info("Initialize server ...");
 		try {
@@ -230,17 +207,13 @@ public class KVServer extends Thread implements IKVServer {
 
 	public static CacheStrategy parseCacheStrategy(String str) {
 		str = str.toUpperCase();
-		
-		switch (str) {
-			case "FIFO":
-				return CacheStrategy.FIFO;
-			case "LRU":
-				return CacheStrategy.LRU;
-			case "LFU":
-				return CacheStrategy.LFU;
-			default:
-				return CacheStrategy.None;
-		}
+		if (str.equals("FIFO"))
+			return CacheStrategy.FIFO;
+		if (str.equals("LRU"))
+			return CacheStrategy.LRU;
+		if (str.equals("LFU"))
+			return CacheStrategy.LFU;
+		return CacheStrategy.None;
 	}
 
 	/**
@@ -252,7 +225,7 @@ public class KVServer extends Thread implements IKVServer {
 	public static void main(String[] args) {
 		try {
 			new LogSetup("logs/server.log", Level.ALL);
-			
+
 			if (args.length != 1) {
 				System.out.println("Error! Invalid number of arguments!");
 				System.out.println("Usage: Server <port>!");
@@ -260,9 +233,9 @@ public class KVServer extends Thread implements IKVServer {
 				int port = Integer.parseInt(args[0]);
 				KVServer server = new KVServer(port);
 
-				System.out.println("Working Directory = " +
-			              System.getProperty("user.dir"));
-				
+				System.out.println("Working Directory = "
+						+ System.getProperty("user.dir"));
+
 				// Read configuration file for cache & server configs.
 				Properties props = new Properties();
 				props.load(new FileInputStream(configPath));
