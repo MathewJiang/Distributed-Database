@@ -89,7 +89,7 @@ public class ClientConnection implements Runnable {
 				} catch (IOException ioe) {
 					logger.error("Error! Connection lost!");
 					isOpen = false;
-				}
+				} 
 			}
 
 		} catch (IOException ioe) {
@@ -139,9 +139,7 @@ public class ClientConnection implements Runnable {
 		if (!Disk.if_init()) {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
-
 		return Storage.getKV(key);
-
 	}
 
 }

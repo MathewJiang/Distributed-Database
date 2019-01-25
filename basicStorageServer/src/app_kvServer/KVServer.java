@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import logger.LogSetup;
@@ -152,7 +154,6 @@ public class KVServer extends Thread implements IKVServer {
 					Socket client = serverSocket.accept();
 					ClientConnection connection = new ClientConnection(client);
 					new Thread(connection).start();
-
 					logger.info("Connected to "
 							+ client.getInetAddress().getHostName()
 							+ " on port " + client.getPort());
@@ -187,7 +188,7 @@ public class KVServer extends Thread implements IKVServer {
 	private boolean isRunning() {
 		return this.running;
 	}
-	
+
 	private boolean initializeServer() {
 		logger.info("Initialize server ...");
 		try {
