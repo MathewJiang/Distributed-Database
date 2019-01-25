@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
-import app_kvServer.storage.LinkedEntries.EntryNode;
-
 import shared.messages.KVMessage.StatusType;
 
 // The simplest Least Frequently Used Cache implemented by a counter

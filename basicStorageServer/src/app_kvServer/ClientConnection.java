@@ -7,6 +7,8 @@ import java.net.Socket;
 
 import org.apache.log4j.*;
 
+import com.google.gson.JsonSyntaxException;
+
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 import shared.ConnectionUtil;
@@ -28,6 +30,7 @@ public class ClientConnection implements Runnable {
 	private Socket clientSocket;
 	private InputStream input;
 	private OutputStream output;
+	
 
 	/**
 	 * Constructs a new CientConnection object for a given TCP socket.
@@ -49,9 +52,15 @@ public class ClientConnection implements Runnable {
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
 			ConnectionUtil conn = new ConnectionUtil();
-			while (isOpen) {
+			
+			while (isOpen && KVServer.serverOn) {
 				try {
+					//Note: if deserlization failed, receiveCommMessage() throws an JsonSyntaxException
 					CommMessage latestMsg = conn.receiveCommMessage(input);
+					if (latestMsg == null) {
+						//FIXME: other scenarios that result in (latestMsg == null)
+						throw new IOException();
+					}
 					CommMessage responseMsg = new CommMessage();
 
 					StatusType op = latestMsg.getStatus();
@@ -86,10 +95,12 @@ public class ClientConnection implements Runnable {
 					 * connection either terminated by the client or lost due to
 					 * network problems
 					 */
+				} catch (JsonSyntaxException e) {
+					logger.error("[ClientConnection]/run(): Error! Received message experiences error during deserilization!");
 				} catch (IOException ioe) {
 					logger.error("Error! Connection lost!");
 					isOpen = false;
-				} 
+				}
 			}
 
 		} catch (IOException ioe) {

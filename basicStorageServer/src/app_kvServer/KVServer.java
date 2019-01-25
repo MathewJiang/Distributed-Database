@@ -30,6 +30,11 @@ public class KVServer extends Thread implements IKVServer {
 	private CacheStrategy strategy;
 	private ServerSocket serverSocket;
 	private boolean running;
+	
+	public static int totalNumClientConnection = 0;
+	public static boolean serverOn = false;
+	ArrayList<Thread> threadCollection = new ArrayList<>();
+	
 
 	/**
 	 * Constructs a (Echo-) Server object which listens to connection attempts
@@ -147,13 +152,17 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
+		serverOn = true;
 
 		if (serverSocket != null) {
 			while (isRunning()) {
 				try {
 					Socket client = serverSocket.accept();
 					ClientConnection connection = new ClientConnection(client);
-					new Thread(connection).start();
+					Thread newConnection = new Thread(connection);
+					threadCollection.add(newConnection);
+					newConnection.start();
+					
 					logger.info("Connected to "
 							+ client.getInetAddress().getHostName()
 							+ " on port " + client.getPort());
@@ -163,6 +172,13 @@ public class KVServer extends Thread implements IKVServer {
 				}
 			}
 		}
+		serverOn = false;
+		
+		
+//		for (Thread t : threadCollection) {
+////			t.interrupt();
+//			t.stop();			//FIXME: this is potentially unsafe
+//		}
 		logger.info("Server stopped.");
 	}
 
@@ -179,6 +195,7 @@ public class KVServer extends Thread implements IKVServer {
 		try {
 			Storage.flush();
 			serverSocket.close();
+			serverOn = false;
 		} catch (IOException e) {
 			logger.error("Error! " + "Unable to close socket on port: " + port,
 					e);
@@ -259,5 +276,8 @@ public class KVServer extends Thread implements IKVServer {
 			System.out.println("Usage: Server <port>!");
 			System.exit(1);
 		}
+		
+		System.out.println("[KVServer]Thread main termainates\n");
 	}
+	
 }

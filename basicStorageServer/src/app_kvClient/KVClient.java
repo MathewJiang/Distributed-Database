@@ -189,8 +189,10 @@ public class KVClient implements IKVClient, ClientSocketListener {
 		sb.append("::::::::::::::::::::::::::::::::\n");
 		sb.append(PROMPT).append("connect <host> <port>");
 		sb.append("\t establishes a connection to a server\n");
-		sb.append(PROMPT).append("send <text message>");
-		sb.append("\t\t sends a text message to the server \n");
+		sb.append(PROMPT).append("put <key> <value | null>");
+		sb.append("\t\t put/update/delete a key-value pair \n");
+		sb.append(PROMPT).append("put <key>");
+		sb.append("\t\t get the value corresponding to the key \n");
 		sb.append(PROMPT).append("disconnect");
 		sb.append("\t\t\t disconnects from the server \n");
 

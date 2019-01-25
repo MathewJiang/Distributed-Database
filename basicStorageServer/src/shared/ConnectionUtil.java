@@ -6,6 +6,10 @@ import java.io.OutputStream;
 
 import org.apache.log4j.Logger;
 
+import com.google.gson.JsonSyntaxException;
+
+import app_kvServer.KVServer;
+
 import shared.messages.CommMessage;
 
 public class ConnectionUtil {
@@ -36,7 +40,19 @@ public class ConnectionUtil {
 		byte[] bufferBytes = new byte[BUFFER_SIZE];
 
 		/* read first char from stream */
-		byte read = (byte) input.read();
+		byte read = (byte) 0;
+		while (KVServer.serverOn) {
+			if (input.available() > 0) {
+				read = (byte) input.read();
+				break;
+			}
+		}
+		
+		if (!KVServer.serverOn) {
+			return null;					//server is down
+		}
+		
+//		byte read = (byte) input.read();
 		boolean reading = true;
 
 		while (read != 13 && reading) {/* carriage return */
@@ -74,7 +90,17 @@ public class ConnectionUtil {
 				continue;
 			}
 			
-			read = (byte) input.read();
+			while (KVServer.serverOn) {
+				if (input.available() > 0) {
+					read = (byte) input.read();
+					break;
+				}
+			}
+			
+			if (!KVServer.serverOn) {
+				return null;
+			}
+			
 		}
 
 		if (msgBytes == null) {
@@ -91,7 +117,7 @@ public class ConnectionUtil {
 		/* build final String */
 		CommMessage msg = CommMessage.deserialize(msgBytes);
 		if (msg == null) {
-			throw new IOException();
+			throw new JsonSyntaxException("[ConnectionUtil]/receiveMsg(): gson deserilization failed");
 		}
 
 		logger.info("Receive message:\t '" + msg.toString() + "'");
