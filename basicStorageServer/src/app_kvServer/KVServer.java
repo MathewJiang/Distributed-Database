@@ -214,6 +214,8 @@ public class KVServer extends Thread implements IKVServer {
 			return CacheStrategy.LRU;
 		if (str.equals("LFU"))
 			return CacheStrategy.LFU;
+		logger.warn("Invalid cache strategy: " + str
+				+ ". Using pure disk storage.");
 		return CacheStrategy.None;
 	}
 
