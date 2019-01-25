@@ -5,103 +5,128 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Queue;
+
+import app_kvServer.storage.LinkedEntries.EntryNode;
 
 import shared.messages.KVMessage.StatusType;
 
+// The simplest Least Frequently Used Cache implemented by a counter
+// heap and a hash map.
 public class LFUCache {
 
-	static int cache_size = -1;
-	static Map<String, String> hashmap;
-	static Queue<String> queue;
-	public static void echo(String line) {
-		System.out.println(line);
+	private class QueueEntry implements Comparable<QueueEntry> {
+		int count;
+		String key;
+		String value;
+
+		public QueueEntry(String k, String v) {
+			key = k;
+			value = v;
+		}
+
+		@Override
+		public int compareTo(QueueEntry other) {
+			return Integer.compare(count, other.count);
+		}
 	}
-	
-	public static void set_cache_size(int size) {
-		cache_size = size;	
-		echo("cache set as: " + cache_size);
-		hashmap = new HashMap<String, String>();
-		queue = new LinkedList<>();
+
+	static int cacheSize = -1;
+	static PriorityQueue<QueueEntry> queue;
+	static Map<String, QueueEntry> map;
+
+	public static void setCacheSize(int size) {
+		cacheSize = size;
+		map = new HashMap<String, QueueEntry>();
+		queue = new PriorityQueue<QueueEntry>();
 	}
-	
-	public static void clearCache(){
-		hashmap.clear();
+
+	public static void clearCache() {
+		map.clear();
+		queue.clear();
 	}
-	
+
 	public static boolean inCache(String key) {
-		if(hashmap.containsKey(key)) {
+		if (map.containsKey(key)) {
 			return true;
-		} 
+		}
 		return false;
 	}
-	
-	public static String getKV(String key) throws Exception {
-		String result;
-		if(hashmap.containsKey(key)) {
-			result = hashmap.get(key);
+
+	public String getKV(String key) throws Exception {
+		QueueEntry entry;
+		if (map.containsKey(key)) {
+			entry = map.get(key);
+
+			// Increment and re-insert into heap.
+			queue.remove(entry);
+			entry.count++;
+			queue.add(entry);
 		} else {
-			result = Disk.getKV(key);
-	
-			// result get successfully here
-			if(hashmap.size()>=cache_size) {
-				// well, should be only ==
-				// we need to evict one from the key list
-				String removing_key = queue.remove();
+			String result = Disk.getKV(key);
+
+			// Eviction
+			if (map.size() >= cacheSize) {
+				QueueEntry removeEntry = queue.remove();
+				map.remove(removeEntry.key);
 				// Need to write it to disk
-				Disk.putKV(removing_key, hashmap.get(removing_key));
-				// remove it from cache
-				hashmap.remove(removing_key);
+				Disk.putKV(removeEntry.key, removeEntry.value);
 			}
-			queue.add(key);
-			hashmap.put(key,result);
+
+			// Cache data retrieved from disk.
+			entry = new QueueEntry(key, result);
+			entry.count++;
+			queue.add(entry);
+			map.put(entry.key, entry);
 		}
-		queue.remove(key);
-		queue.add(key);
-		
-		return result;
+		return entry.value;
 	}
-	
-	public static StatusType putKV(String key, String value) throws IOException{
-		if(value == null || value.equals("")) {
-			if(hashmap.containsKey(key)) {
-				hashmap.remove(key);
-				queue.remove(key);
+
+	public StatusType putKV(String key, String value) throws IOException {
+		if (value == null || value.equals("")) {
+			if (map.containsKey(key)) {
+				QueueEntry removed = map.remove(key);
+				queue.remove(removed);
 				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);
 			}
 		}
-		if(hashmap.size() >= cache_size) {
-			// well, should be only ==
-			// we need to evict one from the key list
-			String removing_key = queue.remove();
+
+		// Eviction
+		if (map.size() >= cacheSize) {
+			QueueEntry removeEntry = queue.remove();
+			map.remove(removeEntry.key);
 			// Need to write it to disk
-			Disk.putKV(removing_key, hashmap.get(removing_key));
-			// remove it from cache
-			hashmap.remove(removing_key);
+			Disk.putKV(removeEntry.key, removeEntry.value);
 		}
-		queue.add(key);
-		
-		if(hashmap.containsKey(key)) {
-			if(hashmap.get(key).equals(value)) {
-				return StatusType.PUT_SUCCESS; // if NOP needed, change this to new enum
+
+		QueueEntry entry = new QueueEntry(key, value);
+		entry.count++;
+		queue.add(entry);
+
+		if (map.containsKey(key)) {
+			if (map.get(key).value.equals(value)) {
+				return StatusType.PUT_SUCCESS; // if NOP needed, change this to
+												// new enum
 			} else {
-				hashmap.put(key,value);
+				map.put(key, entry);
 				return StatusType.PUT_UPDATE;
 			}
-		} 
-		hashmap.put(key,value);
+		}
+		map.put(key, entry);
 		return StatusType.PUT_SUCCESS;
 	}
-	
-	public static void flush_to_disk() throws IOException {
-		Iterator<Map.Entry<String, String>> it = hashmap.entrySet().iterator();
-	    while (it.hasNext()) {
-	    	Map.Entry<String, String> pair = (Map.Entry<String, String>) it.next();
-	    	Disk.floodKV(pair.getKey(), pair.getValue());
-	        it.remove();
-	    }
-	}
 
+	public static void flushToDisk() throws IOException {
+		Iterator<Map.Entry<String, QueueEntry>> it = map.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<String, QueueEntry> pair = (Map.Entry<String, QueueEntry>) it
+					.next();
+			Disk.floodKV(pair.getKey(), pair.getValue().value);
+			it.remove();
+		}
+		queue.clear();
+	}
 }

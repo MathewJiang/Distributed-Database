@@ -8,6 +8,7 @@ import shared.messages.KVMessage.StatusType;
 public class Storage {
 	private static int mode = -1;
 	private static OptimizedLRUCache optimizedLRUCache = new OptimizedLRUCache();
+	private static LFUCache instanceLFUCache = new LFUCache();
 
 	// mode 0 FIFO, 1 LRU, 2 LFU
 
@@ -28,7 +29,7 @@ public class Storage {
 			optimizedLRUCache.setCacheSize(cache_size);
 			break;
 		case 2:
-			LFUCache.set_cache_size(cache_size);
+			instanceLFUCache.setCacheSize(cache_size);
 			break;
 		default:
 			return;
@@ -64,7 +65,7 @@ public class Storage {
 			// String result = LRUCache.getKV(key);
 			return optimizedLRUCache.getKV(key);
 		case 2:
-			return LFUCache.getKV(key);
+			return instanceLFUCache.getKV(key);
 		default:
 			return Disk.getKV(key); // Update: deafult set to disk storage
 		}
@@ -95,7 +96,7 @@ public class Storage {
 			return optimizedLRUCache.putKV(key, value);
 			// return LRUCache.putKV(key, value);
 		case 2:
-			return LFUCache.putKV(key, value);
+			return instanceLFUCache.putKV(key, value);
 		default:
 			return Disk.putKV(key, value); // Update: default set to disk
 											// storage
@@ -116,7 +117,7 @@ public class Storage {
 			// LRUCache.clearCache();
 			break;
 		case 2:
-			LFUCache.clearCache();
+			instanceLFUCache.clearCache();
 			break;
 		default:
 			// do nothing
@@ -133,7 +134,7 @@ public class Storage {
 			return optimizedLRUCache.inCache(key);
 			// return LRUCache.inCache(key);
 		case 2:
-			return LFUCache.inCache(key);
+			return instanceLFUCache.inCache(key);
 		default:
 			return false;
 		}
@@ -150,11 +151,11 @@ public class Storage {
 			FIFOCache.flush_to_disk();
 			break;
 		case 1:
-			optimizedLRUCache.flush_to_disk();
+			optimizedLRUCache.flushToDisk();
 			// LRUCache.flush_to_disk();
 			break;
 		case 2:
-			LFUCache.flush_to_disk();
+			instanceLFUCache.flushToDisk();
 			break;
 		default:
 			break;

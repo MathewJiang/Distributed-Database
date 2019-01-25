@@ -6,7 +6,7 @@ public class LinkedEntries {
 	public class EntryNode {
 		String key;
 		String value;
-		EntryNode pre;
+		EntryNode prev;
 		EntryNode next;
 
 		public EntryNode() {
@@ -26,7 +26,7 @@ public class LinkedEntries {
 		head = new EntryNode();
 		tail = new EntryNode();
 		head.next = tail;
-		tail.pre = head;
+		tail.prev = head;
 	}
 
 	public EntryNode getHead() {
@@ -34,30 +34,30 @@ public class LinkedEntries {
 	}
 
 	public void addHead(EntryNode node) {
-		node.pre = head;
+		node.prev = head;
 		node.next = head.next;
-		head.next.pre = node;
+		head.next.prev = node;
 		head.next = node;
 	}
 
 	public EntryNode getTail() {
-		return tail.pre;
+		return tail.prev;
 	}
 
 	public void addTail(EntryNode node) {
-		node.pre = tail.pre;
+		node.prev = tail.prev;
 		node.next = tail;
-		tail.pre.next = node;
-		tail.pre = node;
+		tail.prev.next = node;
+		tail.prev = node;
 	}
 
 	public void remove(EntryNode node) {
-		node.pre.next = node.next;
-		node.next.pre = node.pre;
+		node.prev.next = node.next;
+		node.next.prev = node.prev;
 	}
 
 	public void clear() {
 		head.next = tail;
-		tail.pre = head;
+		tail.prev = head;
 	}
 }

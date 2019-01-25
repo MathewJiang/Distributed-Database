@@ -79,7 +79,6 @@ public class CommMessage implements KVMessage {
 		id.append(this.value);
 		id.append(" }");
 		
-		
 		return id.toString();
 	}
 }

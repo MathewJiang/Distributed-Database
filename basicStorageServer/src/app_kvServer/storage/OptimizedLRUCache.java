@@ -8,6 +8,8 @@ import app_kvServer.storage.LinkedEntries.EntryNode;
 
 import shared.messages.KVMessage.StatusType;
 
+// Uses a double linked list and a hash map with list node references
+// as values to implement a LRU cache that operates in constant times.
 public class OptimizedLRUCache {
 
 	static int cacheSize = -1;
@@ -81,7 +83,7 @@ public class OptimizedLRUCache {
 		EntryNode node = list.new EntryNode(key, value);
 		list.addTail(node);
 		if (map.containsKey(key)) {
-			if (map.get(key).equals(value)) {
+			if (map.get(key).value.equals(value)) {
 				return StatusType.PUT_SUCCESS; // if NOP needed, change this to
 												// new enum.
 			} else {
@@ -93,7 +95,7 @@ public class OptimizedLRUCache {
 		return StatusType.PUT_SUCCESS;
 	}
 
-	public static void flush_to_disk() throws IOException {
+	public static void flushToDisk() throws IOException {
 		Iterator<Map.Entry<String, EntryNode>> it = map.entrySet().iterator();
 		while (it.hasNext()) {
 			Map.Entry<String, EntryNode> pair = (Map.Entry<String, EntryNode>) it
