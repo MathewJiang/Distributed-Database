@@ -28,7 +28,6 @@ public class Client extends Thread {
 	
 	public Client(String address, int port) 
 			throws UnknownHostException, IOException {
-		
 		clientSocket = new Socket(address, port);
 		listeners = new HashSet<ClientSocketListener>();
 		setRunning(true);
