@@ -12,7 +12,6 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import app_kvServer.KVServer;
-
 import shared.messages.CommMessage;
 
 import logger.LogSetup;
@@ -186,15 +185,17 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 	private void printHelp() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("\nCLIENT COMMANDS (Usage):");
-		sb.append("\n************************************************************************************\n");
-		sb.append("connect <host> <port>");
-		sb.append("\t\t establishes a connection to a server\n");
-		sb.append("put <key> <value | null>");
-		sb.append("\t put/update/delete a key-value pair \n");
-		sb.append("put <key>");
-		sb.append("\t\t\t get the value corresponding to the key \n");
-		sb.append("disconnect");
+		sb.append(PROMPT).append("M1 CLIENT HELP (Usage):\n");
+		sb.append(PROMPT);
+		sb.append("::::::::::::::::::::::::::::::::");
+		sb.append("::::::::::::::::::::::::::::::::\n");
+		sb.append(PROMPT).append("connect <host> <port>");
+		sb.append("\t establishes a connection to a server\n");
+		sb.append(PROMPT).append("put <key> <value | null>");
+		sb.append("\t\t put/update/delete a key-value pair \n");
+		sb.append(PROMPT).append("get <key>");
+		sb.append("\t\t get the value corresponding to the key \n");
+		sb.append(PROMPT).append("disconnect");
 		sb.append("\t\t\t disconnects from the server \n");
 
 		sb.append("logLevel");
@@ -282,6 +283,9 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	 *            contains the port number at args[0].
 	 */
 	public static void main(String[] args) {
+		// Hack
+		KVServer.serverOn = true;
+		
 		try {
 			// Hack shared ConnectionUtil interrupt between server and client
 			// code.
