@@ -23,7 +23,6 @@ public class Storage {
 			FIFOCache.set_cache_size(cache_size);
 			break;
 		case 1:
-			// LRUCache.set_cache_size(cache_size);
 			optimizedLRUCache.setCacheSize(cache_size);
 			break;
 		case 2:
@@ -59,7 +58,6 @@ public class Storage {
 		case 0:
 			return FIFOCache.getKV(key);
 		case 1:
-			// String result = LRUCache.getKV(key);
 			return optimizedLRUCache.getKV(key);
 		case 2:
 			return instanceLFUCache.getKV(key);
@@ -89,7 +87,6 @@ public class Storage {
 			return FIFOCache.putKV(key, value);
 		case 1:
 			return optimizedLRUCache.putKV(key, value);
-			// return LRUCache.putKV(key, value);
 		case 2:
 			return instanceLFUCache.putKV(key, value);
 		default:
@@ -109,13 +106,11 @@ public class Storage {
 			break;
 		case 1:
 			optimizedLRUCache.clearCache();
-			// LRUCache.clearCache();
 			break;
 		case 2:
 			instanceLFUCache.clearCache();
 			break;
 		default:
-			// do nothing
 			break;
 		}
 	}
@@ -127,7 +122,6 @@ public class Storage {
 			return FIFOCache.inCache(key);
 		case 1:
 			return optimizedLRUCache.inCache(key);
-			// return LRUCache.inCache(key);
 		case 2:
 			return instanceLFUCache.inCache(key);
 		default:
@@ -147,7 +141,6 @@ public class Storage {
 			break;
 		case 1:
 			optimizedLRUCache.flushToDisk();
-			// LRUCache.flush_to_disk();
 			break;
 		case 2:
 			instanceLFUCache.flushToDisk();

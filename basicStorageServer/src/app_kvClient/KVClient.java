@@ -186,26 +186,23 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 	private void printHelp() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(PROMPT).append("M1 CLIENT HELP (Usage):\n");
-		sb.append(PROMPT);
-		sb.append("::::::::::::::::::::::::::::::::");
-		sb.append("::::::::::::::::::::::::::::::::\n");
-		sb.append(PROMPT).append("connect <host> <port>");
-		sb.append("\t establishes a connection to a server\n");
-		sb.append(PROMPT).append("put <key> <value | null>");
-		sb.append("\t\t put/update/delete a key-value pair \n");
-		sb.append(PROMPT).append("put <key>");
-		sb.append("\t\t get the value corresponding to the key \n");
-		sb.append(PROMPT).append("disconnect");
+		sb.append("\nCLIENT COMMANDS (Usage):");
+		sb.append("\n************************************************************************************\n");
+		sb.append("connect <host> <port>");
+		sb.append("\t\t establishes a connection to a server\n");
+		sb.append("put <key> <value | null>");
+		sb.append("\t put/update/delete a key-value pair \n");
+		sb.append("put <key>");
+		sb.append("\t\t\t get the value corresponding to the key \n");
+		sb.append("disconnect");
 		sb.append("\t\t\t disconnects from the server \n");
 
-		sb.append(PROMPT).append("logLevel");
-		sb.append("\t\t\t changes the logLevel \n");
-		sb.append(PROMPT).append("\t\t\t\t ");
-		sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n");
+		sb.append("logLevel");
+		sb.append("\t\t\t changes the logLevel. Available levels: {ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF}\n");
 
-		sb.append(PROMPT).append("quit ");
-		sb.append("\t\t\t exits the program");
+		sb.append("quit ");
+		sb.append("\t\t\t\t exits the program");
+		sb.append("\n************************************************************************************\n");
 		System.out.println(sb.toString());
 	}
 
