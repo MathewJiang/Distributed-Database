@@ -40,8 +40,8 @@ public class LFUCache {
 	}
 
 	public static void clearCache() {
-		map.clear();
-		queue.clear();
+		if (map != null) map.clear();
+		if (queue != null) queue.clear();
 	}
 
 	public static boolean inCache(String key) {

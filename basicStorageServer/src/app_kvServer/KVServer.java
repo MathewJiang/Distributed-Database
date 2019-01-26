@@ -7,6 +7,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.concurrent.locks.ReentrantLock;
 
 import logger.LogSetup;
 
@@ -31,6 +32,7 @@ public class KVServer extends Thread implements IKVServer {
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
 	ArrayList<Thread> threadCollection = new ArrayList<>();
+	public static ReentrantLock serverLock = new ReentrantLock();		//FIXME: better not set as static to improve performance
 	
 
 	/**
@@ -45,6 +47,8 @@ public class KVServer extends Thread implements IKVServer {
 	 */
 	public KVServer(int port) {
 		this.port = port;
+		this.cacheSize = -1;
+		this.strategy = CacheStrategy.None;
 	}
 
 	/**
@@ -94,20 +98,28 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public boolean inStorage(String key) {
+		serverLock.lock();
+		
 		try {
 			if (inCache(key)) {
+				serverLock.unlock();
 				return true;
 			}
 			Disk.getKV(key);
 		} catch (Exception e) {
+			serverLock.unlock();
 			return false;
 		}
+		serverLock.unlock();
 		return true;
 	}
 
 	@Override
 	public boolean inCache(String key) {
-		return Storage.inCache(key);
+		serverLock.lock();
+		boolean inCache = Storage.inCache(key);
+		serverLock.unlock();
+		return inCache;
 	}
 
 	@Override
@@ -116,7 +128,14 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
 
-		return Storage.getKV(key);
+		String value = null;
+		try {
+			serverLock.lock();
+			value = Storage.getKV(key);
+		} finally {
+			serverLock.unlock();
+		}
+		return value;
 	}
 
 	@Override
@@ -125,19 +144,28 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init(); // FIXME: should raise a warning/error
 		}
-		Storage.putKV(key, value);
+		
+		try {
+			serverLock.lock();
+			Storage.putKV(key, value);
+		} finally {
+			serverLock.unlock();
+		}
 	}
 
 	@Override
 	public void clearCache() {
+		serverLock.lock();
 		Storage.clearCache();
-
+		serverLock.unlock();
 	}
 
 	@Override
 	public void clearStorage() {
+		serverLock.lock();
 		Storage.clearCache();
 		Storage.clearStorage();
+		serverLock.unlock();
 	}
 
 	/**

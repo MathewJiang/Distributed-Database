@@ -30,5 +30,5 @@ public class AllTests {
 //		clientSuite.addTestSuite(AdditionalTest.class);
 		return clientSuite;
 	}
-	
+
 }
