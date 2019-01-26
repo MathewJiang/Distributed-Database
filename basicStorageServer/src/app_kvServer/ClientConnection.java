@@ -135,9 +135,6 @@ public class ClientConnection implements Runnable {
 		 * 
 		 * return Disk.putKV(key, value);
 		 */
-
-		System.out.println("[ClientConnection.java; handlePUT]key: " + key + " value: " + value);
-		
 		if (!Disk.if_init()) {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init(); // FIXME: should raise a warning/error

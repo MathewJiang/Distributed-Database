@@ -6,11 +6,10 @@ import app_kvServer.IKVServer.CacheStrategy;
 import shared.messages.KVMessage.StatusType;
 
 public class Storage {
+	// mode 0 FIFO, 1 LRU, 2 LFU
 	private static int mode = -1;
 	private static OptimizedLRUCache optimizedLRUCache = new OptimizedLRUCache();
 	private static LFUCache instanceLFUCache = new LFUCache();
-
-	// mode 0 FIFO, 1 LRU, 2 LFU
 
 	public static int getMode() {
 		return mode;
@@ -18,7 +17,6 @@ public class Storage {
 
 	public static void init(int cache_size) {
 		Disk.init();
-		// Disk.clearStorage();
 
 		switch (mode) {
 		case 0:
@@ -55,7 +53,6 @@ public class Storage {
 	}
 
 	public static String getKV(String key) throws Exception {
-
 		Disk.echo("getKV: key: " + key);
 
 		switch (mode) {
@@ -73,8 +70,6 @@ public class Storage {
 	}
 
 	public static StatusType putKV(String key, String value) throws IOException {
-		Disk.echo("DEBUG storage putKV key \"" + key + "\" value \"" + value
-				+ "\"");
 		if (key == null || key.equals("")) {
 			return StatusType.PUT_ERROR;
 		}

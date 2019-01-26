@@ -117,9 +117,6 @@ public class OptimizedLRUCache {
 			EntryNode prev;
 			EntryNode next;
 
-			public EntryNode() {
-			}
-
 			public EntryNode(String k, String v) {
 				key = k;
 				value = v;
@@ -131,8 +128,8 @@ public class OptimizedLRUCache {
 		private EntryNode tail;
 
 		public LinkedEntries() {
-			head = new EntryNode();
-			tail = new EntryNode();
+			head = new EntryNode("head", "dummy");
+			tail = new EntryNode("tail", "dummy");
 			head.next = tail;
 			tail.prev = head;
 		}

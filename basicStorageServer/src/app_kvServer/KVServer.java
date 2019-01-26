@@ -280,8 +280,6 @@ public class KVServer extends Thread implements IKVServer {
 			System.out.println("Usage: Server <port>!");
 			System.exit(1);
 		}
-		
-		System.out.println("[KVServer]Thread main termainates\n");
 	}
 	
 }

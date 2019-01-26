@@ -54,9 +54,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 		return backend;
 	}
 
-	/*
-	 * Copied from echoClient
-	 */
 	public void run() {
 		while (!stop) {
 			stdin = new BufferedReader(new InputStreamReader(System.in));
