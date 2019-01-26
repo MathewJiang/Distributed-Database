@@ -1,11 +1,17 @@
 package app_kvClient;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
+import java.util.Properties;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+import app_kvServer.KVServer;
 
 import shared.messages.CommMessage;
 
@@ -269,6 +275,12 @@ public class KVClient implements IKVClient, ClientSocketListener {
 		logger.error(PROMPT + "Error! " + error);
 	}
 
+	private static void setUpClientLogger() throws Exception {
+		Properties props = new Properties();
+		props.load(new FileInputStream("resources/config/client-log4j.properties"));
+		PropertyConfigurator.configure(props);
+	}
+
 	/**
 	 * Main entry point for the echo server application.
 	 * 
@@ -277,7 +289,17 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	 */
 	public static void main(String[] args) {
 		try {
-			new LogSetup("logs/client.log", Level.ALL);
+			// Hack shared ConnectionUtil interrupt between server and client
+			// code.
+			KVServer.serverOn = true;
+			try {
+				setUpClientLogger();
+			} catch (Exception e) {
+				System.out
+						.println("Unable to read from resources/config/client-log4j.properties");
+				System.out.println("Using default logger from skeleton code.");
+				new LogSetup("logs/client-default.log", Level.ALL);
+			}
 			KVClient app = new KVClient();
 			app.run();
 		} catch (IOException e) {

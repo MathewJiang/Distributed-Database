@@ -52,7 +52,6 @@ public class ConnectionUtil {
 			return null;					//server is down
 		}
 		
-//		byte read = (byte) input.read();
 		boolean reading = true;
 
 		while (read != 13 && reading) {/* carriage return */
