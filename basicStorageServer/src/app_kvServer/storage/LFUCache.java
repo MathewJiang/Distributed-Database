@@ -21,6 +21,7 @@ public class LFUCache {
 		public QueueEntry(String k, String v) {
 			key = k;
 			value = v;
+			count = BigInteger.ZERO;
 		}
 
 		@Override
