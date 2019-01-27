@@ -1,0 +1,21 @@
+2019-01-26 16:18:09,153 ERROR [main] root: m1-client> Error! Not connected!
+2019-01-26 16:18:26,943 INFO  [main] root: Connection established
+2019-01-26 16:18:29,532 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 1522515 }{ value: 512215 }'
+2019-01-26 16:18:29,585 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 1522515 }{ value: 512215 }'
+2019-01-26 16:18:32,641 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 21u34o4uo421oi4oui21 }{ value: 412oi4uoo421uio214 }'
+2019-01-26 16:18:32,643 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 21u34o4uo421oi4oui21 }{ value: 412oi4uoo421uio214 }'
+2019-01-26 16:18:33,937 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 4 }{ value: null }'
+2019-01-26 16:18:33,946 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_ERROR }{ key: null }{ value: null }'
+2019-01-26 16:18:37,729 INFO  [main] root: try to close connection ...
+2019-01-26 16:18:37,729 INFO  [main] root: tearing down the connection ...
+2019-01-26 16:18:37,729 INFO  [main] root: connection closed!
+2019-01-26 16:19:12,018 ERROR [main] root: m1-client> Error! Not connected!
+2019-01-26 16:19:45,523 ERROR [main] root: m1-client> Error! Not connected!
+2019-01-26 16:23:48,950 INFO  [main] root: Connection established
+2019-01-26 16:23:51,565 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: PUT }{ key: 9090 }{ value: 9090 }'
+2019-01-26 16:23:51,612 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 9090 }{ value: 9090 }'
+2019-01-26 16:23:53,439 INFO  [main] root: Send message:	 '{ CommMessage Object: { Status: GET }{ key: 9090 }{ value: null }'
+2019-01-26 16:23:53,441 INFO  [main] root: Receive message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 9090 }{ value: 9090 }'
+2019-01-26 16:24:02,215 INFO  [main] root: try to close connection ...
+2019-01-26 16:24:02,215 INFO  [main] root: tearing down the connection ...
+2019-01-26 16:24:02,215 INFO  [main] root: connection closed!

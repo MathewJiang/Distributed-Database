@@ -179,6 +179,9 @@ public class Disk {
 		File db = new File(db_dir);
 		String[] entries = db.list();
 		echo("Removing files under db_dir " + db_dir);
+		
+		if (entries == null) return;
+		
 		for(int i = 0; i < entries.length; i++){
 		    File curr = new File(db_dir + '/' + entries[i]);
 		    /*if(curr.isFile()) {

@@ -1,12 +1,11 @@
 package app_kvServer.storage;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.Queue;
 
 import shared.messages.KVMessage.StatusType;
 
@@ -15,7 +14,7 @@ import shared.messages.KVMessage.StatusType;
 public class LFUCache {
 
 	private class QueueEntry implements Comparable<QueueEntry> {
-		int count;
+		BigInteger count;
 		String key;
 		String value;
 
@@ -26,7 +25,7 @@ public class LFUCache {
 
 		@Override
 		public int compareTo(QueueEntry other) {
-			return Integer.compare(count, other.count);
+			return count.compareTo(other.count);
 		}
 	}
 
@@ -41,8 +40,8 @@ public class LFUCache {
 	}
 
 	public static void clearCache() {
-		map.clear();
-		queue.clear();
+		if (map != null) map.clear();
+		if (queue != null) queue.clear();
 	}
 
 	public static boolean inCache(String key) {
@@ -59,7 +58,7 @@ public class LFUCache {
 
 			// Increment and re-insert into heap.
 			queue.remove(entry);
-			entry.count++;
+			entry.count.add(BigInteger.ONE);
 			queue.add(entry);
 		} else {
 			String result = Disk.getKV(key);
@@ -74,7 +73,7 @@ public class LFUCache {
 
 			// Cache data retrieved from disk.
 			entry = new QueueEntry(key, result);
-			entry.count++;
+			entry.count.add(BigInteger.ONE);
 			queue.add(entry);
 			map.put(entry.key, entry);
 		}
@@ -101,7 +100,7 @@ public class LFUCache {
 		}
 
 		QueueEntry entry = new QueueEntry(key, value);
-		entry.count++;
+		entry.count.add(BigInteger.ONE);
 		queue.add(entry);
 
 		if (map.containsKey(key)) {

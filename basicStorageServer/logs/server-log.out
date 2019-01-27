@@ -1,0 +1,7 @@
+2019-01-26 16:23:41,606 INFO  [Thread-0] root: Initialize server ...
+2019-01-26 16:23:41,609 INFO  [Thread-0] root: Server listening on port: 5000
+2019-01-26 16:23:48,954 INFO  [Thread-0] root: Connected to localhost on port 38740
+2019-01-26 16:23:51,603 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: PUT }{ key: 9090 }{ value: 9090 }'
+2019-01-26 16:23:51,609 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: PUT_SUCCESS }{ key: 9090 }{ value: 9090 }'
+2019-01-26 16:23:53,439 INFO  [Thread-1] root: Receive message:	 '{ CommMessage Object: { Status: GET }{ key: 9090 }{ value: null }'
+2019-01-26 16:23:53,440 INFO  [Thread-1] root: Send message:	 '{ CommMessage Object: { Status: GET_SUCCESS }{ key: 9090 }{ value: 9090 }'

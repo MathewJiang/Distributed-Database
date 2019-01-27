@@ -6,18 +6,16 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.locks.ReentrantLock;
 
 import logger.LogSetup;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 
 import app_kvServer.storage.Disk;
-import app_kvServer.storage.FIFOCache;
-import app_kvServer.storage.LFUCache;
-import app_kvServer.storage.LRUCache;
 import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
@@ -34,6 +32,7 @@ public class KVServer extends Thread implements IKVServer {
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
 	ArrayList<Thread> threadCollection = new ArrayList<>();
+	public static ReentrantLock serverLock = new ReentrantLock();		//FIXME: better not set as static to improve performance
 	
 
 	/**
@@ -48,6 +47,8 @@ public class KVServer extends Thread implements IKVServer {
 	 */
 	public KVServer(int port) {
 		this.port = port;
+		this.cacheSize = -1;
+		this.strategy = CacheStrategy.None;
 	}
 
 	/**
@@ -97,20 +98,28 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public boolean inStorage(String key) {
+		serverLock.lock();
+		
 		try {
 			if (inCache(key)) {
+				serverLock.unlock();
 				return true;
 			}
 			Disk.getKV(key);
 		} catch (Exception e) {
+			serverLock.unlock();
 			return false;
 		}
+		serverLock.unlock();
 		return true;
 	}
 
 	@Override
 	public boolean inCache(String key) {
-		return Storage.inCache(key);
+		serverLock.lock();
+		boolean inCache = Storage.inCache(key);
+		serverLock.unlock();
+		return inCache;
 	}
 
 	@Override
@@ -119,7 +128,14 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
 
-		return Storage.getKV(key);
+		String value = null;
+		try {
+			serverLock.lock();
+			value = Storage.getKV(key);
+		} finally {
+			serverLock.unlock();
+		}
+		return value;
 	}
 
 	@Override
@@ -128,19 +144,28 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init(); // FIXME: should raise a warning/error
 		}
-		Storage.putKV(key, value);
+		
+		try {
+			serverLock.lock();
+			Storage.putKV(key, value);
+		} finally {
+			serverLock.unlock();
+		}
 	}
 
 	@Override
 	public void clearCache() {
+		serverLock.lock();
 		Storage.clearCache();
-
+		serverLock.unlock();
 	}
 
 	@Override
 	public void clearStorage() {
+		serverLock.lock();
 		Storage.clearCache();
 		Storage.clearStorage();
+		serverLock.unlock();
 	}
 
 	/**
@@ -173,12 +198,6 @@ public class KVServer extends Thread implements IKVServer {
 			}
 		}
 		serverOn = false;
-		
-		
-//		for (Thread t : threadCollection) {
-////			t.interrupt();
-//			t.stop();			//FIXME: this is potentially unsafe
-//		}
 		logger.info("Server stopped.");
 	}
 
@@ -236,6 +255,12 @@ public class KVServer extends Thread implements IKVServer {
 		return CacheStrategy.None;
 	}
 
+	private static void setUpServerLogger() throws Exception {
+		Properties props = new Properties();
+		props.load(new FileInputStream("resources/config/server-log4j.properties"));
+		PropertyConfigurator.configure(props);
+	}
+
 	/**
 	 * Main entry point for the echo server application.
 	 * 
@@ -244,7 +269,14 @@ public class KVServer extends Thread implements IKVServer {
 	 */
 	public static void main(String[] args) {
 		try {
-			new LogSetup("logs/server.log", Level.ALL);
+			try {
+				setUpServerLogger();
+			} catch (Exception e) {
+				System.out
+						.println("Unable to read from resources/config/server-log4j.properties");
+				System.out.println("Using default logger from skeleton code.");
+				new LogSetup("logs/server-default.log", Level.ALL);
+			}
 
 			if (args.length != 1) {
 				System.out.println("Error! Invalid number of arguments!");
@@ -276,8 +308,6 @@ public class KVServer extends Thread implements IKVServer {
 			System.out.println("Usage: Server <port>!");
 			System.exit(1);
 		}
-		
-		System.out.println("[KVServer]Thread main termainates\n");
 	}
 	
 }

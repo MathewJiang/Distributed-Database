@@ -52,7 +52,6 @@ public class ConnectionUtil {
 			return null;					//server is down
 		}
 		
-//		byte read = (byte) input.read();
 		boolean reading = true;
 
 		while (read != 13 && reading) {/* carriage return */
@@ -90,16 +89,31 @@ public class ConnectionUtil {
 				continue;
 			}
 			
-			while (KVServer.serverOn) {
-				if (input.available() > 0) {
+			// FIXME: 
+			// deal with cases where server shut down when client is sending a message
+			// in this case, we should still try to process the request
+			// only quit if only partial message has been sent
+			if (input.available() == 0) {
+				return null;
+			} else {
+				if (!KVServer.serverOn) {
+					return null;
+				} else {
 					read = (byte) input.read();
-					break;
 				}
 			}
 			
-			if (!KVServer.serverOn) {
-				return null;
-			}
+			
+//			while (KVServer.serverOn) {
+//				if (input.available() > 0) {
+//					read = (byte) input.read();
+//					break;
+//				}
+//			}
+//			
+//			if (!KVServer.serverOn) {
+//				return null;
+//			}
 			
 		}
 

@@ -25,7 +25,8 @@ public class LRUCache {
 	}
 	
 	public static void clearCache(){
-		hashmap.clear();
+		if (hashmap != null)
+			hashmap.clear();
 	}
 	
 	public static boolean inCache(String key) {

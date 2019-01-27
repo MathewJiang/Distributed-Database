@@ -6,11 +6,10 @@ import app_kvServer.IKVServer.CacheStrategy;
 import shared.messages.KVMessage.StatusType;
 
 public class Storage {
+	// mode 0 FIFO, 1 LRU, 2 LFU
 	private static int mode = -1;
 	private static OptimizedLRUCache optimizedLRUCache = new OptimizedLRUCache();
 	private static LFUCache instanceLFUCache = new LFUCache();
-
-	// mode 0 FIFO, 1 LRU, 2 LFU
 
 	public static int getMode() {
 		return mode;
@@ -18,14 +17,12 @@ public class Storage {
 
 	public static void init(int cache_size) {
 		Disk.init();
-		// Disk.clearStorage();
 
 		switch (mode) {
 		case 0:
 			FIFOCache.set_cache_size(cache_size);
 			break;
 		case 1:
-			// LRUCache.set_cache_size(cache_size);
 			optimizedLRUCache.setCacheSize(cache_size);
 			break;
 		case 2:
@@ -57,13 +54,10 @@ public class Storage {
 
 	public static String getKV(String key) throws Exception {
 
-		//Disk.echo("getKV: key: " + key);
-
 		switch (mode) {
 		case 0:
 			return FIFOCache.getKV(key);
 		case 1:
-			// String result = LRUCache.getKV(key);
 			return optimizedLRUCache.getKV(key);
 		case 2:
 			return instanceLFUCache.getKV(key);
@@ -74,7 +68,6 @@ public class Storage {
 	}
 
 	public static StatusType putKV(String key, String value) throws IOException {
-
 		if (key == null || key.equals("")) {
 			return StatusType.PUT_ERROR;
 		}
@@ -92,7 +85,6 @@ public class Storage {
 			return FIFOCache.putKV(key, value);
 		case 1:
 			return optimizedLRUCache.putKV(key, value);
-			// return LRUCache.putKV(key, value);
 		case 2:
 			return instanceLFUCache.putKV(key, value);
 		default:
@@ -112,13 +104,11 @@ public class Storage {
 			break;
 		case 1:
 			optimizedLRUCache.clearCache();
-			// LRUCache.clearCache();
 			break;
 		case 2:
 			instanceLFUCache.clearCache();
 			break;
 		default:
-			// do nothing
 			break;
 		}
 	}
@@ -130,7 +120,6 @@ public class Storage {
 			return FIFOCache.inCache(key);
 		case 1:
 			return optimizedLRUCache.inCache(key);
-			// return LRUCache.inCache(key);
 		case 2:
 			return instanceLFUCache.inCache(key);
 		default:
@@ -150,7 +139,6 @@ public class Storage {
 			break;
 		case 1:
 			optimizedLRUCache.flushToDisk();
-			// LRUCache.flush_to_disk();
 			break;
 		case 2:
 			instanceLFUCache.flushToDisk();

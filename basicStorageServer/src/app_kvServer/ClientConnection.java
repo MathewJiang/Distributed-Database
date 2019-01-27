@@ -69,8 +69,10 @@ public class ClientConnection implements Runnable {
 
 					if (op.equals(StatusType.PUT)) {
 						try {
+							KVServer.serverLock.lock();
 							StatusType status = handlePUT(key, value);
-
+							KVServer.serverLock.unlock();
+							
 							responseMsg.setKey(key);
 							responseMsg.setValue(value);
 							responseMsg.setStatus(status);
@@ -79,7 +81,9 @@ public class ClientConnection implements Runnable {
 						}
 					} else if (op.equals(StatusType.GET)) {
 						try {
+							KVServer.serverLock.lock();
 							value = handleGET(key);
+							KVServer.serverLock.unlock();
 
 							responseMsg.setKey(key);
 							responseMsg.setValue(value);
@@ -127,7 +131,7 @@ public class ClientConnection implements Runnable {
 	/*
 	 * handlePUT store the <key, value> pairs in persistent disk
 	 */
-	private StatusType handlePUT(String key, String value) throws IOException {
+	synchronized private StatusType handlePUT(String key, String value) throws IOException {
 		/*
 		 * if (!Disk.if_init()) { logger.
 		 * warn("[ClientConnection]handlePUT: DB not initalized during Server startup"
@@ -135,9 +139,6 @@ public class ClientConnection implements Runnable {
 		 * 
 		 * return Disk.putKV(key, value);
 		 */
-
-		System.out.println("[ClientConnection.java; handlePUT]key: " + key + " value: " + value);
-		
 		if (!Disk.if_init()) {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init(); // FIXME: should raise a warning/error
@@ -146,7 +147,7 @@ public class ClientConnection implements Runnable {
 		return Storage.putKV(key, value);
 	}
 
-	private String handleGET(String key) throws Exception {
+	synchronized private String handleGET(String key) throws Exception {
 		if (!Disk.if_init()) {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
