@@ -22,14 +22,17 @@ public class AdditionalTest extends TestCase {
 		path = System.getProperty("user.dir");
 
 		//testFuncFifoCache();
-		Disk.init();
+		/*Disk.init();
 		if(Disk.if_init()) {
 			Disk.clearStorage();
 		} else {
 			Disk.echo("Disk init failed");
 		}
 		
-		StorageTest.testFuncFifoCache();
+		StorageTest.testFuncFifoCache();*/
+		StorageTest.testDiskPerf_config();
+		StorageTest.StoragePerfTestSweep();
+		
 	}
 	
 }

@@ -49,6 +49,7 @@ public class Storage {
 			mode = 2;
 			break;
 		default:
+			mode = -1;
 			return false;
 		}
 		return true;
@@ -56,7 +57,7 @@ public class Storage {
 
 	public static String getKV(String key) throws Exception {
 
-		Disk.echo("getKV: key: " + key);
+		//Disk.echo("getKV: key: " + key);
 
 		switch (mode) {
 		case 0:
@@ -73,8 +74,7 @@ public class Storage {
 	}
 
 	public static StatusType putKV(String key, String value) throws IOException {
-		Disk.echo("DEBUG storage putKV key \"" + key + "\" value \"" + value
-				+ "\"");
+
 		if (key == null || key.equals("")) {
 			return StatusType.PUT_ERROR;
 		}
@@ -86,8 +86,6 @@ public class Storage {
 		if (key.length() > 20) {
 			return StatusType.PUT_ERROR;
 		}
-
-		Disk.echo(key);
 
 		switch (mode) {
 		case 0:
