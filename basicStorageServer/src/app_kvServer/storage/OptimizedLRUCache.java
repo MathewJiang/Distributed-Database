@@ -2,6 +2,7 @@ package app_kvServer.storage;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -16,16 +17,19 @@ public class OptimizedLRUCache {
 	static int cacheSize = -1;
 	static Map<String, EntryNode> map;
 	static LinkedEntries list;
-
+	static HashSet<String> dirty;
+	
 	public static void setCacheSize(int size) {
 		cacheSize = size;
 		map = new HashMap<String, EntryNode>();
 		list = new LinkedEntries();
+		dirty = new HashSet<String>();
 	}
 
 	public static void clearCache() {
-		map.clear();
-		list.clear();
+		if(map!=null) map.clear();
+		if(list!=null) list.clear();
+		if(dirty!=null) dirty.clear();
 	}
 
 	public static boolean inCache(String key) {
@@ -50,7 +54,10 @@ public class OptimizedLRUCache {
 				map.remove(removeNode.key);
 
 				// Write back to disk.
-				Disk.putKV(removeNode.key, removeNode.value);
+				if(dirty.contains(removeNode.key)) {
+					Disk.putKV(removeNode.key, removeNode.value);
+					dirty.remove(removeNode.key);
+				}
 			}
 
 			// Construct and cache new node.
@@ -73,13 +80,19 @@ public class OptimizedLRUCache {
 				return Disk.putKV(key, value);
 			}
 		}
+		
+		dirty.add(key);
+		
 		if (map.size() >= cacheSize) {
 			EntryNode toRemove = list.getHead();
 			map.remove(toRemove.key);
 			list.remove(toRemove);
 
 			// Need to write it to disk
-			Disk.putKV(toRemove.key, toRemove.value);
+			if(dirty.contains(toRemove.key)) {
+				Disk.putKV(toRemove.key, toRemove.value);
+				dirty.remove(toRemove.key);
+			}
 		}
 		EntryNode node = list.new EntryNode(key, value);
 		list.addTail(node);
@@ -104,6 +117,7 @@ public class OptimizedLRUCache {
 			Disk.floodKV(pair.getKey(), pair.getValue().value);
 			it.remove();
 		}
+		dirty.clear();
 		list.clear();
 	}
 	

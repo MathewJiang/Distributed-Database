@@ -3,6 +3,7 @@ package app_kvServer.storage;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -38,16 +39,18 @@ public class LFUCache {
 	static int cacheSize = -1;
 	static PriorityQueue<QueueEntry> queue;
 	static Map<String, QueueEntry> map;
-	
+	static HashSet<String> dirty;
 	public static void setCacheSize(int size) {
 		cacheSize = size;
 		map = new HashMap<String, QueueEntry>();
 		queue = new PriorityQueue<QueueEntry>();
+		dirty = new HashSet<String>();
 	}
 
 	public static void clearCache() {
 		if (map != null) map.clear();
 		if (queue != null) queue.clear();
+		if (dirty != null) dirty.clear();
 	}
 
 	public static boolean inCache(String key) {
@@ -74,7 +77,10 @@ public class LFUCache {
 				QueueEntry removeEntry = queue.remove();
 				map.remove(removeEntry.key);
 				// Need to write it to disk
-				Disk.putKV(removeEntry.key, removeEntry.value);
+				if(dirty.contains(removeEntry.key)) {
+					Disk.putKV(removeEntry.key, removeEntry.value);
+					dirty.remove(removeEntry.key);
+				}
 			}
 
 			// Cache data retrieved from disk.
@@ -97,12 +103,17 @@ public class LFUCache {
 			}
 		}
 
+		dirty.add(key);
+		
 		// Eviction
 		if (map.size() >= cacheSize) {
 			QueueEntry removeEntry = queue.remove();
 			map.remove(removeEntry.key);
 			// Need to write it to disk
-			Disk.putKV(removeEntry.key, removeEntry.value);
+			if(dirty.contains(removeEntry.key)) {
+				Disk.putKV(removeEntry.key, removeEntry.value);
+				dirty.remove(removeEntry.key);
+			}
 		}
 
 		QueueEntry entry = new QueueEntry(key, value);
@@ -119,7 +130,7 @@ public class LFUCache {
 			}
 		}
 		map.put(key, entry);
-		System.out.println(queue);
+		//System.out.println(queue);
 		return StatusType.PUT_SUCCESS;
 	}
 
@@ -132,5 +143,6 @@ public class LFUCache {
 			it.remove();
 		}
 		queue.clear();
+		dirty.clear();
 	}
 }

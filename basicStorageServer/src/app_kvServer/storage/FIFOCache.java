@@ -2,6 +2,7 @@ package app_kvServer.storage;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -13,11 +14,7 @@ public class FIFOCache {
 	static int cache_size = -1;
 	static Map<String, String> hashmap;
 	static Queue<String> queue;
-<<<<<<< Updated upstream
-	static Map<String, Integer> dirty;
-=======
-	static Map<String, Integer> dirty; 
->>>>>>> Stashed changes
+	static HashSet<String> dirty;
 	public static void echo(String line) {
 		System.out.println(line);
 	}
@@ -27,12 +24,14 @@ public class FIFOCache {
 		echo("cache set as: " + cache_size);
 		hashmap = new HashMap<String, String>();
 		queue = new LinkedList<>();
-		dirty = new HashMap<String, Integer>();
+		dirty = new HashSet<String>();
 	}
 	
 	public static void clearCache(){
 		if (hashmap != null)
 			hashmap.clear();
+		if (dirty != null)
+			dirty.clear();
 	}
 	
 	public static boolean inCache(String key) {
@@ -57,7 +56,7 @@ public class FIFOCache {
 			// we need to evict one from the key list
 			String removing_key = queue.remove();
 			// Need to write it to disk
-			if(dirty.containsKey(removing_key)) {
+			if(dirty.contains(removing_key)) {
 				Disk.putKV(removing_key, hashmap.get(removing_key));
 				dirty.remove(removing_key);
 			}
@@ -76,19 +75,21 @@ public class FIFOCache {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
 				queue.remove(key);
+				dirty.remove(key);
 				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);
 			}
 		}
 		
+		dirty.add(key);
 		
 		if(hashmap.size() >= cache_size) {
 			// well, should be only ==
 			// we need to evict one from the key list
 			String removing_key = queue.remove();
 			// Need to write it to disk
-			if(dirty.containsKey(removing_key)) {
+			if(dirty.contains(removing_key)) {
 				Disk.putKV(removing_key, hashmap.get(removing_key));
 				dirty.remove(removing_key);
 			}
@@ -98,11 +99,11 @@ public class FIFOCache {
 		queue.add(key);
 		
 		if(hashmap.containsKey(key)) {
+			
 			if(hashmap.get(key).equals(value)) {
 				return StatusType.PUT_SUCCESS; // if NOP needed, change this to new enum
 			} else {
 				hashmap.put(key,value);
-				dirty.put(key, value)
 				return StatusType.PUT_UPDATE;
 			}
 		} 
@@ -117,5 +118,6 @@ public class FIFOCache {
 	    	Disk.floodKV(pair.getKey(), pair.getValue());
 	        it.remove();
 	    }
+	    dirty.clear();
 	}
 }
