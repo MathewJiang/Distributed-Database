@@ -28,6 +28,11 @@ public class LFUCache {
 		public int compareTo(QueueEntry other) {
 			return count.compareTo(other.count);
 		}
+		
+		@Override
+		public String toString() {
+			return "{ count: " + count + ", key: " + key + ", value: " + value + " }";
+		}
 	}
 
 	static int cacheSize = -1;
@@ -59,7 +64,7 @@ public class LFUCache {
 
 			// Increment and re-insert into heap.
 			queue.remove(entry);
-			entry.count.add(BigInteger.ONE);
+			entry.count = entry.count.add(BigInteger.ONE);
 			queue.add(entry);
 		} else {
 			String result = Disk.getKV(key);
@@ -74,7 +79,7 @@ public class LFUCache {
 
 			// Cache data retrieved from disk.
 			entry = new QueueEntry(key, result);
-			entry.count.add(BigInteger.ONE);
+			entry.count = entry.count.add(BigInteger.ONE);
 			queue.add(entry);
 			map.put(entry.key, entry);
 		}
@@ -101,7 +106,7 @@ public class LFUCache {
 		}
 
 		QueueEntry entry = new QueueEntry(key, value);
-		entry.count.add(BigInteger.ONE);
+		entry.count = entry.count.add(BigInteger.ONE);
 		queue.add(entry);
 
 		if (map.containsKey(key)) {
@@ -114,6 +119,7 @@ public class LFUCache {
 			}
 		}
 		map.put(key, entry);
+		System.out.println(queue);
 		return StatusType.PUT_SUCCESS;
 	}
 
