@@ -177,7 +177,7 @@ public class StorageTest {
 			int i_rw = 0;
 			while(i_rw < 3) {	
 				int i_cache = 0;
-				StoragePerfTest(num_files, 0, rw_ratio[i_rw], CacheStrategy.None, cache_ratio[i_cache]);
+				ServerPerfTest(num_files, 0, rw_ratio[i_rw], CacheStrategy.None, cache_ratio[i_cache]);
 				while(i_cache < 4) {
 					int cache_size = (int) ((num_files - (num_files * rw_ratio[i_rw])) * cache_ratio[i_cache]);
 					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.FIFO, cache_ratio[i_cache]);
