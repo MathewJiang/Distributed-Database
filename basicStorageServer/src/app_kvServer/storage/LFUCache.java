@@ -32,7 +32,7 @@ public class LFUCache {
 	static int cacheSize = -1;
 	static PriorityQueue<QueueEntry> queue;
 	static Map<String, QueueEntry> map;
-
+	
 	public static void setCacheSize(int size) {
 		cacheSize = size;
 		map = new HashMap<String, QueueEntry>();

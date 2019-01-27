@@ -13,6 +13,11 @@ public class FIFOCache {
 	static int cache_size = -1;
 	static Map<String, String> hashmap;
 	static Queue<String> queue;
+<<<<<<< Updated upstream
+	static Map<String, Integer> dirty;
+=======
+	static Map<String, Integer> dirty; 
+>>>>>>> Stashed changes
 	public static void echo(String line) {
 		System.out.println(line);
 	}
@@ -22,6 +27,7 @@ public class FIFOCache {
 		echo("cache set as: " + cache_size);
 		hashmap = new HashMap<String, String>();
 		queue = new LinkedList<>();
+		dirty = new HashMap<String, Integer>();
 	}
 	
 	public static void clearCache(){
@@ -51,7 +57,10 @@ public class FIFOCache {
 			// we need to evict one from the key list
 			String removing_key = queue.remove();
 			// Need to write it to disk
-			Disk.putKV(removing_key, hashmap.get(removing_key));
+			if(dirty.containsKey(removing_key)) {
+				Disk.putKV(removing_key, hashmap.get(removing_key));
+				dirty.remove(removing_key);
+			}
 			// remove it from cache
 			hashmap.remove(removing_key);
 		}
@@ -79,7 +88,10 @@ public class FIFOCache {
 			// we need to evict one from the key list
 			String removing_key = queue.remove();
 			// Need to write it to disk
-			Disk.putKV(removing_key, hashmap.get(removing_key));
+			if(dirty.containsKey(removing_key)) {
+				Disk.putKV(removing_key, hashmap.get(removing_key));
+				dirty.remove(removing_key);
+			}
 			// remove it from cache
 			hashmap.remove(removing_key);
 		}
@@ -90,6 +102,7 @@ public class FIFOCache {
 				return StatusType.PUT_SUCCESS; // if NOP needed, change this to new enum
 			} else {
 				hashmap.put(key,value);
+				dirty.put(key, value)
 				return StatusType.PUT_UPDATE;
 			}
 		} 
