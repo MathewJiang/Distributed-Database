@@ -31,8 +31,8 @@ public class AdditionalTest extends TestCase {
 		
 		StorageTest.testFuncFifoCache();*/
 		StorageTest.testDiskPerf_config();
-		StorageTest.StoragePerfTestSweep();
-		
+		//StorageTest.StoragePerfTestSweep();
+		StorageTest.ServerPerfTestSweep();
 	}
 	
 }

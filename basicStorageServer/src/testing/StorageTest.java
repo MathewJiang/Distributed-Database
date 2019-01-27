@@ -15,6 +15,7 @@ import app_kvServer.storage.Disk;
 import app_kvServer.storage.FIFOCache;
 import app_kvServer.storage.Storage;
 import app_kvServer.IKVServer.CacheStrategy;
+import app_kvServer.KVServer;
 public class StorageTest {
 
 	@Test
@@ -150,7 +151,7 @@ public class StorageTest {
 	}
 
 	public static void StoragePerfTestSweep() {
-		for(int num_files = 100; num_files < 10000; num_files+=100) {
+		for(int num_files = 1000; num_files < 20000; num_files+=1000) {
 			double cache_ratio[] = {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0};
 			double rw_ratio[] = {0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9};
 			int i_rw = 0;
@@ -159,9 +160,29 @@ public class StorageTest {
 				StoragePerfTest(num_files, 0, rw_ratio[i_rw], CacheStrategy.None, cache_ratio[i_cache]);
 				while(i_cache < 10) {
 					int cache_size = (int) ((num_files - (num_files * rw_ratio[i_rw])) * cache_ratio[i_cache]);
-					StoragePerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.FIFO, cache_ratio[i_cache]);
-					StoragePerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.LRU, cache_ratio[i_cache]);
-					StoragePerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.LFU, cache_ratio[i_cache]);
+					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.FIFO, cache_ratio[i_cache]);
+					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.LRU, cache_ratio[i_cache]);
+					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.LFU, cache_ratio[i_cache]);
+					i_cache++;
+				}
+				i_rw++;
+			}
+		}
+	}
+	
+	public static void ServerPerfTestSweep() {
+		for(int num_files = 1000; num_files < 20000; num_files+=1000) {
+			double cache_ratio[] = {0.2,0.5,0.8,1.0};
+			double rw_ratio[] = {0.2,0.5,0.8};
+			int i_rw = 0;
+			while(i_rw < 3) {	
+				int i_cache = 0;
+				StoragePerfTest(num_files, 0, rw_ratio[i_rw], CacheStrategy.None, cache_ratio[i_cache]);
+				while(i_cache < 4) {
+					int cache_size = (int) ((num_files - (num_files * rw_ratio[i_rw])) * cache_ratio[i_cache]);
+					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.FIFO, cache_ratio[i_cache]);
+					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.LRU, cache_ratio[i_cache]);
+					ServerPerfTest(num_files, cache_size, rw_ratio[i_rw], CacheStrategy.LFU, cache_ratio[i_cache]);
 					i_cache++;
 				}
 				i_rw++;
@@ -214,7 +235,52 @@ public class StorageTest {
 		append(path+"StoragePerfTest.log"," time taken " + (endTime - startTime) + "\n");
 	}
 
-	
+public static void ServerPerfTest(int num_files, int cache_size, double ratio, CacheStrategy strategy, double cache_ratio) {
+		KVServer server = new KVServer(5000);
+		Storage.set_mode(strategy);
+		Storage.init(cache_size);
+		Storage.clearStorage();
+		int num_reads = (int) ((int)num_files * ratio);
+		int num_writes = num_files - num_reads;
+		Disk.echo("Setup test: # of reads: " + num_reads + " # of writes: " + num_writes + " cache_size: " + cache_size);
+		String strategy_str = "";
+		if(strategy == CacheStrategy.FIFO) {
+			strategy_str = "FIFO";
+		} else if(strategy == CacheStrategy.LRU) {
+			strategy_str = "LRU";
+		} else if(strategy == CacheStrategy.LFU) {
+			strategy_str = "LFU";
+		} else {
+			strategy_str = "None";
+		}
+		append(path+"ServerPerfTest.log","cache_ratio: " + cache_ratio  + " Strategy " + strategy_str + " total: " + num_files + " # of reads: " + num_reads + " # of writes: " + num_writes + " cache_size: " + cache_size + " ratio: "+ratio);
+		Disk.echo("Mode set " + strategy_str + " "+Storage.getMode());
+		final long startTime = System.currentTimeMillis();
+		for(int i = 0; i < num_writes; i++) {
+    		try {
+				server.putKV(((Integer)i).toString(), ((Integer)i).toString());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+		while(num_reads != 0) {
+			int randomNum = ThreadLocalRandom.current().nextInt(0, num_writes); // https://stackoverflow.com/questions/44379661/how-can-i-generate-a-random-number-within-a-certain-range-with-java
+			try {
+				server.getKV(((Integer)randomNum).toString());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			num_reads --;
+		}
+		final long endTime = System.currentTimeMillis();
+		
+		append(path+"ServerPerfTest.log"," time taken " + (endTime - startTime) + "\n");
+	}
 	
 	
 	
