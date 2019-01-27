@@ -283,9 +283,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	 *            contains the port number at args[0].
 	 */
 	public static void main(String[] args) {
-		// Hack
-		KVServer.serverOn = true;
-		
 		try {
 			// Hack shared ConnectionUtil interrupt between server and client
 			// code.

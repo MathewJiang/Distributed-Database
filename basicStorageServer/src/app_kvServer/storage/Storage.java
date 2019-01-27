@@ -46,6 +46,7 @@ public class Storage {
 			mode = 2;
 			break;
 		default:
+			mode = -1;
 			return false;
 		}
 		return true;
