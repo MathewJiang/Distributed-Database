@@ -10,55 +10,18 @@ import app_kvServer.IKVServer;
 import shared.ObjectFactory;
 import app_kvServer.KVServer;
 
-public class ConcurrencyTest extends TestCase {
-
-	private IKVClient client1 = null;
-	private IKVClient client2 = null;
-	private IKVClient client3 = null;
-	private IKVClient client4 = null;
-	private IKVClient client5 = null;
-	
+public class ConcurrencyTest extends TestCase {	
 	private IKVServer server1 = null;
 	private IKVServer server2 = null;
 	private IKVServer server3 = null;
-	private IKVServer server4 = null;
-	private IKVServer server5 = null;
 	
-	@Before
-	protected void setUp() {
-		try {
-			server1 = ObjectFactory.createKVServerObject(0, 5, "FIFO");
-			server2 = ObjectFactory.createKVServerObject(0, 5, "LRU");
-			server3 = ObjectFactory.createKVServerObject(0, 5, "LFU");
-			
-			((KVServer)server1).start();
-			((KVServer)server2).start();
-			((KVServer)server3).start();
-//			server4 = ObjectFactory.createKVServerObject(0, 5, "FIFO");
-//			server5 = ObjectFactory.createKVServerObject(0, 5, "FIFO");
-			
-			//start multiple client
-//			client1 = ObjectFactory.createKVClientObject();
-//			client2 = ObjectFactory.createKVClientObject();
-//			client3 = ObjectFactory.createKVClientObject();
-//			client4 = ObjectFactory.createKVClientObject();
-//			client5 = ObjectFactory.createKVClientObject();
-//			
-//			client1.newConnection("localhost", server1.getPort());
-//			client2.newConnection("localhost", server2.getPort());
-//			client3.newConnection("localhost", server3.getPort());
-//			client4.newConnection("localhost", server4.getPort());
-//			client5.newConnection("localhost", server5.getPort());
-			
-		} catch (Exception e){
-			e.printStackTrace();
-		}
-	}
 
 	@Test
 	public void testMultiPUTFIFO() {
-		assertNotNull(server1);
+		server1 = ObjectFactory.createKVServerObject(1025, 5, "FIFO");
+		((KVServer)server1).start();
 		
+		assertNotNull(server1);
 		server1.clearStorage();
 		
 		try {
@@ -238,7 +201,6 @@ public class ConcurrencyTest extends TestCase {
 						fail("[MultiClientTest]testMultiPUT, FIFO");
 					}
 				}
-				
 			});
 			
 			threadPool[0].start();
@@ -270,15 +232,17 @@ public class ConcurrencyTest extends TestCase {
 		} catch (Exception e) {
 			fail("[MultiClientTest]testMultiPUT: Exception");
 		} finally {
-			server1.close();
+//			server1.close();
 			server1.clearStorage();
 		}
-		
 	}
 	
 	
 	@Test
 	public void testMultiPUTLRU() {
+		server2 = ObjectFactory.createKVServerObject(1026, 5, "LRU");
+		((KVServer)server2).start();
+		
 		assertNotNull(server2);
 		server2.clearStorage();
 		
@@ -491,14 +455,18 @@ public class ConcurrencyTest extends TestCase {
 		} catch (Exception e) {
 			fail("[MultiClientTest]testMultiPUTLRU: Exception");
 		} finally {
-			server2.close();
+//			server2.close();
 			server2.clearStorage();
 		}
 		
 	}
 	
+	
 	@Test
 	public void testMultiPUTLFU() {
+		server3 = ObjectFactory.createKVServerObject(1027, 5, "LFU");
+		((KVServer)server3).start();
+		
 		assertNotNull(server3);
 		server3.clearStorage();
 		
@@ -711,7 +679,7 @@ public class ConcurrencyTest extends TestCase {
 		} catch (Exception e) {
 			fail("[MultiClientTest]testMultiPUTLRU: Exception");
 		} finally {
-			server3.close();
+//			server3.close();
 			server3.clearStorage();
 		}
 		

@@ -18,28 +18,31 @@ public class OptimizedLRUCache {
 	static Map<String, EntryNode> map;
 	static LinkedEntries list;
 	static HashSet<String> dirty;
-	
-	public static void setCacheSize(int size) {
+
+	public void setCacheSize(int size) {
 		cacheSize = size;
 		map = new HashMap<String, EntryNode>();
 		list = new LinkedEntries();
 		dirty = new HashSet<String>();
 	}
 
-	public static void clearCache() {
-		if(map!=null) map.clear();
-		if(list!=null) list.clear();
-		if(dirty!=null) dirty.clear();
+	public void clearCache() {
+		if (map != null)
+			map.clear();
+		if (list != null)
+			list.clear();
+		if (dirty != null)
+			dirty.clear();
 	}
 
-	public static boolean inCache(String key) {
+	public boolean inCache(String key) {
 		if (map.containsKey(key)) {
 			return true;
 		}
 		return false;
 	}
 
-	public static String getKV(String key) throws Exception {
+	public String getKV(String key) throws Exception {
 		EntryNode node;
 		if (map.containsKey(key)) {
 			node = map.get(key);
@@ -54,7 +57,7 @@ public class OptimizedLRUCache {
 				map.remove(removeNode.key);
 
 				// Write back to disk.
-				if(dirty.contains(removeNode.key)) {
+				if (dirty.contains(removeNode.key)) {
 					Disk.putKV(removeNode.key, removeNode.value);
 					dirty.remove(removeNode.key);
 				}
@@ -69,7 +72,7 @@ public class OptimizedLRUCache {
 		return node.value;
 	}
 
-	public static StatusType putKV(String key, String value) throws IOException {
+	public StatusType putKV(String key, String value) throws IOException {
 		if (value == null || value.equals("")) {
 			if (map.containsKey(key)) {
 				EntryNode toRemove = map.get(key);
@@ -80,16 +83,16 @@ public class OptimizedLRUCache {
 				return Disk.putKV(key, value);
 			}
 		}
-		
+
 		dirty.add(key);
-		
+
 		if (map.size() >= cacheSize) {
 			EntryNode toRemove = list.getHead();
 			map.remove(toRemove.key);
 			list.remove(toRemove);
 
 			// Need to write it to disk
-			if(dirty.contains(toRemove.key)) {
+			if (dirty.contains(toRemove.key)) {
 				Disk.putKV(toRemove.key, toRemove.value);
 				dirty.remove(toRemove.key);
 			}
@@ -109,21 +112,20 @@ public class OptimizedLRUCache {
 		return StatusType.PUT_SUCCESS;
 	}
 
-	public static void flushToDisk() throws IOException {
+	public void flushToDisk() throws IOException {
 		Iterator<Map.Entry<String, EntryNode>> it = map.entrySet().iterator();
 		while (it.hasNext()) {
-			Map.Entry<String, EntryNode> pair = (Map.Entry<String, EntryNode>) it
-					.next();
+			Map.Entry<String, EntryNode> pair = (Map.Entry<String, EntryNode>) it.next();
 			Disk.floodKV(pair.getKey(), pair.getValue().value);
 			it.remove();
 		}
 		dirty.clear();
 		list.clear();
 	}
-	
+
 	// TODO: Un-static this class after storage refactoring.
 	public static class LinkedEntries {
-		
+
 		// Node of a double linked list.
 		public class EntryNode {
 			String key;
@@ -138,7 +140,7 @@ public class OptimizedLRUCache {
 		}
 
 		private EntryNode head;
-		
+
 		private EntryNode tail;
 
 		public LinkedEntries() {

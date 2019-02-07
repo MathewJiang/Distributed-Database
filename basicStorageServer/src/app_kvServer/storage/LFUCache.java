@@ -29,7 +29,7 @@ public class LFUCache {
 		public int compareTo(QueueEntry other) {
 			return count.compareTo(other.count);
 		}
-		
+
 		@Override
 		public String toString() {
 			return "{ count: " + count + ", key: " + key + ", value: " + value + " }";
@@ -40,20 +40,24 @@ public class LFUCache {
 	static PriorityQueue<QueueEntry> queue;
 	static Map<String, QueueEntry> map;
 	static HashSet<String> dirty;
-	public static void setCacheSize(int size) {
+
+	public void setCacheSize(int size) {
 		cacheSize = size;
 		map = new HashMap<String, QueueEntry>();
 		queue = new PriorityQueue<QueueEntry>();
 		dirty = new HashSet<String>();
 	}
 
-	public static void clearCache() {
-		if (map != null) map.clear();
-		if (queue != null) queue.clear();
-		if (dirty != null) dirty.clear();
+	public void clearCache() {
+		if (map != null)
+			map.clear();
+		if (queue != null)
+			queue.clear();
+		if (dirty != null)
+			dirty.clear();
 	}
 
-	public static boolean inCache(String key) {
+	public boolean inCache(String key) {
 		if (map.containsKey(key)) {
 			return true;
 		}
@@ -77,7 +81,7 @@ public class LFUCache {
 				QueueEntry removeEntry = queue.remove();
 				map.remove(removeEntry.key);
 				// Need to write it to disk
-				if(dirty.contains(removeEntry.key)) {
+				if (dirty.contains(removeEntry.key)) {
 					Disk.putKV(removeEntry.key, removeEntry.value);
 					dirty.remove(removeEntry.key);
 				}
@@ -104,13 +108,13 @@ public class LFUCache {
 		}
 
 		dirty.add(key);
-		
+
 		// Eviction
 		if (map.size() >= cacheSize) {
 			QueueEntry removeEntry = queue.remove();
 			map.remove(removeEntry.key);
 			// Need to write it to disk
-			if(dirty.contains(removeEntry.key)) {
+			if (dirty.contains(removeEntry.key)) {
 				Disk.putKV(removeEntry.key, removeEntry.value);
 				dirty.remove(removeEntry.key);
 			}
@@ -130,15 +134,14 @@ public class LFUCache {
 			}
 		}
 		map.put(key, entry);
-		//System.out.println(queue);
+		// System.out.println(queue);
 		return StatusType.PUT_SUCCESS;
 	}
 
-	public static void flushToDisk() throws IOException {
+	public void flushToDisk() throws IOException {
 		Iterator<Map.Entry<String, QueueEntry>> it = map.entrySet().iterator();
 		while (it.hasNext()) {
-			Map.Entry<String, QueueEntry> pair = (Map.Entry<String, QueueEntry>) it
-					.next();
+			Map.Entry<String, QueueEntry> pair = (Map.Entry<String, QueueEntry>) it.next();
 			Disk.floodKV(pair.getKey(), pair.getValue().value);
 			it.remove();
 		}
