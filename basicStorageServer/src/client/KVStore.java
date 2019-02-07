@@ -166,6 +166,8 @@ public class KVStore extends Thread implements KVCommInterface {
 
 			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
 					.getInputStream());
+			
+			System.out.println(latestMsg.getValue());
 			return latestMsg;
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
