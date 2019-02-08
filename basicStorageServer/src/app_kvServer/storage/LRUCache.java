@@ -69,6 +69,7 @@ public class LRUCache {
 			if(hashmap.containsKey(key)) {
 				hashmap.remove(key);
 				queue.remove(key);
+				Disk.putKV(key, value);
 				echo("DEBUG in hashmap putKV key " + key+" value " + value);
 				return StatusType.DELETE_SUCCESS;
 			} else {

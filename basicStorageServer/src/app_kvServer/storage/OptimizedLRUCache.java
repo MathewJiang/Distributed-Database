@@ -78,6 +78,7 @@ public class OptimizedLRUCache {
 				EntryNode toRemove = map.get(key);
 				map.remove(toRemove.key);
 				list.remove(toRemove);
+				Disk.putKV(key, value);
 				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);

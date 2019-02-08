@@ -77,7 +77,8 @@ public class Disk {
 	
 	public static StatusType putKV(String key, String value) throws IOException{
 		if (key == null || key.equals("")) {
-			System.out.println("!!!!!!!!!!!!!!!!!![debug/put]key is NULL!");
+			System.out.println("[debug]Disk.java: putKV: key is NULL!");
+			throw new IOException();
 		}
 		String dest = db_dir + "/" + key;
 		File search = new File(dest);

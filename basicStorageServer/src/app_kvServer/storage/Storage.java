@@ -53,6 +53,10 @@ public class Storage {
 	}
 
 	public static String getKV(String key) throws Exception {
+		
+		if (key.length() > 20) {
+			throw new Exception();
+		}
 
 		switch (mode) {
 		case 0:

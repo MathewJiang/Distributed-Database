@@ -76,6 +76,7 @@ public class FIFOCache {
 				hashmap.remove(key);
 				queue.remove(key);
 				dirty.remove(key);
+				Disk.putKV(key, value);
 				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);

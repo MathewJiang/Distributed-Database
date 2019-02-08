@@ -101,6 +101,7 @@ public class LFUCache {
 			if (map.containsKey(key)) {
 				QueueEntry removed = map.remove(key);
 				queue.remove(removed);
+				Disk.putKV(key, value);
 				return StatusType.DELETE_SUCCESS;
 			} else {
 				return Disk.putKV(key, value);
