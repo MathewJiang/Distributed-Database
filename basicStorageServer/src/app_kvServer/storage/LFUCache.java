@@ -65,6 +65,8 @@ public class LFUCache {
 	}
 
 	public String getKV(String key) throws Exception {
+		System.out.println(map);
+		System.out.println(queue);
 		QueueEntry entry;
 		if (map.containsKey(key)) {
 			entry = map.get(key);
@@ -97,6 +99,8 @@ public class LFUCache {
 	}
 
 	public StatusType putKV(String key, String value) throws IOException {
+		System.out.println(map);
+		System.out.println(queue);
 		if (value == null || value.equals("")) {
 			if (map.containsKey(key)) {
 				QueueEntry removed = map.remove(key);

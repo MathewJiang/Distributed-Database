@@ -1,5 +1,7 @@
 package shared.messages;
 
+import shared.InfraMetadata;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
@@ -10,6 +12,7 @@ public class CommMessage implements KVMessage {
 	private StatusType status;
 	private String key;
 	private String value;
+	private InfraMetadata infraMetadata;
 
 	public CommMessage() {
 		this.status = null;
@@ -80,5 +83,13 @@ public class CommMessage implements KVMessage {
 		id.append(" }");
 		
 		return id.toString();
+	}
+
+	public InfraMetadata getInfraMetadata() {
+		return infraMetadata;
+	}
+
+	public void setInfraMetadata(InfraMetadata infraMetadata) {
+		this.infraMetadata = infraMetadata;
 	}
 }

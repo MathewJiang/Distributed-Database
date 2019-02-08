@@ -1,5 +1,6 @@
 package shared.messages;
 
+import shared.InfraMetadata;
 import shared.messages.KVMessage.StatusType;
 
 public class CommMessageBuilder {
@@ -17,6 +18,11 @@ public class CommMessageBuilder {
 	
 	public CommMessageBuilder setValue(String value) {
 		msg.setValue(value);
+		return this;
+	}
+	
+	public CommMessageBuilder setInfraMetadata(InfraMetadata data) {
+		msg.setInfraMetadata(data);
 		return this;
 	}
 	

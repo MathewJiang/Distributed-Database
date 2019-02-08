@@ -94,6 +94,7 @@ public class Disk {
 		
 
 		if(value == null || value.equals("")) {
+			search.delete();
 			if (foundEntry) {
 				File delete = new File(dest);
 				delete.delete();
