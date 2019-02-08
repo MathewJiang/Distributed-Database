@@ -50,6 +50,7 @@ public class ConnectionUtil {
 		
 		if (!KVServer.serverOn) {
 			return null;					//server is down
+											//this also makes the JUnit: InteractiveTest fail
 		}
 		
 		boolean reading = true;
