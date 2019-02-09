@@ -15,6 +15,13 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import shared.ConnectionUtil;
+import shared.InfraMetadata;
+import shared.InfraMetadata.ServiceLocation;
+import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
+import shared.messages.KVMessage.StatusType;
+
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 
@@ -23,17 +30,25 @@ public class KVServer extends Thread implements IKVServer {
 
 	private static String configPath = "resources/config/config.properties";
 
+	private InfraMetadata cluster = null;
+	private ServiceLocation serverMetadata = null;
+
 	private int port;
 	private int cacheSize;
 	private CacheStrategy strategy;
 	private ServerSocket serverSocket;
 	private boolean running;
-	
+
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
 	ArrayList<Thread> threadCollection = new ArrayList<>();
-	public static ReentrantLock serverLock = new ReentrantLock();		//FIXME: better not set as static to improve performance
-	
+	public static ReentrantLock serverLock = new ReentrantLock(); // FIXME:
+																	// better
+																	// not set
+																	// as static
+																	// to
+																	// improve
+																	// performance
 
 	/**
 	 * Constructs a (Echo-) Server object which listens to connection attempts
@@ -45,8 +60,7 @@ public class KVServer extends Thread implements IKVServer {
 	 *            should reside in the range of dynamic ports, i.e 49152 -
 	 *            65535.
 	 */
-	public KVServer(int port) {
-		this.port = port;
+	public KVServer() {
 		this.cacheSize = -1;
 		this.strategy = CacheStrategy.None;
 	}
@@ -99,7 +113,7 @@ public class KVServer extends Thread implements IKVServer {
 	@Override
 	public boolean inStorage(String key) {
 		serverLock.lock();
-		
+
 		try {
 			if (inCache(key)) {
 				serverLock.unlock();
@@ -144,7 +158,7 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
 			Disk.init(); // FIXME: should raise a warning/error
 		}
-		
+
 		try {
 			serverLock.lock();
 			Storage.putKV(key, value);
@@ -175,6 +189,9 @@ public class KVServer extends Thread implements IKVServer {
 	@Override
 	public void run() {
 		running = initializeServer();
+
+		// Initialize storage units.
+		Disk.setDbName("/" + this.serverMetadata.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
@@ -187,7 +204,7 @@ public class KVServer extends Thread implements IKVServer {
 					Thread newConnection = new Thread(connection);
 					threadCollection.add(newConnection);
 					newConnection.start();
-					
+
 					logger.info("Connected to "
 							+ client.getInetAddress().getHostName()
 							+ " on port " + client.getPort());
@@ -257,7 +274,8 @@ public class KVServer extends Thread implements IKVServer {
 
 	private static void setUpServerLogger() throws Exception {
 		Properties props = new Properties();
-		props.load(new FileInputStream("resources/config/server-log4j.properties"));
+		props.load(new FileInputStream(
+				"resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
 
@@ -278,15 +296,40 @@ public class KVServer extends Thread implements IKVServer {
 				new LogSetup("logs/server-default.log", Level.ALL);
 			}
 
-			if (args.length != 1) {
+			if (args.length > 2) {
 				System.out.println("Error! Invalid number of arguments!");
 				System.out.println("Usage: Server <port>!");
 			} else {
-				int port = Integer.parseInt(args[0]);
-				KVServer server = new KVServer(port);
+				// CHANGE THIS AFTER ECS AVAILABLE
+				if (false) {
+					// Request ECS for cluster metadata.
+					CommMessage clusterRequest = new CommMessageBuilder()
+							.setStatus(StatusType.GET).setKey("METADATA")
+							.build();
+					ConnectionUtil conn = new ConnectionUtil();
+					Socket ecsSocket = new Socket("localhost",
+							Integer.parseInt(args[0]));
+					conn.sendCommMessage(ecsSocket.getOutputStream(),
+							clusterRequest);
+					CommMessage clusterInfo = conn.receiveCommMessage(ecsSocket
+							.getInputStream());
+					ecsSocket.close();
+				}
+				// Coordinate and initialize server within cluster metadata.
+				KVServer server = new KVServer();
+				server.cluster = new InfraMetadata();// clusterInfo.getInfraMetadata();
+														// CHANGE THIS AFTER ECS
+														// AVAILABLE
+				server.cluster.getServerLocations().add(
+						new ServiceLocation(args[1], "127.0.0.1", 5000));
+				server.serverMetadata = server.cluster
+						.locationOfService(args[1]);
+				server.port = server.serverMetadata.port;
 
-				System.out.println("Working Directory = "
-						+ System.getProperty("user.dir"));
+				System.out.println("Service: "
+						+ server.serverMetadata.serviceName
+						+ " will listen on " + server.serverMetadata.host + ":"
+						+ server.serverMetadata.port);
 
 				// Read configuration file for cache & server configs.
 				Properties props = new Properties();
@@ -309,5 +352,4 @@ public class KVServer extends Thread implements IKVServer {
 			System.exit(1);
 		}
 	}
-	
 }

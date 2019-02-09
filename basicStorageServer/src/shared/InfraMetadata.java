@@ -11,10 +11,7 @@ import java.util.List;
  * Class that holds basic infrastructure metadata of the cluster. Can be parsed
  * from a properties file of the following format:
  * 
- * cluster.properties 
- * 0: ecs:host:port 
- * 1: server1:host:port 
- * 2: server2:host:port
+ * cluster.properties 0: ecs:host:port 1: server1:host:port 2: server2:host:port
  * ...
  */
 public class InfraMetadata {
@@ -95,6 +92,14 @@ public class InfraMetadata {
 
 	public List<ServiceLocation> getServerLocations() {
 		return serverLocations;
+	}
+
+	public ServiceLocation locationOfService(String serverName) {
+		for (ServiceLocation location : serverLocations) {
+			if (location.serviceName.equals(serverName))
+				return location;
+		}
+		return null;
 	}
 
 	public void setEcsLocation(List<ServiceLocation> serverLocations) {

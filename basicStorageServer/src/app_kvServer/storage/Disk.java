@@ -12,26 +12,32 @@ import shared.messages.KVMessage.StatusType;
 public class Disk {
 	static String path = "";
 	static String db_dir = "";
+	static String DB_NAME = "kvdb";
+	
+	public static void setDbName(String str) {
+		DB_NAME = str;
+	}
+
 	public static void echo(String line) {
 		System.out.println(line);
 	}
-	
+
 	public static boolean if_init() {
-		if(db_dir=="") {
+		if (db_dir == "") {
 			return false;
 		}
 		return true;
 	}
-	
+
 	public static void test_and_set_db() {
 		// mkdir at local dir if not being created
-		db_dir = path + "/kvdb";
+		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
-		if(db.exists()) {
+		if (db.exists()) {
 			echo("db exists");
 		} else {
 			echo("db does not exist, making a new db");
-			if(db.mkdir()) {
+			if (db.mkdir()) {
 				echo("Mkdir sucess");
 			} else {
 				echo("Mkdir failed");
@@ -39,61 +45,60 @@ public class Disk {
 		}
 		// this point, we have a db dir initialized
 	}
-	
+
 	public static String getKV(String key) throws Exception {
-		
-		String src = db_dir+"/"+key;
+
+		String src = db_dir + "/" + key;
 		File search = new File(src);
-		if(search.exists()) {
+		if (search.exists()) {
 			// we have this key
-			
+
 		} else {
 			// we don't have this key
 			echo("Trying to search");
 			throw new Exception();
 		}
-		
+
 		FileReader fr = new FileReader(src);
 		BufferedReader fh = new BufferedReader(fr);
-		
+
 		String result = "";
 		String line;
-		while((line = fh.readLine()) != null){
+		while ((line = fh.readLine()) != null) {
 			result += line;
 		}
 		return result;
 	}
-	
-	public static boolean inStorage(String key){
-		
-		String src = db_dir+"/"+key;
+
+	public static boolean inStorage(String key) {
+
+		String src = db_dir + "/" + key;
 		File search = new File(src);
-		if(search.exists()) {
+		if (search.exists()) {
 			return true;
 		} else {
 			return false;
 		}
 	}
-	
-	public static StatusType putKV(String key, String value) throws IOException{
+
+	public static StatusType putKV(String key, String value) throws IOException {
 		if (key == null || key.equals("")) {
 			System.out.println("[debug]Disk.java: putKV: key is NULL!");
 			throw new IOException();
 		}
 		String dest = db_dir + "/" + key;
 		File search = new File(dest);
-		boolean foundEntry  = false;
-		
-		if(search.exists()) {
+		boolean foundEntry = false;
+
+		if (search.exists()) {
 			// we have this key, put update the value
 			foundEntry = true;
 		} else {
 			// we don't have this key, put add the file
 			search.createNewFile();
 		}
-		
 
-		if(value == null || value.equals("")) {
+		if (value == null || value.equals("")) {
 			search.delete();
 			if (foundEntry) {
 				File delete = new File(dest);
@@ -103,27 +108,27 @@ public class Disk {
 				return StatusType.DELETE_ERROR;
 			}
 		}
-		
+
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
-			
+
 			key_file.println(value);
 			key_file.close();
-			
+
 			if (foundEntry) {
-				
+
 				FileReader fr = new FileReader(dest);
 				BufferedReader fh = new BufferedReader(fr);
-				
+
 				String result = "";
 				String line;
-				while((line = fh.readLine()) != null){
+				while ((line = fh.readLine()) != null) {
 					result += line;
 				}
-				
+
 				fh.close();
 				fr.close();
-				
+
 				if (result.equals(value)) {
 					return StatusType.PUT_SUCCESS;
 				} else {
@@ -138,26 +143,26 @@ public class Disk {
 			return StatusType.PUT_ERROR;
 		}
 	}
-	
-	public static void floodKV(String key, String value) throws IOException{
+
+	public static void floodKV(String key, String value) throws IOException {
 		if (key == null || key.equals("")) {
 			System.out.println("!!!!!!!!!!!!!!!!!![debug/flood]key is NULL!");
 		}
 		String dest = db_dir + "/" + key;
 		File search = new File(dest);
-		boolean foundEntry  = false;
-		
-		if(search.exists()) {
+		boolean foundEntry = false;
+
+		if (search.exists()) {
 			// we have this key, put update the value
 			foundEntry = true;
 		} else {
 			// we don't have this key, put add the file
 			search.createNewFile();
 		}
-		
+
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
-			
+
 			key_file.println(value);
 			key_file.close();
 
@@ -167,32 +172,32 @@ public class Disk {
 			return;
 		}
 	}
-	
+
 	public static int key_count() {
-		db_dir = path + "/kvdb";
+		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
 		String[] entries = db.list();
 		return entries.length;
 	}
-	
-	public static void clearStorage(){
-		db_dir = path + "/kvdb";
+
+	public static void clearStorage() {
+		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
 		String[] entries = db.list();
 		echo("Removing files under db_dir " + db_dir);
-		
-		if (entries == null) return;
-		
-		for(int i = 0; i < entries.length; i++){
-		    File curr = new File(db_dir + '/' + entries[i]);
-		    /*if(curr.isFile()) {
-		    	echo(curr.getAbsolutePath() + " is file");
-		    } else {
-		    	echo(curr.getAbsolutePath() + " is not file");
-		    }*/
-		    curr.delete();
+
+		if (entries == null)
+			return;
+
+		for (int i = 0; i < entries.length; i++) {
+			File curr = new File(db_dir + '/' + entries[i]);
+			/*
+			 * if(curr.isFile()) { echo(curr.getAbsolutePath() + " is file"); }
+			 * else { echo(curr.getAbsolutePath() + " is not file"); }
+			 */
+			curr.delete();
 		}
-		//echo("Removed files under db_dir");
+		// echo("Removed files under db_dir");
 	}
 
 	public static void init() {
@@ -201,7 +206,5 @@ public class Disk {
 		echo(pwd_debug_info);
 		test_and_set_db();
 	}
-	
-
 
 }
