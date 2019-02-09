@@ -1,6 +1,7 @@
 package app_kvServer;
 
 import java.io.FileInputStream;
+
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
@@ -8,6 +9,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.UUID;
 
 import logger.LogSetup;
 
@@ -279,13 +281,33 @@ public class KVServer extends Thread implements IKVServer {
 		PropertyConfigurator.configure(props);
 	}
 
+	public static KVServer initServerFromECS(String[] args) throws Exception {
+		// Request ECS for cluster metadata.
+		CommMessage clusterRequest = new CommMessageBuilder()
+				.setStatus(StatusType.GET).setKey("METADATA").build();
+		ConnectionUtil conn = new ConnectionUtil();
+		Socket ecsSocket = new Socket("localhost", Integer.parseInt(args[0]));
+		conn.sendCommMessage(ecsSocket.getOutputStream(), clusterRequest);
+		CommMessage clusterInfo = conn.receiveCommMessage(ecsSocket
+				.getInputStream());
+		ecsSocket.close();
+
+		// Coordinate and initialize server within cluster metadata.
+		KVServer server = new KVServer();
+		server.cluster = clusterInfo.getInfraMetadata();
+		server.serverMetadata = server.cluster.locationOfService(args[1]);
+		server.port = server.serverMetadata.port;
+
+		return server;
+	}
+
 	/**
 	 * Main entry point for the echo server application.
 	 * 
 	 * @param args
 	 *            contains the port number at args[0].
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		try {
 			try {
 				setUpServerLogger();
@@ -299,49 +321,35 @@ public class KVServer extends Thread implements IKVServer {
 			if (args.length > 2) {
 				System.out.println("Error! Invalid number of arguments!");
 				System.out.println("Usage: Server <port>!");
-			} else {
-				// CHANGE THIS AFTER ECS AVAILABLE
-				if (false) {
-					// Request ECS for cluster metadata.
-					CommMessage clusterRequest = new CommMessageBuilder()
-							.setStatus(StatusType.GET).setKey("METADATA")
-							.build();
-					ConnectionUtil conn = new ConnectionUtil();
-					Socket ecsSocket = new Socket("localhost",
-							Integer.parseInt(args[0]));
-					conn.sendCommMessage(ecsSocket.getOutputStream(),
-							clusterRequest);
-					CommMessage clusterInfo = conn.receiveCommMessage(ecsSocket
-							.getInputStream());
-					ecsSocket.close();
-				}
-				// Coordinate and initialize server within cluster metadata.
-				KVServer server = new KVServer();
-				server.cluster = new InfraMetadata();// clusterInfo.getInfraMetadata();
-														// CHANGE THIS AFTER ECS
-														// AVAILABLE
-				server.cluster.getServerLocations().add(
-						new ServiceLocation(args[1], "127.0.0.1", 5000));
-				server.serverMetadata = server.cluster
-						.locationOfService(args[1]);
-				server.port = server.serverMetadata.port;
-
-				System.out.println("Service: "
-						+ server.serverMetadata.serviceName
-						+ " will listen on " + server.serverMetadata.host + ":"
-						+ server.serverMetadata.port);
-
-				// Read configuration file for cache & server configs.
-				Properties props = new Properties();
-				props.load(new FileInputStream(configPath));
-				server.cacheSize = Integer.parseInt(props
-						.getProperty("cache_limit"));
-				server.strategy = parseCacheStrategy(props
-						.getProperty("cache_policy"));
-
-				// Start server.
-				server.start();
+				return;
 			}
+			KVServer server = null;
+			if (args.length == 2) {
+				server = initServerFromECS(args);
+			} else {
+				// No ECS startup. Mock cluster metadata.
+				server = new KVServer();
+				server.port = Integer.parseInt(args[0]);
+				server.serverMetadata = new ServiceLocation(UUID.randomUUID()
+						.toString(), "127.0.0.1", server.port);
+				server.cluster = new InfraMetadata();// clusterInfo.getInfraMetadata();
+				server.cluster.getServerLocations().add(server.serverMetadata);
+			}
+
+			System.out.println("Service: " + server.serverMetadata.serviceName
+					+ " will listen on " + server.serverMetadata.host + ":"
+					+ server.serverMetadata.port);
+
+			// Read configuration file for cache & server configs.
+			Properties props = new Properties();
+			props.load(new FileInputStream(configPath));
+			server.cacheSize = Integer.parseInt(props
+					.getProperty("cache_limit"));
+			server.strategy = parseCacheStrategy(props
+					.getProperty("cache_policy"));
+
+			// Start server.
+			server.start();
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize server!");
 			e.printStackTrace();
