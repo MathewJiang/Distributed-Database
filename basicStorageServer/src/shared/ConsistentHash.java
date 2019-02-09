@@ -20,21 +20,13 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
-
 import shared.InfraMetadata.ServiceLocation;
 
 public class ConsistentHash {
-	class MD5Comparator implements Comparator<BigInteger> {
-   
-		@Override
-	    public int compare(BigInteger a, BigInteger b) {
-			return a.compareTo(b);
-		}
-	}
 	private static Logger logger = Logger.getRootLogger();
 
 	private static TreeMap<BigInteger, ServiceLocation> hashRing 
-		= new TreeMap<BigInteger, ServiceLocation>(); //public Map.Entry<K,V> higherEntry(K key)
+		= new TreeMap<BigInteger, ServiceLocation>();
 	public static ReentrantLock hashRingLock = new ReentrantLock();
 
 	
@@ -116,13 +108,11 @@ public class ConsistentHash {
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
 	 ***************************************************/
-	public static boolean removeAllServerNodes(ServiceLocation serverInfo) {
-		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
-		BigInteger serverHashMD5 = MD5.getMD5(serverHashString);
+	public static boolean removeAllServerNodes() {
 		
 		hashRingLock.lock();
 		try {
-			hashRing.remove(serverHashMD5);
+			hashRing.clear();
 		} catch (Exception e) {
 			hashRingLock.unlock();
 			logger.error("[ConsistentHash.java/removeAllServerNodes]:" +
@@ -172,12 +162,25 @@ public class ConsistentHash {
 		System.out.println(ConsistentHash.getServer("key2").serviceName);
 		System.out.println(ConsistentHash.getServer("key3").serviceName);
 		
-		ConsistentHash.removeServerNode(server4);
+		ConsistentHash.removeServerNode(server2);
 		ConsistentHash.removeServerNode(server5);
 		
 		System.out.println("---round 3----");
 		System.out.println(ConsistentHash.getServer("key1").serviceName);
 		System.out.println(ConsistentHash.getServer("key2").serviceName);
 		System.out.println(ConsistentHash.getServer("key3").serviceName);
+		
+		ConsistentHash.removeAllServerNodes();
+		System.out.println("---round 4----");
+		if (ConsistentHash.getServer("key1") != null) {
+			System.out.println("gg!");
+		}
+		if (ConsistentHash.getServer("key2") != null) {
+			System.out.println("gg!");
+		}
+		if (ConsistentHash.getServer("key3") != null) {
+			System.out.println("gg!");
+		}
+		
     }
 }
