@@ -28,11 +28,11 @@ public class ConsistentHash {
 	public static ReentrantLock hashRingLock = new ReentrantLock();
 
 	
-	/***************************************************
+	/*****************************************************************************
 	 * Get the Server (address) which contains that key
 	 * @param	MD5Key 		Key wants to search for
 	 * @return 				The server address in string
-	 ***************************************************/
+	 *****************************************************************************/
 	public static ServiceLocation getServer(String key) {
 		BigInteger MD5Key = MD5.getMD5(key);
 		
@@ -56,12 +56,12 @@ public class ConsistentHash {
 		return serverEntry.getValue();
 	}
 	
-	/***************************************************
+	/*****************************************************************************
 	 * Add a serverNode into the ring
 	 * (in fact it is being inserted into the treeMap)
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
-	 ***************************************************/
+	 *****************************************************************************/
 	public static boolean addServerNode(ServiceLocation serverInfo) {
 		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
 		BigInteger serverHashMD5 = MD5.getMD5(serverHashString);
@@ -79,11 +79,11 @@ public class ConsistentHash {
 		return true;
 	}
 	
-	/***************************************************
+	/*****************************************************************************
 	 * Remove a serverNode into the ring
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
-	 ***************************************************/
+	 *****************************************************************************/
 	public static boolean removeServerNode(ServiceLocation serverInfo) {
 		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
 		BigInteger serverHashMD5 = MD5.getMD5(serverHashString);
@@ -101,11 +101,11 @@ public class ConsistentHash {
 		return true;
 	}
 	
-	/***************************************************
+	/*****************************************************************************
 	 * Remove a serverNode into the ring
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
-	 ***************************************************/
+	 *****************************************************************************/
 	public static boolean removeAllServerNodes() {
 		
 		hashRingLock.lock();
