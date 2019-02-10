@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Collection;
 import java.util.Properties;
@@ -14,14 +16,18 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
 
+import shared.InfraMetadata;
+import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
 import client.KVCommInterface;
 import client.KVStore;
@@ -30,14 +36,45 @@ import app_kvClient.KVClient;
 import app_kvClient.ClientSocketListener.SocketStatus;
 import app_kvServer.KVServer;
 
+import ecs.ECSNode;
 import ecs.IECSNode;
+import app_kvECS.ECS;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class ECSClient implements IECSClient {
 
+	private ECS zk;
+	private final String ecs_config = "./resources/config/ecs.config";
+	private InfraMetadata MD = new InfraMetadata();
+	List<ServiceLocation> launchedServer = new ArrayList<ServiceLocation>();
+	List<ECSNode> launchedNodes = new ArrayList<ECSNode>();
+	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
+	public static byte[] hexStringToByteArray(String s) {
+	    int len = s.length();
+	    byte[] data = new byte[len / 2];
+	    for (int i = 0; i < len; i += 2) {
+	        data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+	                             + Character.digit(s.charAt(i+1), 16));
+	    }
+	    return data;
+	}
+	
+	// set start = true for all client server
     @Override
     public boolean start() {
         info("start()");
-        warn("start() not implemented");
+        warn("start() implementation in progress");
+        byte[] test = hexStringToByteArray("e04fd020ea3a6910a2d808002b30309d");
+        /*try {
+			zk.create("/node1", test);
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
         return false;
     }
 
@@ -66,10 +103,50 @@ public class ECSClient implements IECSClient {
         warn("Not implemented yet");
         return null;
     }
+    
+    private void loadECSconfig() {
+		try {
+			MD = InfraMetadata.fromConfigFile(ecs_config);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
+    private void launch(String ip, int port) {
+    	Runtime run = Runtime.getRuntime();
+    	Process proc;
+    	info("launch(ip = " + ip + " port = " + port + ")");
+    	if(ip.equals("127.0.0.1") || ip.equals("localhost")) {
+    		try {
+				proc = run.exec(nossh_launch(ip, port));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	} else {
+    		
+    		try {
+    			proc = run.exec(ssh_launch(ip, port));
+    		} catch (IOException e) {
+    			e.printStackTrace();
+    		}
+    	}
+    }
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-        // TODO
+    	loadECSconfig();
+		List<ServiceLocation> servers = MD.getServerLocations();
+		Collections.shuffle(servers, new Random(count)); 
+		info("Launching " + count + "/" + servers.size() + " servers on file");
+		for(int i = 0; i < count; i++) {
+			ServiceLocation curr = servers.get(i);
+			launchedServer.add(curr);
+			ECSNode item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, "FFF", "000");
+			launch(curr.host, curr.port);
+			launchedNodes.add(item_to_be_added); // fake values
+		}
+		info("launched " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
         return null;
     }
 
@@ -105,6 +182,17 @@ public class ECSClient implements IECSClient {
     public void listNode() {
     	warn("no implementation");
     }
+    
+    private String ssh_launch(String ip, int port) {
+    	return "ssh -n "+ ip +" nohup \"sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar &" + port + "\'\"";
+    }
+    
+    private String nossh_launch(String ip, int port) {
+    	return "sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar &" + port + "\'\"";
+    }
+ 
 
     public static void main(String[] args) {
     	// Hack shared ConnectionUtil interrupt between server and client
@@ -125,8 +213,25 @@ public class ECSClient implements IECSClient {
 	private static final String PROMPT = "ecs_shell> ";
 	private BufferedReader stdin;
 	private boolean stop = false;
-
+	private String workDir = "";
+	private String config = "";
+	
+	private void set_workDir () {
+		workDir = System.getProperty("user.dir");
+		info("work directory is: " + workDir);
+	}
 	public void run() {
+		zk = new ECS();
+		set_workDir();
+		try {
+			zk.connect("127.0.0.1", 40000);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		while (!stop) {
 			stdin = new BufferedReader(new InputStreamReader(System.in));
 			System.out.print(PROMPT);
@@ -159,12 +264,23 @@ public class ECSClient implements IECSClient {
 	private void info(String line) {
 		System.out.println("Info: " + line);
 	}
+	private void printStatus() {
+		
+	}
 	private void handleCommand(String cmdLine) {
 		String[] tokens = cmdLine.split("\\s+");
 
 		switch (tokens[0]) {
+		
+		case "status":
+			printStatus();
+			break;
 
 		case "quit":
+			stop = true;
+			System.out.println(PROMPT + "Application exit!");
+			break;
+		case "exit":
 			stop = true;
 			System.out.println(PROMPT + "Application exit!");
 			break;
@@ -218,6 +334,15 @@ public class ECSClient implements IECSClient {
 				listNode();
 			}
 			break;
+		case "":
+			break;
+		case "setupNodes":
+			if (tokens.length == 4) {
+				setupNodes(Integer.parseInt(tokens[1]), tokens[2], Integer.parseInt(tokens[3]));
+			} else {
+				warn("Usage setupNodes <count> <String Strategy> <cacheSize>");
+			}
+			
 		default:
 			printError("Unknown command");
 			printHelp();
@@ -300,5 +425,7 @@ public class ECSClient implements IECSClient {
 		props.load(new FileInputStream("resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
+	
+	
 
 }
