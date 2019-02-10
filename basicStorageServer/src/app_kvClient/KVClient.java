@@ -172,16 +172,16 @@ public class KVClient implements IKVClient, ClientSocketListener {
 					value = tokens[2];
 				}
 				
-				//latestMsg = (CommMessage)backend.put(key, value);
+				latestMsg = (CommMessage)backend.put(key, value);
 				
-				ServiceLocation tempsl = new ServiceLocation("server1", "127.0.0.1", 5000);
-				ArrayList<ServiceLocation> tempsls = new ArrayList<ServiceLocation>();
-				tempsls.add(tempsl);
-				
-				InfraMetadata tempMetaData = new InfraMetadata();
-				tempMetaData.setEcsLocation(tempsls);
-				latestMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_NOT_RESPONSIBLE).build();
-				latestMsg.setInfraMetadata(tempMetaData);
+//				ServiceLocation tempsl = new ServiceLocation("server1", "127.0.0.1", 5000);
+//				ArrayList<ServiceLocation> tempsls = new ArrayList<ServiceLocation>();
+//				tempsls.add(tempsl);
+//				
+//				InfraMetadata tempMetaData = new InfraMetadata();
+//				tempMetaData.setEcsLocation(tempsls);
+//				latestMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_NOT_RESPONSIBLE).build();
+//				latestMsg.setInfraMetadata(tempMetaData);
 				
 				// getting a metaData file from the server
 				// need to do a retry on the corresponding server
