@@ -38,7 +38,7 @@ public class Disk {
 		} else {
 			echo("db does not exist, making a new db");
 			if (db.mkdir()) {
-				echo("Mkdir sucess");
+				echo("Mkdir success");
 			} else {
 				echo("Mkdir failed");
 			}

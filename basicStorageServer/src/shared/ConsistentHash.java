@@ -23,7 +23,7 @@ import shared.InfraMetadata.ServiceLocation;
 public class ConsistentHash {
 	private static Logger logger = Logger.getRootLogger();
 
-	private static TreeMap<BigInteger, ServiceLocation> hashRing 
+	private TreeMap<BigInteger, ServiceLocation> hashRing 
 		= new TreeMap<BigInteger, ServiceLocation>();
 	public static ReentrantLock hashRingLock = new ReentrantLock();
 
@@ -33,7 +33,7 @@ public class ConsistentHash {
 	 * @param	MD5Key 		Key wants to search for
 	 * @return 				The server address in string
 	 *****************************************************************************/
-	public static ServiceLocation getServer(String key) {
+	public ServiceLocation getServer(String key) {
 		BigInteger MD5Key = MD5.getMD5(key);
 		
 		hashRingLock.lock();
@@ -62,7 +62,7 @@ public class ConsistentHash {
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
 	 *****************************************************************************/
-	public static boolean addServerNode(ServiceLocation serverInfo) {
+	public boolean addServerNode(ServiceLocation serverInfo) {
 		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
 		BigInteger serverHashMD5 = MD5.getMD5(serverHashString);
 		
@@ -84,7 +84,7 @@ public class ConsistentHash {
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
 	 *****************************************************************************/
-	public static boolean removeServerNode(ServiceLocation serverInfo) {
+	public boolean removeServerNode(ServiceLocation serverInfo) {
 		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
 		BigInteger serverHashMD5 = MD5.getMD5(serverHashString);
 		
@@ -106,7 +106,7 @@ public class ConsistentHash {
 	 * @param	serverInfo	Server information
 	 * @return 	1 on success, 0 on failure
 	 *****************************************************************************/
-	public static boolean removeAllServerNodes() {
+	public boolean removeAllServerNodes() {
 		
 		hashRingLock.lock();
 		try {
@@ -127,6 +127,8 @@ public class ConsistentHash {
 	 * Can be migrated into JUnit tests later on
 	 */
 	public static void main(String[] args) {
+		ConsistentHash ch = new ConsistentHash();
+		
 		ServiceLocation server1 = new ServiceLocation("server1", "127.0.0.1", 50000);
 		ServiceLocation server2 = new ServiceLocation("server2", "127.0.0.1", 50001);
 		ServiceLocation server3 = new ServiceLocation("server3", "127.0.0.1", 50002);
@@ -143,40 +145,40 @@ public class ConsistentHash {
 		System.out.println("key2: " + String.format("0x%32X", MD5.getMD5("key2")));
 		System.out.println("key3: " + String.format("0x%32X", MD5.getMD5("key3")));
 		
-		ConsistentHash.addServerNode(server1);
-		ConsistentHash.addServerNode(server2);
-		ConsistentHash.addServerNode(server3);
+		ch.addServerNode(server1);
+		ch.addServerNode(server2);
+		ch.addServerNode(server3);
 		
 		System.out.println("---round 1----");
-		System.out.println(ConsistentHash.getServer("key1").serviceName);
-		System.out.println(ConsistentHash.getServer("key2").serviceName);
-		System.out.println(ConsistentHash.getServer("key3").serviceName);
+		System.out.println(ch.getServer("key1").serviceName);
+		System.out.println(ch.getServer("key2").serviceName);
+		System.out.println(ch.getServer("key3").serviceName);
 		
-		ConsistentHash.addServerNode(server4);
-		ConsistentHash.addServerNode(server5);
+		ch.addServerNode(server4);
+		ch.addServerNode(server5);
 		
 		System.out.println("---round 2----");
-		System.out.println(ConsistentHash.getServer("key1").serviceName);
-		System.out.println(ConsistentHash.getServer("key2").serviceName);
-		System.out.println(ConsistentHash.getServer("key3").serviceName);
+		System.out.println(ch.getServer("key1").serviceName);
+		System.out.println(ch.getServer("key2").serviceName);
+		System.out.println(ch.getServer("key3").serviceName);
 		
-		ConsistentHash.removeServerNode(server2);
-		ConsistentHash.removeServerNode(server5);
+		ch.removeServerNode(server2);
+		ch.removeServerNode(server5);
 		
 		System.out.println("---round 3----");
-		System.out.println(ConsistentHash.getServer("key1").serviceName);
-		System.out.println(ConsistentHash.getServer("key2").serviceName);
-		System.out.println(ConsistentHash.getServer("key3").serviceName);
+		System.out.println(ch.getServer("key1").serviceName);
+		System.out.println(ch.getServer("key2").serviceName);
+		System.out.println(ch.getServer("key3").serviceName);
 		
-		ConsistentHash.removeAllServerNodes();
+		ch.removeAllServerNodes();
 		System.out.println("---round 4----");
-		if (ConsistentHash.getServer("key1") != null) {
+		if (ch.getServer("key1") != null) {
 			System.out.println("gg!");
 		}
-		if (ConsistentHash.getServer("key2") != null) {
+		if (ch.getServer("key2") != null) {
 			System.out.println("gg!");
 		}
-		if (ConsistentHash.getServer("key3") != null) {
+		if (ch.getServer("key3") != null) {
 			System.out.println("gg!");
 		}
 		
