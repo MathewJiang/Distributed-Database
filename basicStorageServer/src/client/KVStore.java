@@ -3,6 +3,7 @@ package client;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -11,6 +12,9 @@ import org.apache.log4j.Logger;
 import app_kvClient.ClientSocketListener;
 import app_kvClient.ClientSocketListener.SocketStatus;
 import shared.ConnectionUtil;
+import shared.ConsistentHash;
+import shared.InfraMetadata;
+import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage;
@@ -25,6 +29,10 @@ public class KVStore extends Thread implements KVCommInterface {
 	private Socket clientSocket;
 	private String address;
 	private int port;
+	
+	private InfraMetadata metaData;
+	private final int portECS = 40000;
+	private ConsistentHash clientHash = new ConsistentHash();	// FIXME: every client has a hash ring
 
 	public KVStore(String address, int port) {
 		this.address = address;
@@ -139,6 +147,7 @@ public class KVStore extends Thread implements KVCommInterface {
 
 			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
 					.getInputStream());
+			
 			return latestMsg;
 		} catch (IOException ioe) {
 			if (isRunning()) {
@@ -167,7 +176,14 @@ public class KVStore extends Thread implements KVCommInterface {
 			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
 					.getInputStream());
 			
-			System.out.println(latestMsg.getValue());
+			/*
+			 * M2:
+			 * the message got from the server is Metadata file
+			 */
+			if (latestMsg != null && latestMsg.getInfraMetadata() != null) {
+				metaData = latestMsg.getInfraMetadata();
+				
+			}
 			return latestMsg;
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
@@ -182,4 +198,73 @@ public class KVStore extends Thread implements KVCommInterface {
 		}
 		return null;
 	}
+	
+	
+	/*
+	 * Helper Methods
+	 */
+	
+	/*****************************************************************************
+	 * constructClientHashRing
+	 * construct the hashring structure on the client side
+	 * 
+	 * @return		true on success
+	 * 				false on failure
+	 *****************************************************************************/
+	public void setMetaData(InfraMetadata iMetaData) {
+		this.metaData = iMetaData;
+	}
+	
+	/*****************************************************************************
+	 * constructClientHashRing
+	 * construct the hashring structure on the client side
+	 * 
+	 * @return		true on success
+	 * 				false on failure
+	 *****************************************************************************/
+	public boolean constructClientHash() {
+		// FIXME: need to determine which directory
+		// should the metaData output to
+		String mataDataFilePath = System.getProperty("user.home");
+		InfraMetadata infraMetaData = metaData;
+		ArrayList<ServiceLocation> serverLocations = new ArrayList<ServiceLocation>();
+		
+		/*
+		try {
+			infraMetaData = InfraMetadata.fromConfigFile(mataDataFilePath);
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("[Error!]KVStore.java: constructHashRing(), metadata file parsing failed");
+			return false;
+		}
+		*/
+		
+		if (infraMetaData == null) {
+			logger.error("[Error!]KVStore.java: constructHashRing(), metadata file is null");
+			return false;
+		} else {
+			serverLocations = (ArrayList<ServiceLocation>)infraMetaData.getServerLocations();
+			
+			for (ServiceLocation sl : serverLocations) {
+				clientHash.addServerNode(sl);		//add server nodes into the client hash ring
+			}
+		}
+		
+		return true;
+	}
+	
+	/*****************************************************************************
+	 * getServer
+	 * get the responsible server given the key
+	 * 
+	 * @param		key		the key that would be discovered
+	 * 						under which server
+	 * 
+	 * @return		corresponding server info on success
+	 * 				null on failure 
+	 *****************************************************************************/
+	public ServiceLocation getServer (String key) {
+		return clientHash.getServer(key);
+	}
+	
 }

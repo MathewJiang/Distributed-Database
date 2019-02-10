@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Properties;
 
 import org.apache.log4j.Level;
@@ -12,8 +13,11 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import app_kvServer.KVServer;
+import shared.InfraMetadata;
+import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-
+import shared.messages.CommMessageBuilder;
+import shared.messages.KVMessage.StatusType;
 import logger.LogSetup;
 import client.KVCommInterface;
 import client.KVStore;
@@ -28,6 +32,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 	private String serverAddress;
 	private int serverPort;
+
 
 	@Override
 	public void newConnection(String hostname, int port)
@@ -50,6 +55,10 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	 */
 	@Override
 	public KVCommInterface getStore() {
+		return backend;
+	}
+
+	public KVStore getBackEnd() {
 		return backend;
 	}
 
@@ -137,24 +146,75 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			break;
 
 		case "put":
-			System.out.println("[debug]m1-client put: tokens size: "
-					+ tokens.length);
 			if (tokens.length < 2) {
-				printError("Incorrect num of arguments; Must be passing in as: put <key> <value>; or put <key> for deletion");
+				printError("Incorrect num of arguments; " +
+						"Must be passing in as: put <key> <value> for insertion; " +
+						"or put <key> for deletion");
 				return;
 			}
+			
 			if (tokens.length > 3) {
 				tokens = parsePutInput(tokens);
 			}
 			if (backend == null || !backend.isRunning()) {
-				printError("Not connected!");
+				printError("[KVClient.java/HandleCommand/put]Not connected!");
 				return;
 			}
+			
 			try {
+				CommMessage latestMsg = null;
+				String key = tokens[1];
+				String value = null;
+				
 				if (tokens.length == 2) {
-					backend.put(tokens[1], null);
+					value = null;
 				} else {
-					backend.put(tokens[1], tokens[2]);
+					value = tokens[2];
+				}
+				
+				//latestMsg = (CommMessage)backend.put(key, value);
+				
+				ServiceLocation tempsl = new ServiceLocation("server1", "127.0.0.1", 5000);
+				ArrayList<ServiceLocation> tempsls = new ArrayList<ServiceLocation>();
+				tempsls.add(tempsl);
+				
+				InfraMetadata tempMetaData = new InfraMetadata();
+				tempMetaData.setEcsLocation(tempsls);
+				latestMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_NOT_RESPONSIBLE).build();
+				latestMsg.setInfraMetadata(tempMetaData);
+				
+				// getting a metaData file from the server
+				// need to do a retry on the corresponding server
+				KVClient tempClient = null;
+				int i = 0;
+				while (latestMsg != null 
+						&& latestMsg.getStatus().equals(StatusType.SERVER_NOT_RESPONSIBLE)
+						&& latestMsg.getInfraMetadata() != null) {
+					//FIXME: should we just retry once???
+					System.out.println("[debug]Round " + i);
+					i++;
+					if (tempClient != null) {
+						tempClient.disconnect();
+						tempClient = null;
+					}
+					
+					backend.setMetaData(latestMsg.getInfraMetadata());
+					if (backend.constructClientHash()) {
+						ServiceLocation sl = backend.getServer(key);
+
+						//FIXME:
+						//try to reconnect with the responsible server
+						tempClient = new KVClient();
+						tempClient.newConnection(sl.host, sl.port);
+						
+						//retry
+						latestMsg = (CommMessage)tempClient.getBackEnd().put(key, value);
+					}
+				}
+				
+				if (tempClient != null) {
+					tempClient.disconnect();
+					tempClient = null;
 				}
 			} catch (Exception e) {
 				printError("Put Error: " + e.toString());
@@ -168,7 +228,55 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			}
 			if (backend != null && backend.isRunning()) {
 				try {
-					backend.get(tokens[1]);
+					String key = tokens[1];
+					CommMessage latestMsg = (CommMessage) backend.get(key);
+					
+					//testing purpose only
+//					ServiceLocation tempsl = new ServiceLocation("server1", "127.0.0.1", 5000);
+//					ArrayList<ServiceLocation> tempsls = new ArrayList<ServiceLocation>();
+//					tempsls.add(tempsl);
+//					
+//					InfraMetadata tempMetaData = new InfraMetadata();
+//					tempMetaData.setEcsLocation(tempsls);
+//					CommMessage latestMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_NOT_RESPONSIBLE).build();
+//					latestMsg.setInfraMetadata(tempMetaData);
+					
+					// getting a metaData file from the server
+					// need to do a retry on the corresponding server
+					KVClient tempClient = null;
+					int i = 0;
+					while (latestMsg != null 
+							&& latestMsg.getStatus().equals(StatusType.SERVER_NOT_RESPONSIBLE)
+							&& latestMsg.getInfraMetadata() != null) {
+						//FIXME: should we just retry once???
+						System.out.println("[debug]Round " + i);
+						i++;
+						if (tempClient != null) {
+							tempClient.disconnect();
+							tempClient = null;
+						}
+						
+						backend.setMetaData(latestMsg.getInfraMetadata());
+						if (backend.constructClientHash()) {
+							ServiceLocation sl = backend.getServer(key);
+
+							//FIXME:
+							//try to reconnect with the responsible server
+							tempClient = new KVClient();
+							tempClient.newConnection(sl.host, sl.port);
+							
+							//retry
+							latestMsg = (CommMessage)tempClient.getBackEnd().get(key);
+						}
+					}
+					
+					if (tempClient != null) {
+						tempClient.disconnect();
+						tempClient = null;
+					}
+					if (latestMsg != null && latestMsg.getValue() != null) {
+						System.out.println(latestMsg.getValue());
+					}
 				} catch (Exception e) {
 					printError("Error getting key " + tokens[1] + ": "
 							+ e.toString());

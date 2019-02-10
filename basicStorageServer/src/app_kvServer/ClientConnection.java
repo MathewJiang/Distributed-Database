@@ -71,19 +71,20 @@ public class ClientConnection implements Runnable {
 						try {
 							KVServer.serverLock.lock();
 							StatusType status = handlePUT(key, value);
-							KVServer.serverLock.unlock();
+							
 							
 							responseMsg.setKey(key);
 							responseMsg.setValue(value);
 							responseMsg.setStatus(status);
 						} catch (IOException e) {
 							responseMsg.setStatus(StatusType.PUT_ERROR);
+						} finally {
+							KVServer.serverLock.unlock();
 						}
 					} else if (op.equals(StatusType.GET)) {
 						try {
 							KVServer.serverLock.lock();
 							value = handleGET(key);
-							KVServer.serverLock.unlock();
 
 							responseMsg.setKey(key);
 							responseMsg.setValue(value);
@@ -91,6 +92,8 @@ public class ClientConnection implements Runnable {
 						} catch (Exception e) {
 							value = null;
 							responseMsg.setStatus(StatusType.GET_ERROR);
+						} finally {
+							KVServer.serverLock.unlock();
 						}
 					}
 					conn.sendCommMessage(output, responseMsg);

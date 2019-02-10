@@ -327,6 +327,10 @@ public class KVServer extends Thread implements IKVServer {
 			if (args.length == 2) {
 				server = initServerFromECS(args);
 			} else {
+				if (args.length == 0) {
+					System.out.println("[Error]Missing port number");
+					System.exit(1);
+				}
 				// No ECS startup. Mock cluster metadata.
 				server = new KVServer();
 				server.port = Integer.parseInt(args[0]);
