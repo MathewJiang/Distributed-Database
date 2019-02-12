@@ -7,9 +7,17 @@
 package app_kvECS;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-
+import java.util.Map;
+import java.util.HashMap;
 import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -17,12 +25,11 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
-import org.slf4j.LoggerFactory;
 public class ECS {
 
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
-
+	//String logConfigFileLocation = "./";
 	
 	/*****************************************************************************
 	 * connect:
@@ -32,7 +39,7 @@ public class ECS {
 	 * @return 			connected zk
 	 *****************************************************************************/
 	public ZooKeeper connect(String host, int port) throws IOException, InterruptedException {
-		BasicConfigurator.configure();
+		org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
 		zk = new ZooKeeper(host, port, new Watcher() {
 			@Override
 			public void process(WatchedEvent event) {
@@ -55,32 +62,97 @@ public class ECS {
 		zk.close();
 	}
 	
-	public void create(String path, byte[] data) throws 
+	public void create(String path, byte[] data, String mode) throws 
 		KeeperException,InterruptedException {
-		zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+		CreateMode CMode = CreateMode.EPHEMERAL;
+		switch(mode) {
+			case"-p":
+				CMode = CreateMode.PERSISTENT;
+				break;
+			case"-ps":
+				CMode = CreateMode.EPHEMERAL_SEQUENTIAL;
+				break;
+			case"-e":
+				CMode = CreateMode.EPHEMERAL;
+				break;
+			case"-es":
+				CMode = CreateMode.EPHEMERAL_SEQUENTIAL;
+				break;	
+		}
+		zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,CMode);
 	}
 	
-	/*public void Executor(String hostPort, String znode, String filename, String exec[]) throws KeeperException, IOException {
-        dm = new DataMonitor(zk, znode, null, this);
-    }*/
-
-    /*public void run() {
-        try {
-            synchronized (this) {
-                while (!dm.dead) {
-                    wait();
-                }
-            }
-        } catch (InterruptedException e) {
-        }
-    }*/
-
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+	public void echo(String line){
+		System.out.println(line);
 	}
-
+	public void printPath(String path) {
+		try {
+			List<String> Children = zk.getChildren(path, false);
+			Iterator<String> it  = Children.iterator();
+			while (it.hasNext()) {
+				System.out.println(it.next());
+			}
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public Set<String> returnDirSet(String path) {
+		Set<String> DirSet = new HashSet<String>();
+		try {
+			List<String> Children = zk.getChildren(path, false);
+			Iterator<String> it  = Children.iterator();
+			while (it.hasNext()) {
+				String curr = it.next();
+				DirSet.add(curr);
+			}
+			return DirSet;
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return DirSet;
+	}
+	public void deleteHead(String target) {
+		try {
+			zk.delete(target,zk.exists(target,true).getVersion());
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public void setData(String path, byte[] data) {
+		try {
+			zk.setData(path, data, -1);
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	public String getData(String path) {
+		try {
+			return (zk.getData(path, false, null)).toString();
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (java.lang.NullPointerException e) {
+			return "";
+		}
+		return "";
+	}
 }

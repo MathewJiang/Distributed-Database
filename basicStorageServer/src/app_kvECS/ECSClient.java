@@ -44,11 +44,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class ECSClient implements IECSClient {
 
-	private ECS zk;
+	private ECS ecs;
 	private final String ecs_config = "./resources/config/ecs.config";
 	private InfraMetadata MD = new InfraMetadata();
 	List<ServiceLocation> launchedServer = new ArrayList<ServiceLocation>();
 	List<ECSNode> launchedNodes = new ArrayList<ECSNode>();
+	private String currDir = "/";
+	private Set<String> SetDir = new HashSet<String>();
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
 	    int len = s.length();
@@ -128,7 +130,7 @@ public class ECSClient implements IECSClient {
     		
     		try {
     			proc = run.exec(ssh_launch(ip, port));
-    		} catch (IOException e) {
+    		} catch (IOExceptionpath e) {
     			e.printStackTrace();
     		}
     	}
@@ -210,7 +212,7 @@ public class ECSClient implements IECSClient {
 		app.run();
     }
     private static Logger logger = Logger.getRootLogger();
-	private static final String PROMPT = "ecs_shell> ";
+	private static final String PROMPT = "ecs_shell";
 	private BufferedReader stdin;
 	private boolean stop = false;
 	private String workDir = "";
@@ -221,10 +223,10 @@ public class ECSClient implements IECSClient {
 		info("work directory is: " + workDir);
 	}
 	public void run() {
-		zk = new ECS();
+		ecs = new ECS();
 		set_workDir();
 		try {
-			zk.connect("127.0.0.1", 40000);
+			ecs.connect("127.0.0.1", 40000);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -234,7 +236,7 @@ public class ECSClient implements IECSClient {
 		}
 		while (!stop) {
 			stdin = new BufferedReader(new InputStreamReader(System.in));
-			System.out.print(PROMPT);
+			System.out.print(PROMPT+":"+currDir + "$ ");
 
 			try {
 				String cmdLine = stdin.readLine();
@@ -264,8 +266,8 @@ public class ECSClient implements IECSClient {
 	private void info(String line) {
 		System.out.println("Info: " + line);
 	}
-	private void printStatus() {
-		
+	private void echo(String line) {
+		System.out.println(line);
 	}
 	private void handleCommand(String cmdLine) {
 		String[] tokens = cmdLine.split("\\s+");
@@ -342,12 +344,131 @@ public class ECSClient implements IECSClient {
 			} else {
 				warn("Usage setupNodes <count> <String Strategy> <cacheSize>");
 			}
-			
+			break;
+		case "ls":
+			if (tokens.length == 1) {
+				ecs.printPath(currDir);
+			} else if(tokens.length == 2) {
+				ecs.printPath(currDir + tokens[1]);
+			} else {
+				warn("ls should take 1 or no args");
+			}
+			break;
+		case "cd":
+			if (tokens.length == 1) {
+				currDir = "/";
+			} else if(tokens.length == 2) {
+				if(ecs.returnDirSet(currDir).contains(tokens[1])) {
+					if(currDir != "/") {
+						currDir += "/";
+					}
+					currDir +=tokens[1];
+				} else if(tokens[1].equals(".")) {
+					break;
+				} else if(tokens[1].equals("..")) {
+					if(currDir.equals("/")) {
+						break;
+					}
+					String[] parts = currDir.split("/");
+					if(parts.length > 2) {
+					currDir = "";
+						for(int i = 0; i < parts.length - 1; i++) {
+							currDir += parts[i] + "/";
+						}
+						if(currDir.equals("/")) {
+							break;
+						}
+						currDir = currDir.substring(0, currDir.length() -1);
+					} else {
+						currDir = "/";
+					}
+				} else {
+				
+					echo("ecs_shell cd: " + tokens[1] + " : No such file or directory");
+				}
+			} else {
+				warn("cd should take 1 or no args");
+			}
+			break;
+		case "create":
+			if(tokens.length == 1) {
+				break;
+			} else if(tokens.length >= 3) {
+				for(int i = 2; i < tokens.length;i++) {
+					byte[] emptyByte = null;
+					try {
+						String safeCurrDir = currDir;
+						if(!currDir.endsWith("/")) {
+							safeCurrDir += "/";
+						}
+						ecs.create(safeCurrDir +tokens[i], emptyByte, tokens[1]);
+					} catch (KeeperException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+			break;
+		case "rm":
+			if(tokens.length == 1) {
+				break;
+			} else if(tokens.length == 2) {
+				if(!ecs.returnDirSet(currDir).contains(tokens[1])) {
+					echo("rm: cannot remove \'"+tokens[1]+"\': No such file or directory");
+					break;
+				}
+				String safeCurrDir = currDir;
+				if(!currDir.endsWith("/")) {
+					safeCurrDir += "/";
+				}
+				if(ecs.returnDirSet(currDir + tokens[1]).size() !=0) {
+					echo("rm: cannot remove \'" + tokens[1] + "\': Is a directory");
+				} else if(tokens[1].equals("-r")) {
+					
+					if(tokens[1].startsWith("/")) {
+						ecs.deleteHead(tokens[1]);
+					} else {
+						ecs.deleteHead(safeCurrDir+tokens[1]);
+					}
+				} else {
+					if(tokens[1].startsWith("/")) {
+						ecs.deleteHead(tokens[1]);
+					} else {
+						ecs.deleteHead(safeCurrDir+tokens[1]);
+					}
+				}
+			}
+			break;
+		case "echo":
+			if(tokens.length >= 2) {
+				if(tokens.length == 2) {
+					echo(tokens[1]);
+				}
+				if(tokens.length == 4) {
+					if(tokens[2].equals(">")) {
+						ecs.setData(currDir + tokens[3], tokens[1].getBytes());
+					}
+				}
+			}
+			break;
+		case "cat":
+			if(tokens.length == 2) {
+				echo(ecs.getData(currDir + tokens[1]));
+			}
+			break;
 		default:
 			printError("Unknown command");
 			printHelp();
 			return;
 		}
+	}
+
+	private void printStatus() {
+		// TODO Auto-generated method stub
+		
 	}
 
 	private void printHelp() {
@@ -425,7 +546,4 @@ public class ECSClient implements IECSClient {
 		props.load(new FileInputStream("resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-	
-	
-
 }
