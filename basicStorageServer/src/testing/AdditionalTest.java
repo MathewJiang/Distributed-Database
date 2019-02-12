@@ -1,13 +1,7 @@
 package testing;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import org.junit.Test;
 
-import app_kvServer.storage.Disk;
-import app_kvServer.storage.FIFOCache;
 import junit.framework.TestCase;
 
 
@@ -30,9 +24,12 @@ public class AdditionalTest extends TestCase {
 		}
 		
 		StorageTest.testFuncFifoCache();*/
-		StorageTest.testDiskPerf_config();
+//		StorageTest.testDiskPerf_config();
 		//StorageTest.StoragePerfTestSweep();
-		StorageTest.ServerPerfTestSweep();
+//		StorageTest.ServerPerfTestSweep();
+		
+		StorageTest.testFuncLRUCache();
+		StorageTest.testFuncLFUCache();
 	}
 	
 }

@@ -85,7 +85,10 @@ public class KVServer extends Thread implements IKVServer {
 		this.port = port;
 		this.cacheSize = cacheSize;
 		this.strategy = parseCacheStrategy(strategy);
-
+	}
+	
+	public void setRunning(boolean running) {
+		this.running = running;
 	}
 
 	@Override
@@ -104,7 +107,7 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public CacheStrategy getCacheStrategy() {
-		return IKVServer.CacheStrategy.None;
+		return strategy;
 	}
 
 	@Override
@@ -202,7 +205,7 @@ public class KVServer extends Thread implements IKVServer {
 			while (isRunning()) {
 				try {
 					Socket client = serverSocket.accept();
-					ClientConnection connection = new ClientConnection(client);
+					ClientConnection connection = new ClientConnection(client, this);
 					Thread newConnection = new Thread(connection);
 					threadCollection.add(newConnection);
 					newConnection.start();
@@ -318,7 +321,7 @@ public class KVServer extends Thread implements IKVServer {
 				new LogSetup("logs/server-default.log", Level.ALL);
 			}
 
-			if (args.length > 2) {
+			if (args.length > 4) {
 				System.out.println("Error! Invalid number of arguments!");
 				System.out.println("Usage: Server <port>!");
 				return;
@@ -327,12 +330,51 @@ public class KVServer extends Thread implements IKVServer {
 			if (args.length == 2) {
 				server = initServerFromECS(args);
 			} else {
+				String host = "127.0.0.1";
+				int port = 0;
+				String cacheStrategy = null;
+				int cacheSize = 0;
+				
 				if (args.length == 0) {
 					System.out.println("[Error]Missing port number");
 					System.exit(1);
+				} else if (args.length == 1){
+					try {
+						port = Integer.parseInt(args[0]);
+					} catch (NumberFormatException e) {
+						System.out.println("[Error]Port number format exception");
+						System.exit(1);
+					}
+				} else if (args.length == 2) {
+					System.out.println("[Error]Incorrect number of arguments");
+					System.exit(1);
+				} else if (args.length == 3) {
+					try {
+						port = Integer.parseInt(args[0]);
+						cacheSize = Integer.parseInt(args[2]);
+					} catch (NumberFormatException e) {
+						System.out.println("[Error]Port number format exception");
+						System.exit(1);
+					}
+					cacheStrategy = args[1];
 				}
+				
+				
 				// No ECS startup. Mock cluster metadata.
-				server = new KVServer();
+				if (cacheStrategy != null) {
+					server = new KVServer(port, cacheSize, cacheStrategy);
+				} else {
+					server = new KVServer();
+					// Read configuration file for cache & server configs.
+					Properties props = new Properties();
+					props.load(new FileInputStream(configPath));
+					server.cacheSize = Integer.parseInt(props
+							.getProperty("cache_limit"));
+					server.strategy = parseCacheStrategy(props
+							.getProperty("cache_policy"));
+				}
+				
+				System.out.println("[debug]server port: " + server.getPort() + ", cacheStrategy: " + server.getCacheStrategy() + ", cacheSize: " + server.getCacheSize());
 				server.port = Integer.parseInt(args[0]);
 				server.serverMetadata = new ServiceLocation(UUID.randomUUID()
 						.toString(), "127.0.0.1", server.port);
@@ -343,14 +385,6 @@ public class KVServer extends Thread implements IKVServer {
 			System.out.println("Service: " + server.serverMetadata.serviceName
 					+ " will listen on " + server.serverMetadata.host + ":"
 					+ server.serverMetadata.port);
-
-			// Read configuration file for cache & server configs.
-			Properties props = new Properties();
-			props.load(new FileInputStream(configPath));
-			server.cacheSize = Integer.parseInt(props
-					.getProperty("cache_limit"));
-			server.strategy = parseCacheStrategy(props
-					.getProperty("cache_policy"));
 
 			// Start server.
 			server.start();

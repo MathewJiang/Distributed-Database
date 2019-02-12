@@ -40,7 +40,7 @@ public class StorageTest {
 		try {
 			test_log.createNewFile();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 
@@ -57,14 +57,14 @@ public class StorageTest {
 		try {
 			Disk.putKV("a", "1209");
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
+			
 			e1.printStackTrace();
 		}
 		for (int i = 0; i < num_files; i++) {
 			try {
 				Disk.putKV(((Integer) i).toString(), ((Integer) i).toString());
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -75,7 +75,7 @@ public class StorageTest {
 			read = Disk.getKV("8475");
 			Disk.echo(read);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 		final long endTime = System.currentTimeMillis();
@@ -202,7 +202,7 @@ public class StorageTest {
 				Disk.echo("Key is not lost");
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 
@@ -214,7 +214,7 @@ public class StorageTest {
 				Disk.echo("Fail, early keys should be in Disk and I got " + test);
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 
@@ -239,7 +239,7 @@ public class StorageTest {
 			os.write(content.getBytes(), 0, content.length());
 			os.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			
 			e.printStackTrace();
 		}
 
@@ -315,7 +315,7 @@ public class StorageTest {
 			try {
 				Storage.putKV(((Integer) i).toString(), ((Integer) i).toString());
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -324,7 +324,7 @@ public class StorageTest {
 			try {
 				Storage.getKV(((Integer) randomNum).toString());
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 			num_reads--;
@@ -336,7 +336,18 @@ public class StorageTest {
 
 	public static void ServerPerfTest(int num_files, int cache_size, double ratio, CacheStrategy strategy,
 			double cache_ratio) {
-		KVServer server = new KVServer(5000);
+		
+		String cStrategy = null;
+		if (strategy.equals(CacheStrategy.FIFO)) {
+			cStrategy = "FIFO";
+		} else if (strategy.equals(CacheStrategy.LRU)) {
+			cStrategy = "LRU";
+		} else if (strategy.equals(CacheStrategy.LFU)) {
+			cStrategy = "LFU";
+		} else {
+			cStrategy = "None";
+		}
+		KVServer server = new KVServer(5000, cache_size, cStrategy);
 		Storage.set_mode(strategy);
 		Storage.init(cache_size);
 		Storage.clearStorage();
@@ -364,10 +375,10 @@ public class StorageTest {
 			try {
 				server.putKV(((Integer) i).toString(), ((Integer) i).toString());
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
+				
 				e.printStackTrace();
 			}
 		}
@@ -376,7 +387,6 @@ public class StorageTest {
 			try {
 				server.getKV(((Integer) randomNum).toString());
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			num_reads--;

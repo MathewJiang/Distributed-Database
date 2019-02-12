@@ -53,6 +53,7 @@ public class ConnectionUtil {
 											//this also makes the JUnit: InteractiveTest fail
 		}
 		
+//		byte read = (byte) input.read();
 		boolean reading = true;
 
 		while (read != 13 && reading) {/* carriage return */
@@ -103,7 +104,7 @@ public class ConnectionUtil {
 					read = (byte) input.read();
 				}
 			}
-			
+//			read = (byte) input.read();
 			
 //			while (KVServer.serverOn) {
 //				if (input.available() > 0) {

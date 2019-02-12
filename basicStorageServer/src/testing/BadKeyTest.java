@@ -1,23 +1,12 @@
 package testing;
 
 
-import java.io.IOException;
-import java.net.UnknownHostException;
-
-import org.junit.Before;
 import org.junit.Test;
 
 import client.KVStore;
 
-import shared.ObjectFactory;
-import shared.messages.CommMessage;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
-import app_kvClient.IKVClient;
-import app_kvClient.KVClient;
-import app_kvServer.IKVServer;
-import app_kvServer.KVServer;
-
 import junit.framework.TestCase;
 
 public class BadKeyTest extends TestCase {
@@ -76,7 +65,6 @@ public class BadKeyTest extends TestCase {
 
 		assertTrue(ex == null && response.getStatus() == StatusType.PUT_ERROR);
 	}
-	
 	
 	
 }

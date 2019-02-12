@@ -12,11 +12,15 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import app_kvClient.ClientSocketListener.SocketStatus;
 import app_kvServer.KVServer;
+import shared.ConnectionUtil;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
+import shared.messages.KVAdminMessage;
+import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage.StatusType;
 import logger.LogSetup;
 import client.KVCommInterface;
@@ -284,6 +288,24 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			}
 			break;
 
+		/*
+		//only for testing purposes
+		case "shutdown":
+			try {
+				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
+				cm.setAdminMessage(new KVAdminMessage());
+				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.SHUTDOWN);
+				ConnectionUtil conn = new ConnectionUtil();
+				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+
+				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+				
+				System.out.println("Serve should be closed now");
+			} catch (IOException ioe) {
+				logger.error("Connection lost!");
+			}
+			break;
+		*/
 		default:
 			printError("Unknown command");
 			printHelp();

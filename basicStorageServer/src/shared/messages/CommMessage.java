@@ -13,6 +13,7 @@ public class CommMessage implements KVMessage {
 	private String key;
 	private String value;
 	private InfraMetadata infraMetadata;
+	private KVAdminMessage adminMessage;
 
 	public CommMessage() {
 		this.status = null;
@@ -52,6 +53,14 @@ public class CommMessage implements KVMessage {
 		this.status = status;
 	}
 	
+	public KVAdminMessage getAdminMessage() {
+		return this.adminMessage;
+	}
+	
+	public void setAdminMessage(KVAdminMessage adminMessage) {
+		this.adminMessage = adminMessage;
+	}
+	
 	// Serialize a CommMessage into a byte array that represents a JSON string.
 	public static byte[] serialize(CommMessage msg) {
 		Gson gson = new GsonBuilder().serializeNulls().create();
@@ -81,6 +90,12 @@ public class CommMessage implements KVMessage {
 		id.append("{ value: ");
 		id.append(this.value);
 		id.append(" }");
+		
+		id.append(" | {AdminMessage Object: ");
+		id.append(adminMessage.getKVAdMessageType().toString());
+		id.append("} ");
+		
+		id.append("}");
 		
 		return id.toString();
 	}
