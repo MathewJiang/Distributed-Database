@@ -17,7 +17,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import app_kvECS.ECS;
 import shared.ConnectionUtil;
+import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
@@ -32,8 +34,10 @@ public class KVServer extends Thread implements IKVServer {
 
 	private static String configPath = "resources/config/config.properties";
 
-	private InfraMetadata cluster = null;
-	private ServiceLocation serverMetadata = null;
+	private ECS ecs = null;
+	private InfraMetadata clusterMD = null;
+	private ConsistentHash clusterHash = null;
+	private ServiceLocation serverMD = null;
 
 	private int port;
 	private int cacheSize;
@@ -86,7 +90,7 @@ public class KVServer extends Thread implements IKVServer {
 		this.cacheSize = cacheSize;
 		this.strategy = parseCacheStrategy(strategy);
 	}
-	
+
 	public void setRunning(boolean running) {
 		this.running = running;
 	}
@@ -196,7 +200,7 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
-		Disk.setDbName("/" + this.serverMetadata.serviceName + "-kvdb");
+		Disk.setDbName("/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
@@ -210,12 +214,10 @@ public class KVServer extends Thread implements IKVServer {
 					threadCollection.add(newConnection);
 					newConnection.start();
 
-					logger.info("Connected to "
-							+ client.getInetAddress().getHostName()
-							+ " on port " + client.getPort());
+					logger.info(
+							"Connected to " + client.getInetAddress().getHostName() + " on port " + client.getPort());
 				} catch (IOException e) {
-					logger.error("Error! "
-							+ "Unable to establish connection. \n", e);
+					logger.error("Error! " + "Unable to establish connection. \n", e);
 				}
 			}
 		}
@@ -238,8 +240,7 @@ public class KVServer extends Thread implements IKVServer {
 			serverSocket.close();
 			serverOn = false;
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port,
-					e);
+			logger.error("Error! " + "Unable to close socket on port: " + port, e);
 		}
 	}
 
@@ -252,8 +253,7 @@ public class KVServer extends Thread implements IKVServer {
 		try {
 			serverSocket = new ServerSocket(port);
 			port = serverSocket.getLocalPort();
-			logger.info("Server listening on port: "
-					+ serverSocket.getLocalPort());
+			logger.info("Server listening on port: " + serverSocket.getLocalPort());
 			return true;
 		} catch (IOException e) {
 			logger.error("Error! Cannot open server socket:");
@@ -272,34 +272,45 @@ public class KVServer extends Thread implements IKVServer {
 			return CacheStrategy.LRU;
 		if (str.equals("LFU"))
 			return CacheStrategy.LFU;
-		logger.warn("Invalid cache strategy: " + str
-				+ ". Using pure disk storage.");
+		logger.warn("Invalid cache strategy: " + str + ". Using pure disk storage.");
 		return CacheStrategy.None;
 	}
 
 	private static void setUpServerLogger() throws Exception {
 		Properties props = new Properties();
-		props.load(new FileInputStream(
-				"resources/config/server-log4j.properties"));
+		props.load(new FileInputStream("resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
 
-	public static KVServer initServerFromECS(String[] args) throws Exception {
-		// Request ECS for cluster metadata.
-		CommMessage clusterRequest = new CommMessageBuilder()
-				.setStatus(StatusType.GET).setKey("METADATA").build();
-		ConnectionUtil conn = new ConnectionUtil();
-		Socket ecsSocket = new Socket("localhost", Integer.parseInt(args[0]));
-		conn.sendCommMessage(ecsSocket.getOutputStream(), clusterRequest);
-		CommMessage clusterInfo = conn.receiveCommMessage(ecsSocket
-				.getInputStream());
-		ecsSocket.close();
+	public void retrieveClusterFromECS() {
+		if (ecs == null) {
+			ecs = new ECS();
+		}
+		
+		// TODO: ECS Provides: 
+		// ?: ecs.connect();
+		// clusterMD = ecs.getMetadata();
+		
+		// Compute server side consistent hash.
+		clusterHash = new ConsistentHash();
+		clusterHash.addNodesFromInfraMD(clusterMD);
+	}
 
-		// Coordinate and initialize server within cluster metadata.
+	public static KVServer initServerFromECS(String[] args) throws Exception {
+		// Coordinate and initialize server w.r.t ECS metadata.
+		// Initialize clusterMD and compute clusterHash.
 		KVServer server = new KVServer();
-		server.cluster = clusterInfo.getInfraMetadata();
-		server.serverMetadata = server.cluster.locationOfService(args[1]);
-		server.port = server.serverMetadata.port;
+		server.retrieveClusterFromECS();
+		
+		// Calculate server instance specific metadata.
+		server.serverMD = server.clusterMD.locationOfService(args[1]);
+		server.port = server.serverMD.port;
+
+		// Read configuration file for cache & server configs.
+		Properties props = new Properties();
+		props.load(new FileInputStream(configPath));
+		server.cacheSize = Integer.parseInt(props.getProperty("cache_limit"));
+		server.strategy = parseCacheStrategy(props.getProperty("cache_policy"));
 
 		return server;
 	}
@@ -315,8 +326,7 @@ public class KVServer extends Thread implements IKVServer {
 			try {
 				setUpServerLogger();
 			} catch (Exception e) {
-				System.out
-						.println("Unable to read from resources/config/server-log4j.properties");
+				System.out.println("Unable to read from resources/config/server-log4j.properties");
 				System.out.println("Using default logger from skeleton code.");
 				new LogSetup("logs/server-default.log", Level.ALL);
 			}
@@ -334,20 +344,17 @@ public class KVServer extends Thread implements IKVServer {
 				int port = 0;
 				String cacheStrategy = null;
 				int cacheSize = 0;
-				
+
 				if (args.length == 0) {
 					System.out.println("[Error]Missing port number");
 					System.exit(1);
-				} else if (args.length == 1){
+				} else if (args.length == 1) {
 					try {
 						port = Integer.parseInt(args[0]);
 					} catch (NumberFormatException e) {
 						System.out.println("[Error]Port number format exception");
 						System.exit(1);
 					}
-				} else if (args.length == 2) {
-					System.out.println("[Error]Incorrect number of arguments");
-					System.exit(1);
 				} else if (args.length == 3) {
 					try {
 						port = Integer.parseInt(args[0]);
@@ -358,8 +365,7 @@ public class KVServer extends Thread implements IKVServer {
 					}
 					cacheStrategy = args[1];
 				}
-				
-				
+
 				// No ECS startup. Mock cluster metadata.
 				if (cacheStrategy != null) {
 					server = new KVServer(port, cacheSize, cacheStrategy);
@@ -368,23 +374,26 @@ public class KVServer extends Thread implements IKVServer {
 					// Read configuration file for cache & server configs.
 					Properties props = new Properties();
 					props.load(new FileInputStream(configPath));
-					server.cacheSize = Integer.parseInt(props
-							.getProperty("cache_limit"));
-					server.strategy = parseCacheStrategy(props
-							.getProperty("cache_policy"));
+					server.cacheSize = Integer.parseInt(props.getProperty("cache_limit"));
+					server.strategy = parseCacheStrategy(props.getProperty("cache_policy"));
 				}
-				
-				System.out.println("[debug]server port: " + server.getPort() + ", cacheStrategy: " + server.getCacheStrategy() + ", cacheSize: " + server.getCacheSize());
+
+				System.out.println("[debug]server port: " + server.getPort() + ", cacheStrategy: "
+						+ server.getCacheStrategy() + ", cacheSize: " + server.getCacheSize());
 				server.port = Integer.parseInt(args[0]);
-				server.serverMetadata = new ServiceLocation(UUID.randomUUID()
-						.toString(), "127.0.0.1", server.port);
-				server.cluster = new InfraMetadata();// clusterInfo.getInfraMetadata();
-				server.cluster.getServerLocations().add(server.serverMetadata);
+				
+				// Generate cluster metadata that consists of only this server.
+				server.serverMD = new ServiceLocation(UUID.randomUUID().toString(), "127.0.0.1", server.port);
+				server.clusterMD = new InfraMetadata();
+				server.clusterMD.getServerLocations().add(server.serverMD);
+				
+				// Computer consistent hashes.
+				server.clusterHash = new ConsistentHash();
+				server.clusterHash.addNodesFromInfraMD(server.clusterMD);
 			}
 
-			System.out.println("Service: " + server.serverMetadata.serviceName
-					+ " will listen on " + server.serverMetadata.host + ":"
-					+ server.serverMetadata.port);
+			System.out.println("Service: " + server.serverMD.serviceName + " will listen on " + server.serverMD.host
+					+ ":" + server.serverMD.port);
 
 			// Start server.
 			server.start();

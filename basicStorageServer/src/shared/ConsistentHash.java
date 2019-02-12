@@ -27,6 +27,11 @@ public class ConsistentHash {
 		= new TreeMap<BigInteger, ServiceLocation>();
 	public static ReentrantLock hashRingLock = new ReentrantLock();
 
+	public void addNodesFromInfraMD(InfraMetadata md) {
+		for (ServiceLocation srv : md.getServerLocations()) {
+			addServerNode(srv);
+		}
+	}
 	
 	/*****************************************************************************
 	 * Get the Server (address) which contains that key
