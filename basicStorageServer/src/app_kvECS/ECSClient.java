@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -415,28 +416,35 @@ public class ECSClient implements IECSClient {
 		case "rm":
 			if(tokens.length == 1) {
 				break;
-			} else if(tokens.length == 2) {
-				if(!ecs.returnDirSet(currDir).contains(tokens[1])) {
-					echo("rm: cannot remove \'"+tokens[1]+"\': No such file or directory");
-					break;
+			} else if(tokens.length >= 2) {
+				if(!currDir.endsWith("/") && !tokens[1].equals("-r")) {
+					if(!ecs.returnDirSet(currDir).contains(tokens[1])) {
+						echo("rm: cannot remove \'"+tokens[1]+"\': No such file or directory");
+						break;
+					}
 				}
 				String safeCurrDir = currDir;
 				if(!currDir.endsWith("/")) {
 					safeCurrDir += "/";
 				}
-				if(ecs.returnDirSet(currDir + tokens[1]).size() !=0) {
-					echo("rm: cannot remove \'" + tokens[1] + "\': Is a directory");
-				} else if(tokens[1].equals("-r")) {
-					
+				if(tokens[1].equals("-r")) {
+					if(!ecs.returnDirSet(currDir).contains(tokens[2])) {
+						echo("rm: cannot remove \'"+tokens[2]+"\': No such file or directory");
+						break;
+					}
 					if(tokens[1].startsWith("/")) {
-						ecs.deleteHead(tokens[1]);
+						ecs.deleteHeadRecursive(tokens[2]);
 					} else {
-						ecs.deleteHead(safeCurrDir+tokens[1]);
+						ecs.deleteHeadRecursive(safeCurrDir+tokens[2]);
 					}
 				} else {
 					if(tokens[1].startsWith("/")) {
 						ecs.deleteHead(tokens[1]);
 					} else {
+						if(ecs.returnDirSet(currDir + tokens[1]).size() !=0) {
+							echo("rm: cannot remove \'" + tokens[1] + "\': Is a directory");
+							break;
+						}
 						ecs.deleteHead(safeCurrDir+tokens[1]);
 					}
 				}
@@ -449,7 +457,7 @@ public class ECSClient implements IECSClient {
 				}
 				if(tokens.length == 4) {
 					if(tokens[2].equals(">")) {
-						ecs.setData(currDir + tokens[3], tokens[1].getBytes());
+						ecs.setData(currDir + tokens[3], tokens[1]);
 					}
 				}
 			}
