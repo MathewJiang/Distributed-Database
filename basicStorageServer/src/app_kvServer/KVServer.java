@@ -281,7 +281,16 @@ public class KVServer extends Thread implements IKVServer {
 		props.load(new FileInputStream("resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-
+	
+	// If key is in the range this server is responsible for.
+	public boolean hasKey(String key) {
+		return clusterHash.getServer(key).serviceName.equals(serverMD.serviceName);
+	}
+	
+	public InfraMetadata getClusterMD() {
+		return clusterMD;
+	}
+	
 	public void retrieveClusterFromECS() {
 		if (ecs == null) {
 			ecs = new ECS();
