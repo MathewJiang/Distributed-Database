@@ -9,6 +9,7 @@ package app_kvECS;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +30,8 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
 
+import ecs.IECSNode;
+
 public class ECS {
 
 	private ZooKeeper zk;
@@ -44,7 +47,8 @@ public class ECS {
 	 *****************************************************************************/
 	public ZooKeeper connect(String host, int port) throws IOException, InterruptedException {
 		org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
-		zk = new ZooKeeper(host, port, new Watcher() {
+		String connectString = host +":"+port;
+		zk = new ZooKeeper(connectString, 500, new Watcher() {
 			@Override
 			public void process(WatchedEvent event) {
 				if (event.getState() == KeeperState.SyncConnected) {
@@ -55,6 +59,7 @@ public class ECS {
 		});
 		
 		connectionLatch.await();
+		echo("Connected");
 		return zk;
 	}
 	
@@ -201,7 +206,7 @@ public class ECS {
 		if(returnDirList(target).size() == 0) {
 			
 			try {
-				echo("real delete " + target);
+				//echo("real delete " + target);
 				zk.delete(target,zk.exists(target,true).getVersion());
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
@@ -211,5 +216,30 @@ public class ECS {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public boolean configured() {
+		try {
+			if(zk.exists("/configureStatus", false) == null) {
+				zk.create("/configureStatus", ("true").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+				return true;
+			} else {
+				return (getData("/configureStatus").equals("true"));
+			}
+			
+		} catch (KeeperException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	public Collection<IECSNode> getECSNodeCollection() {
+		// TODO Auto-generated method stub
+		echo("Info: configure from ECS repo");
+		return null;
 	}
 }

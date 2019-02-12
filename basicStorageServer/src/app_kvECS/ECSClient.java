@@ -45,7 +45,7 @@ public class ECSClient implements IECSClient {
 	private final String ecs_config = "./resources/config/ecs.config";
 	private InfraMetadata MD = new InfraMetadata();
 	List<ServiceLocation> launchedServer = new ArrayList<ServiceLocation>();
-	List<ECSNode> launchedNodes = new ArrayList<ECSNode>();
+	List<IECSNode> launchedNodes = new ArrayList<IECSNode>();
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
 	
@@ -112,7 +112,7 @@ public class ECSClient implements IECSClient {
         return null;
     }
     
-    private void loadECSconfig() {
+    private void loadECSconfigFromFile() {
 		try {
 			MD = InfraMetadata.fromConfigFile(ecs_config);
 		} catch (Exception e) {
@@ -143,7 +143,10 @@ public class ECSClient implements IECSClient {
     }
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-    	loadECSconfig();
+    	if(ecs.configured()) {
+    		return ecs.getECSNodeCollection();
+    	}
+    	loadECSconfigFromFile();
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 
 		info("Launching " + count + "/" + servers.size() + " servers on file");
@@ -151,11 +154,11 @@ public class ECSClient implements IECSClient {
 			ServiceLocation curr = servers.get(i);
 			launchedServer.add(curr);
 			ECSNode item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, "FFF", "000");
-			launch(curr.host, curr.port);
+			//launch(curr.host, curr.port);
 			launchedNodes.add(item_to_be_added); // fake values
 		}
 		info("launched " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
-        return null;
+        return launchedNodes;
     }
 
     @Override
@@ -210,7 +213,6 @@ public class ECSClient implements IECSClient {
 		info("work directory is: " + workDir);
 	}
 
-    
     /**
      * run():
      * execute the command shell
@@ -220,6 +222,7 @@ public class ECSClient implements IECSClient {
 		set_workDir();
 		try {
 			ecs.connect("127.0.0.1", 40000);
+			
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
