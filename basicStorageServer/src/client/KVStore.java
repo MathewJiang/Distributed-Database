@@ -26,7 +26,7 @@ public class KVStore extends Thread implements KVCommInterface {
 	private Set<ClientSocketListener> listeners;
 	private boolean running;
 
-	private Socket clientSocket;
+	public Socket clientSocket;		//FXIME: change back to private
 	private String address;
 	private int port;
 	
@@ -176,14 +176,6 @@ public class KVStore extends Thread implements KVCommInterface {
 			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
 					.getInputStream());
 			
-			/*
-			 * M2:
-			 * the message got from the server is Metadata file
-			 */
-			if (latestMsg != null && latestMsg.getInfraMetadata() != null) {
-				metaData = latestMsg.getInfraMetadata();
-				
-			}
 			return latestMsg;
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");

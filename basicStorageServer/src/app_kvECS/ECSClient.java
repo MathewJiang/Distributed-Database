@@ -30,16 +30,12 @@ import org.apache.zookeeper.data.Stat;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-import client.KVCommInterface;
-import client.KVStore;
-
-import app_kvClient.KVClient;
-import app_kvClient.ClientSocketListener.SocketStatus;
-import app_kvServer.KVServer;
 
 import ecs.ECSNode;
 import ecs.IECSNode;
 import app_kvECS.ECS;
+import app_kvServer.KVServer;
+
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -52,6 +48,14 @@ public class ECSClient implements IECSClient {
 	List<ECSNode> launchedNodes = new ArrayList<ECSNode>();
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
+	
+    private static Logger logger = Logger.getRootLogger();
+	private static final String PROMPT = "ecs_shell";
+	private BufferedReader stdin;
+	private boolean stop = false;
+	private String workDir = "";
+	private String config = "";
+	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
 	    int len = s.length();
@@ -62,6 +66,7 @@ public class ECSClient implements IECSClient {
 	    }
 	    return data;
 	}
+	
 	
 	// set start = true for all client server
     @Override
@@ -131,7 +136,7 @@ public class ECSClient implements IECSClient {
     		
     		try {
     			proc = run.exec(ssh_launch(ip, port));
-    		} catch (IOExceptionpath e) {
+    		} catch (IOException e) {
     			e.printStackTrace();
     		}
     	}
@@ -164,6 +169,7 @@ public class ECSClient implements IECSClient {
         // TODO
         return false;
     }
+    
     public boolean removeNode(int index) {
     	info("removeNode(index=" + index+")");
         warn("no implementation");
@@ -197,32 +203,18 @@ public class ECSClient implements IECSClient {
     }
  
 
-    public static void main(String[] args) {
-    	// Hack shared ConnectionUtil interrupt between server and client
-		// code.
-		KVServer.serverOn = true;
-		/*try {
-			setUpClientLogger();
-		} catch (Exception e) {
-			System.out
-					.println("Unable to read from resources/config/client-log4j.properties");
-			System.out.println("Using default logger from skeleton code.");
-			new LogSetup("logs/client-default.log", Level.ALL);
-		}*/
-		ECSClient app = new ECSClient();
-		app.run();
-    }
-    private static Logger logger = Logger.getRootLogger();
-	private static final String PROMPT = "ecs_shell";
-	private BufferedReader stdin;
-	private boolean stop = false;
-	private String workDir = "";
-	private String config = "";
+
 	
 	private void set_workDir () {
 		workDir = System.getProperty("user.dir");
 		info("work directory is: " + workDir);
 	}
+
+    
+    /**
+     * run():
+     * execute the command shell
+     */
 	public void run() {
 		ecs = new ECS();
 		set_workDir();
@@ -261,15 +253,19 @@ public class ECSClient implements IECSClient {
 		result[2] = sb.toString();
 		return result;
 	}
+	
 	private void warn(String line) {
 		System.out.println("Warning: " + line);
 	}
+	
 	private void info(String line) {
 		System.out.println("Info: " + line);
 	}
+
 	private void echo(String line) {
 		System.out.println(line);
 	}
+
 	private void handleCommand(String cmdLine) {
 		String[] tokens = cmdLine.split("\\s+");
 
@@ -295,6 +291,7 @@ public class ECSClient implements IECSClient {
 				warn("Usage addNodes <numberOfNodes> <cacheSize> <replacementStrategy>");
 			}
 			break;
+			
 		case "start":
 			if (tokens.length != 1) {
 				warn("start does not have any arguments");
@@ -302,6 +299,7 @@ public class ECSClient implements IECSClient {
 				start();
 			}
 			break;
+			
 		case "stop":
 			if (tokens.length != 1) {
 				warn("end does not have any arguments");
@@ -309,6 +307,7 @@ public class ECSClient implements IECSClient {
 				stop();
 			}
 			break;
+			
 		case "shutDown":
 			if (tokens.length != 1) {
 				warn("shutDown does not have any arguments");
@@ -316,6 +315,7 @@ public class ECSClient implements IECSClient {
 				shutdown();
 			}
 			break;
+			
 		case "addNode":
 			if (tokens.length == 3) {
 				addNode(tokens[3], Integer.parseInt(tokens[2]));
@@ -323,6 +323,7 @@ public class ECSClient implements IECSClient {
 				warn("Usage addNode <cacheSize> <replacementStrategy>");
 			}
 			break;
+			
 		case "removeNode":
 			if (tokens.length == 2) {
 				removeNode(Integer.parseInt(tokens[1]));
@@ -330,6 +331,7 @@ public class ECSClient implements IECSClient {
 				warn("Usage removeNode <index>");
 			}
 			break;
+			
 		case "listNode":
 			if (tokens.length !=1) {
 				warn("listNode does not have any argument");
@@ -467,6 +469,22 @@ public class ECSClient implements IECSClient {
 				echo(ecs.getData(currDir + tokens[1]));
 			}
 			break;
+		
+		case "logLevel":
+			if (tokens.length == 2) {
+				String level = setLevel(tokens[1]);
+				if (level.equals(LogSetup.UNKNOWN_LEVEL)) {
+					printError("No valid log level!");
+					printPossibleLogLevels();
+				} else {
+					System.out.println(PROMPT + "Log level changed to level "
+							+ level);
+				}
+			} else {
+				printError("Invalid number of parameters!");
+			}
+			break;
+			
 		default:
 			printError("Unknown command");
 			printHelp();
@@ -549,9 +567,25 @@ public class ECSClient implements IECSClient {
 		logger.error(PROMPT + "Error! " + error);
 	}
 
-	private static void setUpClientLogger() throws Exception {
+	private static void setUpESCClientLogger() throws Exception {
 		Properties props = new Properties();
 		props.load(new FileInputStream("resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
+	
+    public static void main(String[] args) {
+    	// Hack shared ConnectionUtil interrupt between server and client
+		// code.
+		KVServer.serverOn = true;
+		/*try {
+			setUpClientLogger();
+		} catch (Exception e) {
+			System.out
+					.println("Unable to read from resources/config/client-log4j.properties");
+			System.out.println("Using default logger from skeleton code.");
+			new LogSetup("logs/client-default.log", Level.ALL);
+		}*/
+		ECSClient app = new ECSClient();
+		app.run();
+    }
 }

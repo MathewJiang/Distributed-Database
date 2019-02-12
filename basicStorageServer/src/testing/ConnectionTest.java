@@ -22,6 +22,7 @@ public class ConnectionTest extends TestCase {
 		}
 		
 		assertNull(ex);
+		kvClient.disconnect();
 	}
 	
 	public void testUnknownHost() {

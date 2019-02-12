@@ -13,6 +13,8 @@ import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 import shared.ConnectionUtil;
 import shared.messages.CommMessage;
+import shared.messages.KVAdminMessage;
+import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage.StatusType;
 
 /**
@@ -30,6 +32,7 @@ public class ClientConnection implements Runnable {
 	private Socket clientSocket;
 	private InputStream input;
 	private OutputStream output;
+	private KVServer callingServer;
 	
 
 	/**
@@ -38,8 +41,9 @@ public class ClientConnection implements Runnable {
 	 * @param clientSocket
 	 *            the Socket object for the client connection.
 	 */
-	public ClientConnection(Socket clientSocket) {
+	public ClientConnection(Socket clientSocket, KVServer callingServer) {
 		this.clientSocket = clientSocket;
+		this.callingServer = callingServer;
 		this.isOpen = true;
 	}
 
@@ -61,42 +65,78 @@ public class ClientConnection implements Runnable {
 						//FIXME: other scenarios that result in (latestMsg == null)
 						throw new IOException();
 					}
-					CommMessage responseMsg = new CommMessage();
-
-					StatusType op = latestMsg.getStatus();
-					String key = latestMsg.getKey();
-					String value = latestMsg.getValue();
-
-					if (op.equals(StatusType.PUT)) {
-						try {
-							KVServer.serverLock.lock();
-							StatusType status = handlePUT(key, value);
-							
-							
-							responseMsg.setKey(key);
-							responseMsg.setValue(value);
-							responseMsg.setStatus(status);
-						} catch (IOException e) {
-							responseMsg.setStatus(StatusType.PUT_ERROR);
-						} finally {
-							KVServer.serverLock.unlock();
+					
+					if (latestMsg.getAdminMessage() != null){
+						//if this is an AdminMessage
+						KVAdminMessage adminMessage = latestMsg.getAdminMessage();
+						KVAdminMessageType adminMessageType = adminMessage.getKVAdMessageType();
+						
+						switch (adminMessageType) {
+						case START:
+							isOpen = true;
+							KVServer.serverOn = true;
+							callingServer.setRunning(true);
+							break; 
+						case STOP:
+							isOpen = false;
+							KVServer.serverOn = false;
+							callingServer.setRunning(true);
+							break;
+						case SHUTDOWN:
+							isOpen = false;
+							KVServer.serverOn = false;
+							callingServer.close();
+							break;
+						case UPDATE:
+							//TODO: 
+							break;
+						case LOCK_WRITE:
+							//TODO: 
+							break;
+						case UNLOCK_WRITE:
+							//TODO: 
+							break;
+						default:
+							break;
 						}
-					} else if (op.equals(StatusType.GET)) {
-						try {
-							KVServer.serverLock.lock();
-							value = handleGET(key);
-
-							responseMsg.setKey(key);
-							responseMsg.setValue(value);
-							responseMsg.setStatus(StatusType.GET_SUCCESS);
-						} catch (Exception e) {
-							value = null;
-							responseMsg.setStatus(StatusType.GET_ERROR);
-						} finally {
-							KVServer.serverLock.unlock();
+					} else {
+						CommMessage responseMsg = new CommMessage();
+	
+						StatusType op = latestMsg.getStatus();
+						String key = latestMsg.getKey();
+						String value = latestMsg.getValue();
+	
+						if (op.equals(StatusType.PUT)) {
+							try {
+								KVServer.serverLock.lock();
+								StatusType status = handlePUT(key, value);
+								
+								
+								responseMsg.setKey(key);
+								responseMsg.setValue(value);
+								responseMsg.setStatus(status);
+							} catch (IOException e) {
+								responseMsg.setStatus(StatusType.PUT_ERROR);
+							} finally {
+								KVServer.serverLock.unlock();
+							}
+						} else if (op.equals(StatusType.GET)) {
+							try {
+								KVServer.serverLock.lock();
+								value = handleGET(key);
+	
+								responseMsg.setKey(key);
+								responseMsg.setValue(value);
+								responseMsg.setStatus(StatusType.GET_SUCCESS);
+							} catch (Exception e) {
+								value = null;
+								responseMsg.setStatus(StatusType.GET_ERROR);
+							} finally {
+								KVServer.serverLock.unlock();
+							}
 						}
+						conn.sendCommMessage(output, responseMsg);
 					}
-					conn.sendCommMessage(output, responseMsg);
 
 					/*
 					 * connection either terminated by the client or lost due to
