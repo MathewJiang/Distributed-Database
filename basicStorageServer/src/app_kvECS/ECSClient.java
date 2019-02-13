@@ -505,7 +505,7 @@ public class ECSClient implements IECSClient {
 
 	private void printHelp() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(PROMPT).append("M1 CLIENT HELP (Usage):\n");
+		sb.append(PROMPT).append("M2 CLIENT HELP (Usage):\n");
 		sb.append(PROMPT);
 		sb.append("::::::::::::::::::::::::::::::::");
 		sb.append("::::::::::::::::::::::::::::::::\n");

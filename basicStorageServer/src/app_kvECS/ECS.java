@@ -297,4 +297,21 @@ public class ECS {
 		}
 		setConfigured();
 	}
+	
+	/*
+	 * locking primitives 
+	 * Lock blocks
+	 * trylock does not block and return true if succeed.
+	 */
+	private void spinLock() {
+		
+	}
+	
+	private boolean spinTryLock() {
+		return false;
+	}
+	
+	private void spinUnlock() {
+		
+	}
 }
