@@ -126,6 +126,55 @@ public class ConsistentHash {
 		return true;
 	}
 	
+	/*****************************************************************************
+	 * Get hash range given a server
+	 * @param	serverInfo	Server information
+	 * @return 	hashRange	String[0] = low
+	 * 						String[1] = high
+	 * 
+	 * @throws	Exception	if the hashRing has not been constructed
+	 * Note: if low > high, meaning it loops around the ring
+	 *****************************************************************************/
+	public String[] getHashRange(ServiceLocation serverInfo) throws Exception {
+		if (serverInfo == null) {
+			throw new Exception("[ConsistentHash.java/getHashRange]ServerInfo is null!");
+		}
+		
+		String[] hashRange = new String[2];
+		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
+		BigInteger MD5ServerInfo = MD5.getMD5(serverHashString);
+		
+		// TODO: if only one element in hashRing
+		// TODO: the serverMD5 is 0x0000
+		hashRingLock.lock();
+		if (hashRing.size() == 0) {
+			hashRingLock.unlock();
+			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
+		} else if (hashRing.size() == 1) {
+			hashRange[0] = String.format("0x%32X", MD5ServerInfo.add(BigInteger.ONE));
+			if (MD5ServerInfo.compareTo(BigInteger.ZERO) == 0) {
+				hashRange[1] = String.format("0x%32X", BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE));
+			} else {
+				hashRange[1] = String.format("0x%32X", MD5ServerInfo.subtract(BigInteger.ONE));
+			}
+		} else {
+			Entry<BigInteger, ServiceLocation>predecessorEntry = hashRing.lowerEntry(MD5ServerInfo);
+			if (predecessorEntry == null) {
+				//if the server is the first element
+				predecessorEntry = hashRing.lastEntry();
+			}
+			hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
+			
+			if (MD5ServerInfo.compareTo(BigInteger.ZERO) == 0) {
+				hashRange[1] = String.format("0x%32X", BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE));
+			} else {
+				hashRange[1] = String.format("0x%32X", MD5ServerInfo.subtract(BigInteger.ONE));
+			}
+		}
+		
+		hashRingLock.unlock();
+		return hashRange;
+	}
 	
 	/*
 	 * Testing purposes only
@@ -153,6 +202,17 @@ public class ConsistentHash {
 		ch.addServerNode(server1);
 		ch.addServerNode(server2);
 		ch.addServerNode(server3);
+		
+		String[] server1HashRange = null;
+		try {
+			server1HashRange = ch.getHashRange(server1);
+		} catch (Exception e) {
+			System.out.println("gg!");
+			e.printStackTrace();
+		}
+		
+		System.out.println("---server1 range from: " + server1HashRange[0]);
+		System.out.println("to: " + server1HashRange[1] + "---");
 		
 		System.out.println("---round 1----");
 		System.out.println(ch.getServer("key1").serviceName);
