@@ -90,7 +90,12 @@ public class ClientConnection implements Runnable {
 							callingServer.close();
 							break;
 						case UPDATE:
-							// TODO:
+							//TODO: 
+							isOpen = false;
+							KVServer.serverOn = false;
+							callingServer.setRunning(true);
+							
+							//no longer accept client requests
 							break;
 						case LOCK_WRITE:
 							// TODO:
@@ -113,40 +118,50 @@ public class ClientConnection implements Runnable {
 						if (!callingServer.hasKey(key)) {
 							responseMsg.setInfraMetadata(callingServer.getClusterMD());
 							responseMsg.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
-						} else if (op.equals(StatusType.PUT)) {
-							try {
-								KVServer.serverLock.lock();
-								StatusType status = handlePUT(key, value);
-								responseMsg.setKey(key);
-								responseMsg.setValue(value);
-								responseMsg.setStatus(status);
-							} catch (IOException e) {
-								responseMsg.setStatus(StatusType.PUT_ERROR);
-							} finally {
-								KVServer.serverLock.unlock();
-							}
-						} else if (op.equals(StatusType.GET)) {
-							try {
-								KVServer.serverLock.lock();
-								value = handleGET(key);
-
-								responseMsg.setKey(key);
-								responseMsg.setValue(value);
-								responseMsg.setStatus(StatusType.GET_SUCCESS);
-							} catch (Exception e) {
-								value = null;
-								responseMsg.setStatus(StatusType.GET_ERROR);
-							} finally {
-								KVServer.serverLock.unlock();
+						} else {
+							switch (op) {
+							case PUT: 
+								try {
+									KVServer.serverLock.lock();
+									StatusType status = handlePUT(key, value);
+									responseMsg.setKey(key);
+									responseMsg.setValue(value);
+									responseMsg.setStatus(status);
+								} catch (IOException e) {
+									responseMsg.setStatus(StatusType.PUT_ERROR);
+								} finally {
+									KVServer.serverLock.unlock();
+								}
+								break;
+								
+							case GET:
+								try {
+									KVServer.serverLock.lock();
+									value = handleGET(key);
+	
+									responseMsg.setKey(key);
+									responseMsg.setValue(value);
+									responseMsg.setStatus(StatusType.GET_SUCCESS);
+								} catch (Exception e) {
+									value = null;
+									responseMsg.setStatus(StatusType.GET_ERROR);
+								} finally {
+									KVServer.serverLock.unlock();
+								}
+								break;
+								
+							default:
+								logger.error("[Error]ClientConnection.java/run(): Unknown type of message");
+								throw new IOException();
 							}
 						}
 						conn.sendCommMessage(output, responseMsg);
 					}
 
-					/*
-					 * connection either terminated by the client or lost due to
-					 * network problems
-					 */
+				/*
+				 * connection either terminated by the client or lost due to
+				 * network problems
+				 */
 				} catch (JsonSyntaxException e) {
 					logger.error(
 							"[ClientConnection]/run(): Error! Received message experiences error during deserilization!");

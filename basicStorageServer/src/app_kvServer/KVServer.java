@@ -44,6 +44,7 @@ public class KVServer extends Thread implements IKVServer {
 	private CacheStrategy strategy;
 	private ServerSocket serverSocket;
 	private boolean running;
+	private boolean suspending;
 
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;

@@ -50,7 +50,7 @@ public class ECSClient implements IECSClient {
 	private Set<String> SetDir = new HashSet<String>();
 	
     private static Logger logger = Logger.getRootLogger();
-	private static final String PROMPT = "ecs_shell";
+	private static final String PROMPT = "ecs_shell>";
 	private BufferedReader stdin;
 	private boolean stop = false;
 	private String workDir = "";
@@ -412,6 +412,7 @@ public class ECSClient implements IECSClient {
 				}
 			}
 			break;
+			
 		case "rm":
 			if(tokens.length == 1) {
 				break;
@@ -449,6 +450,7 @@ public class ECSClient implements IECSClient {
 				}
 			}
 			break;
+			
 		case "echo":
 			if(tokens.length >= 2) {
 				if(tokens.length == 2) {
