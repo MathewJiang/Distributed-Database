@@ -15,6 +15,7 @@ import shared.ConnectionUtil;
 import shared.messages.CommMessage;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVAdminMessage.KVAdminMessageType;
+import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 
 /**
@@ -33,7 +34,6 @@ public class ClientConnection implements Runnable {
 	private InputStream input;
 	private OutputStream output;
 	private KVServer callingServer;
-	
 
 	/**
 	 * Constructs a new CientConnection object for a given TCP socket.
@@ -56,27 +56,29 @@ public class ClientConnection implements Runnable {
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
 			ConnectionUtil conn = new ConnectionUtil();
-			
+
 			while (isOpen && KVServer.serverOn) {
 				try {
-					//Note: if deserlization failed, receiveCommMessage() throws an JsonSyntaxException
+					// Note: if deserlization failed, receiveCommMessage()
+					// throws an JsonSyntaxException
 					CommMessage latestMsg = conn.receiveCommMessage(input);
 					if (latestMsg == null) {
-						//FIXME: other scenarios that result in (latestMsg == null)
+						// FIXME: other scenarios that result in (latestMsg ==
+						// null)
 						throw new IOException();
 					}
-					
-					if (latestMsg.getAdminMessage() != null){
-						//if this is an AdminMessage
+
+					if (latestMsg.getAdminMessage() != null) {
+						// if this is an AdminMessage
 						KVAdminMessage adminMessage = latestMsg.getAdminMessage();
 						KVAdminMessageType adminMessageType = adminMessage.getKVAdMessageType();
-						
+
 						switch (adminMessageType) {
 						case START:
 							isOpen = true;
 							KVServer.serverOn = true;
 							callingServer.setRunning(true);
-							break; 
+							break;
 						case STOP:
 							isOpen = false;
 							KVServer.serverOn = false;
@@ -88,30 +90,33 @@ public class ClientConnection implements Runnable {
 							callingServer.close();
 							break;
 						case UPDATE:
-							//TODO: 
+							// TODO:
 							break;
 						case LOCK_WRITE:
-							//TODO: 
+							// TODO:
 							break;
 						case UNLOCK_WRITE:
-							//TODO: 
+							// TODO:
 							break;
 						default:
 							break;
 						}
 					} else {
-						CommMessage responseMsg = new CommMessage();
-	
 						StatusType op = latestMsg.getStatus();
 						String key = latestMsg.getKey();
 						String value = latestMsg.getValue();
-	
-						if (op.equals(StatusType.PUT)) {
+
+						CommMessage responseMsg = new CommMessage();
+
+						// If request key is not in server range. Issue an
+						// update message to requesting client.
+						if (!callingServer.hasKey(key)) {
+							responseMsg.setInfraMetadata(callingServer.getClusterMD());
+							responseMsg.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+						} else if (op.equals(StatusType.PUT)) {
 							try {
 								KVServer.serverLock.lock();
 								StatusType status = handlePUT(key, value);
-								
-								
 								responseMsg.setKey(key);
 								responseMsg.setValue(value);
 								responseMsg.setStatus(status);
@@ -124,7 +129,7 @@ public class ClientConnection implements Runnable {
 							try {
 								KVServer.serverLock.lock();
 								value = handleGET(key);
-	
+
 								responseMsg.setKey(key);
 								responseMsg.setValue(value);
 								responseMsg.setStatus(StatusType.GET_SUCCESS);
@@ -143,7 +148,8 @@ public class ClientConnection implements Runnable {
 					 * network problems
 					 */
 				} catch (JsonSyntaxException e) {
-					logger.error("[ClientConnection]/run(): Error! Received message experiences error during deserilization!");
+					logger.error(
+							"[ClientConnection]/run(): Error! Received message experiences error during deserilization!");
 				} catch (IOException ioe) {
 					logger.error("Error! Connection lost!");
 					isOpen = false;

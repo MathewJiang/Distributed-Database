@@ -178,15 +178,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				
 				latestMsg = (CommMessage)backend.put(key, value);
 				
-//				ServiceLocation tempsl = new ServiceLocation("server1", "127.0.0.1", 5000);
-//				ArrayList<ServiceLocation> tempsls = new ArrayList<ServiceLocation>();
-//				tempsls.add(tempsl);
-//				
-//				InfraMetadata tempMetaData = new InfraMetadata();
-//				tempMetaData.setEcsLocation(tempsls);
-//				latestMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_NOT_RESPONSIBLE).build();
-//				latestMsg.setInfraMetadata(tempMetaData);
-				
 				// getting a metaData file from the server
 				// need to do a retry on the corresponding server
 				KVClient tempClient = null;
@@ -235,16 +226,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 					String key = tokens[1];
 					CommMessage latestMsg = (CommMessage) backend.get(key);
 					
-					//testing purpose only
-//					ServiceLocation tempsl = new ServiceLocation("server1", "127.0.0.1", 5000);
-//					ArrayList<ServiceLocation> tempsls = new ArrayList<ServiceLocation>();
-//					tempsls.add(tempsl);
-//					
-//					InfraMetadata tempMetaData = new InfraMetadata();
-//					tempMetaData.setEcsLocation(tempsls);
-//					CommMessage latestMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_NOT_RESPONSIBLE).build();
-//					latestMsg.setInfraMetadata(tempMetaData);
-					
 					// getting a metaData file from the server
 					// need to do a retry on the corresponding server
 					KVClient tempClient = null;
@@ -287,25 +268,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				}
 			}
 			break;
-
-		/*
-		//only for testing purposes
-		case "shutdown":
-			try {
-				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
-				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.SHUTDOWN);
-				ConnectionUtil conn = new ConnectionUtil();
-				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-
-				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-				
-				System.out.println("Serve should be closed now");
-			} catch (IOException ioe) {
-				logger.error("Connection lost!");
-			}
-			break;
-		*/
+			
 		default:
 			printError("Unknown command");
 			printHelp();
