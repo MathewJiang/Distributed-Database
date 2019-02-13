@@ -9,6 +9,7 @@ package app_kvECS;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashSet;
@@ -32,6 +33,7 @@ public class ECS {
 
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
+	
 	//String logConfigFileLocation = "./";
 	
 	/*****************************************************************************
@@ -53,6 +55,21 @@ public class ECS {
 			}
 			
 		});
+		// registering some lock
+		byte[] emptyByte = null;
+		try {
+			if(zk.exists("/lock",true) == null) {
+				create("/lock", emptyByte, "-p");
+			}
+			if(zk.exists("/lock/spinlock",true) == null) {
+				create("/lock/spinlock", emptyByte, "-p");
+			}
+			
+		} catch (KeeperException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		
 		connectionLatch.await();
 		echo("Connected");
@@ -67,7 +84,7 @@ public class ECS {
 		zk.close();
 	}
 	
-	public void create(String path, byte[] data, String mode){
+	public String create(String path, byte[] data, String mode){
 		CreateMode CMode = CreateMode.EPHEMERAL;
 		switch(mode) {
 			case"-p":
@@ -83,8 +100,9 @@ public class ECS {
 				CMode = CreateMode.EPHEMERAL_SEQUENTIAL;
 				break;	
 		}
+		String result = null;
 		try {
-			zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,CMode);
+			result = zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,CMode);
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -92,6 +110,7 @@ public class ECS {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return result;
 	}
 	
 	public void echo(String line){
@@ -249,8 +268,11 @@ public class ECS {
 			String NodeHost = getData(serverPath + "NodeHost"); 
 			int NodePort = Integer.parseInt(getData(serverPath + "NodePort")); 
 			String from = getData(serverPath + "from"); 
-			String to = getData(serverPath + "to"); 
-			nodelist.add(new ECSNode(serverName, NodeHost, NodePort, from, to));
+			String to = getData(serverPath + "to");
+			String[] range = new String[2];
+			range[0] = from;
+			range[1] = to;
+			nodelist.add(new ECSNode(serverName, NodeHost, NodePort, range));
 		}
 		return nodelist;
 	}
@@ -278,6 +300,18 @@ public class ECS {
 			echo(serverLocations.get(i).serviceName + ":" +serverLocations.get(i).host + ":" + serverLocations.get(i).port);
 		}
 	}
+	
+	public void printHash() {
+		List<IECSNode> nodes = getECSNodeCollection();
+		for(int i = 0; i < nodes.size();i++) {
+			IECSNode node = nodes.get(i);
+			String from = node.getNodeHashRange()[0];
+			String to = node.getNodeHashRange()[1];
+			echo(node.getNodeName() + ":" + node.getNodeHost()+":"
+					+node.getNodePort()+"["+ from + "~" + to + "]" );
+		}
+	}
+	
 	private void setConfigured() {
 		setData("/configureStatus", "true");
 	}
@@ -303,8 +337,30 @@ public class ECS {
 	 * Lock blocks
 	 * trylock does not block and return true if succeed.
 	 */
+	
+	private String lock_create() {
+		byte[] emptyByte = null;
+		String path = null;
+		try {
+			path = zk.create("/lock/spinlock/",emptyByte, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		return path;
+	}
 	private void spinLock() {
-		
+		String n = lock_create();
+		List<String> raceList = returnDirList("/lock/spinlock/");
+		int array[] = new int[raceList.size()];
+		for(int i=0;i<raceList.size();i++) {
+			int entry = Integer.parseInt(raceList.get(i));
+			array[i] = entry;
+		}
+		Arrays.sort(array);
+		int winner = array[0];
+		if(Integer.parseInt(Character.toString(n.charAt(n.length()-1)))==winner) {
+			
+		}
 	}
 	
 	private boolean spinTryLock() {
@@ -313,5 +369,17 @@ public class ECS {
 	
 	private void spinUnlock() {
 		
+	}
+
+	public void reset() {
+		List<String> rootDir = returnDirList("/");
+		for(int i = 0; i < rootDir.size(); i++) {	
+			String curr = rootDir.get(i);
+			if(curr.equals("zookeeper")) {
+				continue;
+			}
+			// rm -r everything
+			deleteHeadRecursive("/" + curr);
+		}
 	}
 }

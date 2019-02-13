@@ -27,6 +27,7 @@ import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
 
+import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
@@ -46,6 +47,7 @@ public class ECSClient implements IECSClient {
 	private InfraMetadata MD = new InfraMetadata();
 	List<ServiceLocation> launchedServer = new ArrayList<ServiceLocation>();
 	List<IECSNode> launchedNodes = new ArrayList<IECSNode>();
+	private ConsistentHash hashRing;
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
 	
@@ -147,15 +149,32 @@ public class ECSClient implements IECSClient {
     		return ecs.getECSNodeCollection();
     	}
     	loadECSconfigFromFile();
+    	hashRing.addNodesFromInfraMD(MD);
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 
 		info("Launching " + count + "/" + servers.size() + " servers on file");
+		// need to construct a finished MD
+		InfraMetadata new_MD = new InfraMetadata();
+		List<ServiceLocation> selectedServers = new ArrayList<ServiceLocation>();
+		for(int i = 0; i < count; i++) {
+			ServiceLocation curr = servers.get(i);
+			selectedServers.add(curr);
+		}
+		new_MD.setServerLocations(selectedServers);
+		hashRing.addNodesFromInfraMD(new_MD);
 		for(int i = 0; i < count; i++) {
 			ServiceLocation curr = servers.get(i);
 			launchedServer.add(curr);
-			ECSNode item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, "FFF", "000");
-			//launch(curr.host, curr.port);
-			launchedNodes.add(item_to_be_added); // fake values
+			ECSNode item_to_be_added;
+			try {
+				item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, hashRing.getHashRange(curr));
+				launchedNodes.add(item_to_be_added);	
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
 		}
 		info("launched " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
         ecs.setLaunchedNodes(launchedNodes);
@@ -222,6 +241,9 @@ public class ECSClient implements IECSClient {
 	public void run() {
 		ecs = new ECS();
 		set_workDir();
+		hashRing = new ConsistentHash();
+		
+		
 		try {
 			ecs.connect("127.0.0.1", 40000);
 			
@@ -444,7 +466,7 @@ public class ECSClient implements IECSClient {
 						if(ecs.returnDirSet(currDir + tokens[1]).size() !=0) {
 							echo("rm: cannot remove \'" + tokens[1] + "\': Is a directory");
 							break;
-						}
+						}loadECSconfigFromFile();
 						ecs.deleteHead(safeCurrDir+tokens[1]);
 					}
 				}
@@ -492,7 +514,18 @@ public class ECSClient implements IECSClient {
 				ecs.printMD();
 			}
 			break;
-			
+		case "reset":
+			if (tokens.length == 2) {
+				if(tokens[1].equals("-all")) {
+					ecs.reset();
+				}
+			}
+			break;
+		case "printHash":
+			if (tokens.length == 1) {
+				ecs.printHash();
+			}
+			break;
 		default:
 			printError("Unknown command");
 			printHelp();

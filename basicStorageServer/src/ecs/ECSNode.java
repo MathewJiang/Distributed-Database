@@ -8,13 +8,11 @@ public class ECSNode implements IECSNode {
 	private String NodeHost = "";
 	private int NodePort;
 	private String[] NodeHashRange;
-	public ECSNode(String node_name, String node_host, int node_port, String from, String to) {
+	public ECSNode(String node_name, String node_host, int node_port, String[] range) {
 		NodeName = node_name;
 		NodeHost = node_host;
 		NodePort = node_port;
-		NodeHashRange = new String[2];
-		NodeHashRange[0] = from;
-		NodeHashRange[1] = to;
+		NodeHashRange = range;
 	}
 
 	@Override
