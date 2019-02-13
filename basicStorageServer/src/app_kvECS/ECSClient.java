@@ -158,8 +158,10 @@ public class ECSClient implements IECSClient {
 			launchedNodes.add(item_to_be_added); // fake values
 		}
 		info("launched " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
-        return launchedNodes;
+        ecs.setLaunchedNodes(launchedNodes);
+		return launchedNodes;
     }
+    
 
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
@@ -402,19 +404,11 @@ public class ECSClient implements IECSClient {
 			} else if(tokens.length >= 3) {
 				for(int i = 2; i < tokens.length;i++) {
 					byte[] emptyByte = null;
-					try {
-						String safeCurrDir = currDir;
-						if(!currDir.endsWith("/")) {
-							safeCurrDir += "/";
-						}
-						ecs.create(safeCurrDir +tokens[i], emptyByte, tokens[1]);
-					} catch (KeeperException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+					String safeCurrDir = currDir;
+					if(!currDir.endsWith("/")) {
+						safeCurrDir += "/";
 					}
+					ecs.create(safeCurrDir +tokens[i], emptyByte, tokens[1]);
 				}
 			}
 			break;
@@ -469,7 +463,11 @@ public class ECSClient implements IECSClient {
 			break;
 		case "cat":
 			if(tokens.length == 2) {
-				echo(ecs.getData(currDir + tokens[1]));
+				String safeCurrDir = currDir;
+				if(!currDir.endsWith("/")) {
+					safeCurrDir += "/";
+				}
+				echo(ecs.getData(safeCurrDir + tokens[1]));
 			}
 			break;
 		
@@ -485,6 +483,11 @@ public class ECSClient implements IECSClient {
 				}
 			} else {
 				printError("Invalid number of parameters!");
+			}
+			break;
+		case "printMD":
+			if (tokens.length == 1) {
+				ecs.printMD();
 			}
 			break;
 			
