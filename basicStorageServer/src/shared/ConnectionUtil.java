@@ -6,11 +6,10 @@ import java.io.OutputStream;
 
 import org.apache.log4j.Logger;
 
-import com.google.gson.JsonSyntaxException;
-
+import shared.messages.CommMessage;
 import app_kvServer.KVServer;
 
-import shared.messages.CommMessage;
+import com.google.gson.JsonSyntaxException;
 
 public class ConnectionUtil {
 	private Logger logger = Logger.getRootLogger();

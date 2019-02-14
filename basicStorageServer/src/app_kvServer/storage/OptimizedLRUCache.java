@@ -6,9 +6,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 
-import app_kvServer.storage.OptimizedLRUCache.LinkedEntries.EntryNode;
-
 import shared.messages.KVMessage.StatusType;
+import app_kvServer.storage.OptimizedLRUCache.LinkedEntries.EntryNode;
 
 // Uses a double linked list and a hash map with list node references
 // as values to implement a LRU cache that operates in constant times.

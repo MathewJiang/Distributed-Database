@@ -5,24 +5,18 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Properties;
+
+import logger.LogSetup;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
-import app_kvClient.ClientSocketListener.SocketStatus;
-import app_kvServer.KVServer;
-import shared.ConnectionUtil;
-import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-import shared.messages.CommMessageBuilder;
-import shared.messages.KVAdminMessage;
-import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage.StatusType;
-import logger.LogSetup;
+import app_kvServer.KVServer;
 import client.KVCommInterface;
 import client.KVStore;
 

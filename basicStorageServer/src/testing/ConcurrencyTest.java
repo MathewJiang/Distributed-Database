@@ -1,11 +1,12 @@
 package testing;
 
 
-import org.junit.Test;
 import junit.framework.TestCase;
 
-import app_kvServer.IKVServer;
+import org.junit.Test;
+
 import shared.ObjectFactory;
+import app_kvServer.IKVServer;
 import app_kvServer.KVServer;
 
 public class ConcurrencyTest extends TestCase {	

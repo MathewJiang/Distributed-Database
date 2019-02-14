@@ -4,41 +4,29 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Collection;
 import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
 
 import logger.LogSetup;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.AsyncCallback.StatCallback;
-import org.apache.zookeeper.KeeperException.Code;
-import org.apache.zookeeper.data.Stat;
 
 import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-
+import app_kvServer.KVServer;
 import ecs.ECSNode;
 import ecs.IECSNode;
-import app_kvECS.ECS;
-import app_kvServer.KVServer;
-
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class ECSClient implements IECSClient {
 
