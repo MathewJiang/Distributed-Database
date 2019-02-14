@@ -2,8 +2,8 @@ package app_kvServer.storage;
 
 import java.io.IOException;
 
-import app_kvServer.IKVServer.CacheStrategy;
 import shared.messages.KVMessage.StatusType;
+import app_kvServer.IKVServer.CacheStrategy;
 
 public class Storage {
 	// mode 0 FIFO, 1 LRU, 2 LFU

@@ -1,11 +1,12 @@
 package testing;
 
+import junit.framework.TestCase;
+
 import org.junit.Test;
 
-import client.KVStore;
-import junit.framework.TestCase;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import client.KVStore;
 
 
 public class InteractionTest extends TestCase {

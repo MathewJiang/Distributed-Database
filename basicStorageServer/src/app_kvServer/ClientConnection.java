@@ -1,16 +1,12 @@
 package app_kvServer;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
 
-import com.google.gson.JsonSyntaxException;
-
-import app_kvServer.storage.Disk;
-import app_kvServer.storage.Storage;
 import shared.ConnectionUtil;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
@@ -18,6 +14,10 @@ import shared.messages.KVAdminMessage;
 import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.Storage;
+
+import com.google.gson.JsonSyntaxException;
 
 /**
  * Represents a connection end point for a particular client that is connected

@@ -18,6 +18,7 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
+
 import shared.InfraMetadata.ServiceLocation;
 
 public class ConsistentHash {

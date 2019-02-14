@@ -1,24 +1,24 @@
 package testing;
 
-import static org.junit.Assert.*;
-
-import java.util.concurrent.ThreadLocalRandom;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 
+import app_kvServer.IKVServer.CacheStrategy;
+import app_kvServer.KVServer;
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.FIFOCache;
 import app_kvServer.storage.LFUCache;
-import app_kvServer.storage.LRUCache;
 import app_kvServer.storage.OptimizedLRUCache;
 import app_kvServer.storage.Storage;
-import app_kvServer.IKVServer.CacheStrategy;
-import app_kvServer.KVServer;
 
 public class StorageTest {
 

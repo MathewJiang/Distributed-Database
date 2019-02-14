@@ -1,13 +1,13 @@
 package testing;
 
 
-import org.junit.Test;
+import junit.framework.TestCase;
 
-import client.KVStore;
+import org.junit.Test;
 
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
-import junit.framework.TestCase;
+import client.KVStore;
 
 public class BadKeyTest extends TestCase {
 	private KVStore kvClient;
