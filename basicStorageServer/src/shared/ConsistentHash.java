@@ -152,25 +152,24 @@ public class ConsistentHash {
 			hashRingLock.unlock();
 			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
 		} else if (hashRing.size() == 1) {
-			hashRange[0] = String.format("0x%32X", MD5ServerInfo.add(BigInteger.ONE));
-			if (MD5ServerInfo.compareTo(BigInteger.ZERO) == 0) {
-				hashRange[1] = String.format("0x%32X", BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE));
+			if (MD5ServerInfo.compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
+				hashRange[0] = String.format("0x%32X", BigInteger.ZERO);
 			} else {
-				hashRange[1] = String.format("0x%32X", MD5ServerInfo.subtract(BigInteger.ONE));
+				hashRange[0] = String.format("0x%32X", MD5ServerInfo.add(BigInteger.ONE));
 			}
+			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
 		} else {
 			Entry<BigInteger, ServiceLocation>predecessorEntry = hashRing.lowerEntry(MD5ServerInfo);
 			if (predecessorEntry == null) {
 				//if the server is the first element
 				predecessorEntry = hashRing.lastEntry();
 			}
-			hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
-			
-			if (MD5ServerInfo.compareTo(BigInteger.ZERO) == 0) {
-				hashRange[1] = String.format("0x%32X", BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE));
+			if (predecessorEntry.getKey().compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
+				hashRange[0] = String.format("0x%32X", BigInteger.ZERO);
 			} else {
-				hashRange[1] = String.format("0x%32X", MD5ServerInfo.subtract(BigInteger.ONE));
+				hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
 			}
+			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
 		}
 		
 		hashRingLock.unlock();
