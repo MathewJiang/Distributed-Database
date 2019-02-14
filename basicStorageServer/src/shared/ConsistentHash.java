@@ -18,6 +18,7 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
+
 import shared.InfraMetadata.ServiceLocation;
 
 public class ConsistentHash {
@@ -151,25 +152,24 @@ public class ConsistentHash {
 			hashRingLock.unlock();
 			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
 		} else if (hashRing.size() == 1) {
-			hashRange[0] = String.format("0x%32X", MD5ServerInfo.add(BigInteger.ONE));
-			if (MD5ServerInfo.compareTo(BigInteger.ZERO) == 0) {
-				hashRange[1] = String.format("0x%32X", BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE));
+			if (MD5ServerInfo.compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
+				hashRange[0] = String.format("0x%32X", BigInteger.ZERO);
 			} else {
-				hashRange[1] = String.format("0x%32X", MD5ServerInfo.subtract(BigInteger.ONE));
+				hashRange[0] = String.format("0x%32X", MD5ServerInfo.add(BigInteger.ONE));
 			}
+			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
 		} else {
 			Entry<BigInteger, ServiceLocation>predecessorEntry = hashRing.lowerEntry(MD5ServerInfo);
 			if (predecessorEntry == null) {
 				//if the server is the first element
 				predecessorEntry = hashRing.lastEntry();
 			}
-			hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
-			
-			if (MD5ServerInfo.compareTo(BigInteger.ZERO) == 0) {
-				hashRange[1] = String.format("0x%32X", BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE));
+			if (predecessorEntry.getKey().compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
+				hashRange[0] = String.format("0x%32X", BigInteger.ZERO);
 			} else {
-				hashRange[1] = String.format("0x%32X", MD5ServerInfo.subtract(BigInteger.ONE));
+				hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
 			}
+			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
 		}
 		
 		hashRingLock.unlock();
@@ -182,11 +182,12 @@ public class ConsistentHash {
 	 */
 	public static void main(String[] args) {
 		ConsistentHash ch = new ConsistentHash();
-		
+
+		ServiceLocation server0 = new ServiceLocation("server1", "127.0.0.1", 50003);
 		ServiceLocation server1 = new ServiceLocation("server1", "127.0.0.1", 50000);
-		ServiceLocation server2 = new ServiceLocation("server2", "127.0.0.1", 50001);
-		ServiceLocation server3 = new ServiceLocation("server3", "127.0.0.1", 50002);
-		ServiceLocation server4 = new ServiceLocation("server4", "127.0.0.1", 50003);
+		ServiceLocation server2 = new ServiceLocation("server2", "127.0.0.1", 50007);
+		ServiceLocation server3 = new ServiceLocation("server3", "127.0.0.1", 50001);
+		ServiceLocation server4 = new ServiceLocation("server4", "127.0.0.1", 50006);
 		ServiceLocation server5 = new ServiceLocation("server5", "127.0.0.1", 50004);
 		
 		System.out.println("server1 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50000")));
@@ -199,20 +200,37 @@ public class ConsistentHash {
 		System.out.println("key2: " + String.format("0x%32X", MD5.getMD5("key2")));
 		System.out.println("key3: " + String.format("0x%32X", MD5.getMD5("key3")));
 		
+		ch.addServerNode(server0);
 		ch.addServerNode(server1);
 		ch.addServerNode(server2);
 		ch.addServerNode(server3);
+		ch.addServerNode(server4);
+		//ch.addServerNode(server5);
 		
+		String[] server0HashRange = null;
 		String[] server1HashRange = null;
+		String[] server2HashRange = null;
+		String[] server3HashRange = null;
+		String[] server4HashRange = null;
+		String[] server5HashRange = null;
 		try {
+			server0HashRange = ch.getHashRange(server0);
 			server1HashRange = ch.getHashRange(server1);
+			server2HashRange = ch.getHashRange(server2);
+			server3HashRange = ch.getHashRange(server3);
+			server4HashRange = ch.getHashRange(server4);
+			//server5HashRange = ch.getHashRange(server5);
 		} catch (Exception e) {
 			System.out.println("gg!");
 			e.printStackTrace();
 		}
 		
-		System.out.println("---server1 range from: " + server1HashRange[0]);
-		System.out.println("to: " + server1HashRange[1] + "---");
+		System.out.println("---server0 range from: " + server0HashRange[0] + "~" + server0HashRange[1] + "---");
+		System.out.println("---server1 range from: " + server1HashRange[0] + "~" + server1HashRange[1] + "---");
+		System.out.println("---server2 range from: " + server2HashRange[0] + "~" + server2HashRange[1] + "---");
+		System.out.println("---server3 range from: " + server3HashRange[0] + "~" + server3HashRange[1] + "---");
+		System.out.println("---server4 range from: " + server4HashRange[0] + "~" + server4HashRange[1] + "---");
+		//System.out.println("---server5 range from: " + server5HashRange[0] + "~" + server5HashRange[1] + "---");
 		
 		System.out.println("---round 1----");
 		System.out.println(ch.getServer("key1").serviceName);

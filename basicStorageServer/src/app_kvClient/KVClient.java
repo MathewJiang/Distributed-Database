@@ -5,24 +5,21 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.Properties;
+
+import logger.LogSetup;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
-import app_kvClient.ClientSocketListener.SocketStatus;
-import app_kvServer.KVServer;
 import shared.ConnectionUtil;
-import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-import shared.messages.CommMessageBuilder;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage.StatusType;
-import logger.LogSetup;
+import app_kvServer.KVServer;
 import client.KVCommInterface;
 import client.KVStore;
 
@@ -266,6 +263,56 @@ public class KVClient implements IKVClient, ClientSocketListener {
 					printError("Error getting key " + tokens[1] + ": "
 							+ e.toString());
 				}
+			}
+			break;
+		
+			
+		//only for testing purposes
+		case "shutdown":
+			try {
+				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
+				cm.setAdminMessage(new KVAdminMessage());
+				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.SHUTDOWN);
+				ConnectionUtil conn = new ConnectionUtil();
+				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+				
+				System.out.println("Serve should be closed now");
+			} catch (IOException ioe) {
+				logger.error("Connection lost!");
+			}
+			break;
+		
+		//only for testing purposes
+		case "stop":
+			//Stop all the servers (should be issued from ECS)
+			try {
+				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
+				cm.setAdminMessage(new KVAdminMessage());
+				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.STOP);
+				ConnectionUtil conn = new ConnectionUtil();
+				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+				
+				System.out.println("Serve should be closed now");
+			} catch (IOException ioe) {
+				logger.error("Connection lost!");
+			}
+			break;
+			
+		case "start":
+			//Start all the servers (should be issued from ECS)
+			try {
+				CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null, null);
+				cm.setAdminMessage(new KVAdminMessage());
+				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.START);
+				ConnectionUtil conn = new ConnectionUtil();
+				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+				
+				System.out.println("Serve should be started now");
+			} catch (IOException ioe) {
+				logger.error("Connection lost!");
 			}
 			break;
 			

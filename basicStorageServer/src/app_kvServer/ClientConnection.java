@@ -1,22 +1,23 @@
 package app_kvServer;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
 
-import com.google.gson.JsonSyntaxException;
-
-import app_kvServer.storage.Disk;
-import app_kvServer.storage.Storage;
 import shared.ConnectionUtil;
 import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import app_kvServer.storage.Disk;
+import app_kvServer.storage.Storage;
+
+import com.google.gson.JsonSyntaxException;
 
 /**
  * Represents a connection end point for a particular client that is connected
@@ -34,6 +35,7 @@ public class ClientConnection implements Runnable {
 	private InputStream input;
 	private OutputStream output;
 	private KVServer callingServer;
+	private boolean clientConnectionDown = false;
 
 	/**
 	 * Constructs a new CientConnection object for a given TCP socket.
@@ -59,8 +61,6 @@ public class ClientConnection implements Runnable {
 
 			while (isOpen && KVServer.serverOn) {
 				try {
-					// Note: if deserlization failed, receiveCommMessage()
-					// throws an JsonSyntaxException
 					CommMessage latestMsg = conn.receiveCommMessage(input);
 					if (latestMsg == null) {
 						// FIXME: other scenarios that result in (latestMsg ==
@@ -68,94 +68,70 @@ public class ClientConnection implements Runnable {
 						throw new IOException();
 					}
 
-					if (latestMsg.getAdminMessage() != null) {
-						// if this is an AdminMessage
-						KVAdminMessage adminMessage = latestMsg.getAdminMessage();
-						KVAdminMessageType adminMessageType = adminMessage.getKVAdMessageType();
-
-						switch (adminMessageType) {
-						case START:
-							isOpen = true;
-							KVServer.serverOn = true;
-							callingServer.setRunning(true);
-							break;
-						case STOP:
-							isOpen = false;
-							KVServer.serverOn = false;
-							callingServer.setRunning(true);
-							break;
-						case SHUTDOWN:
-							isOpen = false;
-							KVServer.serverOn = false;
-							callingServer.close();
-							break;
-						case UPDATE:
-							//TODO: 
-							isOpen = false;
-							KVServer.serverOn = false;
-							callingServer.setRunning(true);
-							
-							//no longer accept client requests
-							break;
-						case LOCK_WRITE:
-							// TODO:
-							break;
-						case UNLOCK_WRITE:
-							// TODO:
-							break;
-						default:
-							break;
+					if (clientConnectionDown) {
+						if (latestMsg.getAdminMessage() != null) {
+							processAdminMessage(latestMsg, conn);
+						} else {
+							// Sending messages to inform client that the server has been stopped
+							// as a way to ignoring the request
+							CommMessage responseMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_STOPPED).build();
+							conn.sendCommMessage(output, responseMsg);
 						}
 					} else {
-						StatusType op = latestMsg.getStatus();
-						String key = latestMsg.getKey();
-						String value = latestMsg.getValue();
-
-						CommMessage responseMsg = new CommMessage();
-
-						// If request key is not in server range. Issue an
-						// update message to requesting client.
-						if (!callingServer.hasKey(key)) {
-							responseMsg.setInfraMetadata(callingServer.getClusterMD());
-							responseMsg.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+						if (latestMsg.getAdminMessage() != null) {
+							processAdminMessage(latestMsg, conn);
 						} else {
-							switch (op) {
-							case PUT: 
-								try {
-									KVServer.serverLock.lock();
-									StatusType status = handlePUT(key, value);
-									responseMsg.setKey(key);
-									responseMsg.setValue(value);
-									responseMsg.setStatus(status);
-								} catch (IOException e) {
-									responseMsg.setStatus(StatusType.PUT_ERROR);
-								} finally {
-									KVServer.serverLock.unlock();
-								}
-								break;
-								
-							case GET:
-								try {
-									KVServer.serverLock.lock();
-									value = handleGET(key);
+							StatusType op = latestMsg.getStatus();
+							String key = latestMsg.getKey();
+							String value = latestMsg.getValue();
 	
-									responseMsg.setKey(key);
-									responseMsg.setValue(value);
-									responseMsg.setStatus(StatusType.GET_SUCCESS);
-								} catch (Exception e) {
-									value = null;
-									responseMsg.setStatus(StatusType.GET_ERROR);
-								} finally {
-									KVServer.serverLock.unlock();
+							CommMessage responseMsg = new CommMessage();
+	
+							// If request key is not in server range. Issue an
+							// update message to requesting client.
+							if (!callingServer.hasKey(key)) {
+								responseMsg.setInfraMetadata(callingServer.getClusterMD());
+								responseMsg.setStatus(StatusType.SERVER_NOT_RESPONSIBLE);
+							} else {
+								switch (op) {
+								case PUT: 
+									try {
+										KVServer.serverLock.lock();
+										StatusType status = handlePUT(key, value);
+										responseMsg.setKey(key);
+										responseMsg.setValue(value);
+										responseMsg.setStatus(status);
+									} catch (IOException e) {
+										responseMsg.setStatus(StatusType.PUT_ERROR);
+									} finally {
+										KVServer.serverLock.unlock();
+									}
+									break;
+									
+								case GET:
+									try {
+										KVServer.serverLock.lock();
+										value = handleGET(key);
+		
+										responseMsg.setKey(key);
+										responseMsg.setValue(value);
+										responseMsg.setStatus(StatusType.GET_SUCCESS);
+									} catch (Exception e) {
+										value = null;
+										responseMsg.setStatus(StatusType.GET_ERROR);
+									} finally {
+										KVServer.serverLock.unlock();
+									}
+									break;
+									
+								default:
+									logger.error("[Error]ClientConnection.java/run(): Unknown type of message");
+									throw new IOException();
 								}
-								break;
-								
-							default:
-								logger.error("[Error]ClientConnection.java/run(): Unknown type of message");
-								throw new IOException();
 							}
+						
+							conn.sendCommMessage(output, responseMsg);
 						}
-						conn.sendCommMessage(output, responseMsg);
 					}
 
 				/*
@@ -192,6 +168,62 @@ public class ClientConnection implements Runnable {
 	 * Helper methods
 	 **********************************/
 
+	/****************************************************************************
+	 * processAdminMessage
+	 * process the incoming AdminMessage
+	 * 
+	 * @param	latestMsg		message recieved externally
+	 * @param   conn			current connection with the callingServer
+	 * @throws 	IOException
+	 ****************************************************************************/
+	private void processAdminMessage(CommMessage latestMsg, ConnectionUtil conn) throws IOException {
+		if (latestMsg.getAdminMessage() != null) {
+			// if this is an AdminMessage
+			KVAdminMessage adminMessage = latestMsg.getAdminMessage();
+			KVAdminMessageType adminMessageType = adminMessage.getKVAdMessageType();
+
+			switch (adminMessageType) {
+			case START:
+				clientConnectionDown = false;
+				break;
+			case STOP:
+				//Reject all client messages during this period
+				clientConnectionDown = true;
+				//CommMessage responseMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_STOPPED).build();
+				//conn.sendCommMessage(output, responseMsg);
+				break;
+			case SHUTDOWN:
+				isOpen = false;
+				KVServer.serverOn = false;
+				callingServer.close();
+				break;
+			case UPDATE:
+				/*
+				 * Update requires all servers stop responding
+				 * client requests (i.e. KVAdminMessage == null)
+				 */
+				//TODO:
+				isOpen = false;
+				KVServer.serverOn = false;
+				callingServer.setRunning(true);
+				
+				// find out if I am the one who needs migration
+				// if so, migrate
+				// if not, keep waiting
+				
+				//no longer accept client requests
+				break;
+			case LOCK_WRITE:
+				// TODO:
+				break;
+			case UNLOCK_WRITE:
+				// TODO:
+				break;
+			default:
+				break;
+			}
+		}
+	}
 	/*
 	 * handlePUT store the <key, value> pairs in persistent disk
 	 */

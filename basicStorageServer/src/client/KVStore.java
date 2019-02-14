@@ -9,8 +9,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import app_kvClient.ClientSocketListener;
-import app_kvClient.ClientSocketListener.SocketStatus;
 import shared.ConnectionUtil;
 import shared.ConsistentHash;
 import shared.InfraMetadata;
@@ -19,6 +17,8 @@ import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import app_kvClient.ClientSocketListener;
+import app_kvClient.ClientSocketListener.SocketStatus;
 
 public class KVStore extends Thread implements KVCommInterface {
 

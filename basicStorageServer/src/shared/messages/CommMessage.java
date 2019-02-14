@@ -91,9 +91,11 @@ public class CommMessage implements KVMessage {
 		id.append(this.value);
 		id.append(" }");
 		
-		id.append(" | {AdminMessage Object: ");
-		id.append(adminMessage.getKVAdMessageType().toString());
-		id.append("} ");
+		if (adminMessage != null) {
+			id.append(" | {AdminMessage Object: ");
+			id.append(adminMessage.getKVAdMessageType().toString());
+			id.append("} ");
+		}
 		
 		id.append("}");
 		

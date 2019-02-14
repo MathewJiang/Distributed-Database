@@ -1,15 +1,14 @@
 package app_kvServer;
 
 import java.io.FileInputStream;
-
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Properties;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 
 import logger.LogSetup;
 
@@ -17,15 +16,10 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
-import app_kvECS.ECS;
-import shared.ConnectionUtil;
 import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
-import shared.messages.CommMessage;
-import shared.messages.CommMessageBuilder;
-import shared.messages.KVMessage.StatusType;
-
+import app_kvECS.ECS;
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 
