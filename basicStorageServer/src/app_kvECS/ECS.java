@@ -17,10 +17,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+
+import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooKeeper;
@@ -33,7 +36,7 @@ public class ECS {
 
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
-	
+	spinlock globalLock = new spinlock();
 	//String logConfigFileLocation = "./";
 	
 	/*****************************************************************************
@@ -348,29 +351,139 @@ public class ECS {
 		}
 		return path;
 	}
-	private void spinLock() {
-		String n = lock_create();
-		List<String> raceList = returnDirList("/lock/spinlock/");
-		int array[] = new int[raceList.size()];
-		for(int i=0;i<raceList.size();i++) {
-			int entry = Integer.parseInt(raceList.get(i));
-			array[i] = entry;
-		}
-		Arrays.sort(array);
-		int winner = array[0];
-		if(Integer.parseInt(Character.toString(n.charAt(n.length()-1)))==winner) {
-			
-		}
-	}
-	
-	private boolean spinTryLock() {
-		return false;
-	}
-	
-	private void spinUnlock() {
-		
-	}
+	private CountDownLatch Latch = null;
+	private String getTypeName (Watcher.Event.EventType type) {
+			if(type == EventType.None) {
+				return "None";
+			} else if(type == EventType.NodeChildrenChanged) {
+				return "NodeChildrenChanged";
+			} else if(type == EventType.NodeCreated) {
+				return "NodeCreated";
+			} else if(type == EventType.NodeDataChanged) {
+				return "NodeDataChanged";
+			} else if(type == EventType.NodeDeleted) {
+				return "NodeDeleted";
+			}
 
+		return "not valid";
+	}
+	private boolean watchStringChange(final String path) {
+		//echo("watching " + path);
+		final boolean valid[] = {true};
+		Latch = new CountDownLatch(1);
+			try {
+				zk.exists(path, new Watcher() {
+					public void process(WatchedEvent e) {
+						//echo("trapped");
+						//echo("e.path = "+e.getPath());
+						//echo(getTypeName(e.getType()));
+						if (e.getType() == EventType.NodeDeleted) {
+							Latch.countDown();
+						} else {
+							valid[0] = false;
+							Latch.countDown();
+						}
+					}
+				}
+				);
+			} catch (KeeperException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		
+			//echo("latched");
+			try {
+				Latch.await();
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			Latch = null;
+			return valid[0];
+	}
+	
+	public void lock() {
+		globalLock.lock();
+	}
+	
+	public void unlock() {
+		globalLock.unlock();
+	}
+	public class spinlock{
+		private String lockPath = "";
+		public void lock() {
+			String n = lock_create(); // full path
+			while(true) {
+				List<String> raceList = returnDirList("/lock/spinlock");
+				int array[] = new int[raceList.size()];
+				for(int i=0;i<raceList.size();i++) {
+					int entry = Integer.parseInt(raceList.get(i));
+					array[i] = entry;
+				}
+				Arrays.sort(array);
+				int winner = array[0];
+				int ticket = Integer.parseInt(Character.toString(n.charAt(n.length()-1)));
+				if(ticket==winner || ticket == 0) {
+					setData(n, "true");
+					// locked
+					lockPath = n;
+					return;
+				} else {
+					// wait for previous competitor ticket - 1
+					int waitFor = ticket - 1;
+					String appendZero = ("0000000000" + waitFor);
+					String fillMSBZero = appendZero.substring(appendZero.length() - 10);
+					//echo("waitfor " + fillMSBZero + " I am " + n);
+					watchStringChange("/lock/spinlock/" + fillMSBZero);
+				}
+			}
+		}
+		
+		public boolean trylock() {
+			String n = lock_create(); // full path
+			List<String> raceList = returnDirList("/lock/spinlock");
+			int array[] = new int[raceList.size()];
+			for(int i=0;i<raceList.size();i++) {
+				int entry = Integer.parseInt(raceList.get(i));
+				array[i] = entry;
+			}
+			Arrays.sort(array);
+			int winner = array[0];
+			int ticket = Integer.parseInt(Character.toString(n.charAt(n.length()-1)));
+			if(ticket==winner) {
+				setData(n, "true");
+				lockPath = n;
+				// locked
+				return true;
+			}
+			return false;
+		}
+		
+		public void unlock() {
+			try {
+				zk.delete(lockPath,zk.exists(lockPath,true).getVersion());
+			} catch (InterruptedException | KeeperException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+	}
+	
+	public void init() {
+		try {
+			zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+			zk.create("/lock/spinlock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+		} catch (KeeperException | InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return;
+	}
+	
 	public void reset() {
 		List<String> rootDir = returnDirList("/");
 		for(int i = 0; i < rootDir.size(); i++) {	

@@ -35,6 +35,7 @@ import shared.messages.CommMessage;
 import ecs.ECSNode;
 import ecs.IECSNode;
 import app_kvECS.ECS;
+import app_kvECS.ECS.spinlock;
 import app_kvServer.KVServer;
 
 import java.util.*;
@@ -245,8 +246,7 @@ public class ECSClient implements IECSClient {
 		
 		
 		try {
-			ecs.connect("127.0.0.1", 40000);
-			
+			ecs.connect("127.0.0.1", 39678);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -518,12 +518,23 @@ public class ECSClient implements IECSClient {
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
 					ecs.reset();
+					ecs.init();
 				}
 			}
 			break;
 		case "printHash":
 			if (tokens.length == 1) {
 				ecs.printHash();
+			}
+			break;
+		case "lock":
+			if (tokens.length == 1) {
+				ecs.lock();
+			}
+			break;
+		case "unlock": 
+			if (tokens.length == 1) {
+				ecs.unlock();
 			}
 			break;
 		default:
