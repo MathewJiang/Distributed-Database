@@ -23,7 +23,7 @@ import app_kvServer.KVServer;
 import client.KVCommInterface;
 import client.KVStore;
 
-public class KVClient implements IKVClient, ClientSocketListener {
+public class KVClient implements IKVClient {
 
 	private static Logger logger = Logger.getRootLogger();
 	private static final String PROMPT = "m1-client> ";
@@ -31,24 +31,13 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	private KVStore backend = null;
 	private boolean stop = false;
 
-	private String serverAddress;
-	private int serverPort;
-
+	public KVClient() throws IOException, InterruptedException {
+		backend = new KVStore();
+	}
 
 	@Override
 	public void newConnection(String hostname, int port)
-			throws UnknownHostException, IOException {
-		backend = new KVStore(hostname, port);
-		backend.connect();
-		backend.addListener(this);
-	}
-
-	// Disconnet from the current backend connection.
-	private void disconnect() {
-		if (backend != null) {
-			backend.closeConnection();
-			backend = null;
-		}
+			throws UnknownHostException, IOException, InterruptedException {
 	}
 
 	/**
@@ -56,10 +45,6 @@ public class KVClient implements IKVClient, ClientSocketListener {
 	 */
 	@Override
 	public KVCommInterface getStore() {
-		return backend;
-	}
-
-	public KVStore getBackEnd() {
 		return backend;
 	}
 
@@ -98,33 +83,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 		case "quit":
 			stop = true;
-			disconnect();
 			System.out.println(PROMPT + "Application exit!");
-			break;
-
-		case "connect":
-			if (tokens.length == 3) {
-				try {
-					serverAddress = tokens[1];
-					serverPort = Integer.parseInt(tokens[2]);
-					newConnection(serverAddress, serverPort);
-				} catch (NumberFormatException nfe) {
-					printError("No valid address. Port must be a number!");
-					logger.info("Unable to parse argument <port>", nfe);
-				} catch (UnknownHostException e) {
-					printError("Unknown Host!");
-					logger.info("Unknown Host!", e);
-				} catch (IOException e) {
-					printError("Could not establish connection!");
-					logger.warn("Could not establish connection!", e);
-				}
-			} else {
-				printError("Invalid number of parameters!");
-			}
-			break;
-
-		case "disconnect":
-			disconnect();
 			break;
 
 		case "logLevel":
@@ -148,65 +107,41 @@ public class KVClient implements IKVClient, ClientSocketListener {
 
 		case "put":
 			if (tokens.length < 2) {
-				printError("Incorrect num of arguments; " +
-						"Must be passing in as: put <key> <value> for insertion; " +
-						"or put <key> for deletion");
+				printError("Incorrect num of arguments; "
+						+ "Must be passing in as: put <key> <value> for insertion; "
+						+ "or put <key> for deletion");
 				return;
 			}
-			
+
 			if (tokens.length > 3) {
 				tokens = parsePutInput(tokens);
 			}
-			if (backend == null || !backend.isRunning()) {
-				printError("[KVClient.java/HandleCommand/put]Not connected!");
-				return;
-			}
-			
+
 			try {
 				CommMessage latestMsg = null;
 				String key = tokens[1];
 				String value = null;
-				
+
 				if (tokens.length == 2) {
 					value = null;
 				} else {
 					value = tokens[2];
 				}
-				
-				latestMsg = (CommMessage)backend.put(key, value);
-				
+
+				latestMsg = (CommMessage) backend.put(key, value);
 				// getting a metaData file from the server
 				// need to do a retry on the corresponding server
-				KVClient tempClient = null;
 				int i = 0;
-				while (latestMsg != null 
-						&& latestMsg.getStatus().equals(StatusType.SERVER_NOT_RESPONSIBLE)
+				while (latestMsg != null
+						&& latestMsg.getStatus().equals(
+								StatusType.SERVER_NOT_RESPONSIBLE)
 						&& latestMsg.getInfraMetadata() != null) {
-					//FIXME: should we just retry once???
+					// FIXME: should we just retry once???
 					System.out.println("[debug]Round " + i);
 					i++;
-					if (tempClient != null) {
-						tempClient.disconnect();
-						tempClient = null;
-					}
-					
-					backend.setMetaData(latestMsg.getInfraMetadata());
-					if (backend.constructClientHash()) {
-						ServiceLocation sl = backend.getServer(key);
 
-						//FIXME:
-						//try to reconnect with the responsible server
-						tempClient = new KVClient();
-						tempClient.newConnection(sl.host, sl.port);
-						
-						//retry
-						latestMsg = (CommMessage)tempClient.getBackEnd().put(key, value);
-					}
-				}
-				
-				if (tempClient != null) {
-					tempClient.disconnect();
-					tempClient = null;
+					backend.resetClusterHash(latestMsg.getInfraMetadata());
+					latestMsg = (CommMessage) backend.put(key, value);
 				}
 			} catch (Exception e) {
 				printError("Put Error: " + e.toString());
@@ -218,52 +153,29 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				printError("Incorrect num of arguments; Must be passing in as: get <key>");
 				return;
 			}
-			if (backend != null && backend.isRunning()) {
-				try {
-					String key = tokens[1];
-					CommMessage latestMsg = (CommMessage) backend.get(key);
-					
-					// getting a metaData file from the server
-					// need to do a retry on the corresponding server
-					KVClient tempClient = null;
-					int i = 0;
-					while (latestMsg != null 
-							&& latestMsg.getStatus().equals(StatusType.SERVER_NOT_RESPONSIBLE)
-							&& latestMsg.getInfraMetadata() != null) {
-						//FIXME: should we just retry once???
-						System.out.println("[debug]Round " + i);
-						i++;
-						if (tempClient != null) {
-							tempClient.disconnect();
-							tempClient = null;
-						}
-						
-						backend.setMetaData(latestMsg.getInfraMetadata());
-						if (backend.constructClientHash()) {
-							ServiceLocation sl = backend.getServer(key);
+			try {
+				String key = tokens[1];
+				CommMessage latestMsg = (CommMessage) backend.get(key);
 
-							//FIXME:
-							//try to reconnect with the responsible server
-							tempClient = new KVClient();
-							tempClient.newConnection(sl.host, sl.port);
-							
-							//retry
-							latestMsg = (CommMessage)tempClient.getBackEnd().get(key);
-						}
-					}
-					
-					if (tempClient != null) {
-						tempClient.disconnect();
-						tempClient = null;
-					}
-					if (latestMsg != null && latestMsg.getValue() != null) {
-						System.out.println(latestMsg.getValue());
-					}
-				} catch (Exception e) {
-					printError("Error getting key " + tokens[1] + ": "
-							+ e.toString());
+				// getting a metaData file from the server
+				// need to do a retry on the corresponding server
+				int i = 0;
+				while (latestMsg != null
+						&& latestMsg.getStatus().equals(
+								StatusType.SERVER_NOT_RESPONSIBLE)
+						&& latestMsg.getInfraMetadata() != null) {
+					// FIXME: should we just retry once???
+					System.out.println("[debug]Round " + i);
+					i++;
+
+					backend.resetClusterHash(latestMsg.getInfraMetadata());
+					latestMsg = (CommMessage) backend.get(key);
 				}
+			} catch (Exception e) {
+				printError("Error getting key " + tokens[1] + ": "
+						+ e.toString());
 			}
+
 			break;
 		
 			
@@ -272,7 +184,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			try {
 				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
 				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.SHUTDOWN);
+				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.SHUTDOWN);
 				ConnectionUtil conn = new ConnectionUtil();
 				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
 				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
@@ -289,7 +201,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			try {
 				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
 				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.STOP);
+				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.STOP);
 				ConnectionUtil conn = new ConnectionUtil();
 				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
 				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
@@ -305,7 +217,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			try {
 				CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null, null);
 				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.START);
+				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.START);
 				ConnectionUtil conn = new ConnectionUtil();
 				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
 				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
@@ -381,38 +293,14 @@ public class KVClient implements IKVClient, ClientSocketListener {
 		}
 	}
 
-	@Override
-	public void handleNewCommMessage(CommMessage cm) {
-		if (!stop) {
-			System.out.println(cm.toString());
-			System.out.print(PROMPT);
-		}
-
-	}
-
-	@Override
-	public void handleStatus(SocketStatus status) {
-		if (status == SocketStatus.CONNECTED) {
-
-		} else if (status == SocketStatus.DISCONNECTED) {
-			System.out.print(PROMPT);
-			System.out.println("Connection terminated: " + serverAddress
-					+ " / " + serverPort);
-
-		} else if (status == SocketStatus.CONNECTION_LOST) {
-			System.out.println("Connection lost: " + serverAddress + " / "
-					+ serverPort);
-			System.out.print(PROMPT);
-		}
-	}
-
 	private void printError(String error) {
 		logger.error(PROMPT + "Error! " + error);
 	}
 
 	private static void setUpClientLogger() throws Exception {
 		Properties props = new Properties();
-		props.load(new FileInputStream("resources/config/client-log4j.properties"));
+		props.load(new FileInputStream(
+				"resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
 
@@ -427,6 +315,16 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			// Hack shared ConnectionUtil interrupt between server and client
 			// code.
 			KVServer.serverOn = true;
+			KVClient app = null;
+			
+			try {
+				app = new KVClient();
+			} catch (Exception e1) {
+				logger.error("Error initializing KVStore(asking ECS for metadata)");
+				e1.printStackTrace();
+				return;
+			}
+			
 			try {
 				setUpClientLogger();
 			} catch (Exception e) {
@@ -435,12 +333,11 @@ public class KVClient implements IKVClient, ClientSocketListener {
 				System.out.println("Using default logger from skeleton code.");
 				new LogSetup("logs/client-default.log", Level.ALL);
 			}
-			KVClient app = new KVClient();
 			app.run();
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
 			e.printStackTrace();
-			System.exit(1);
+			return;
 		}
 	}
 

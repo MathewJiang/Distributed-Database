@@ -26,7 +26,7 @@ public class ConsistentHash {
 
 	private TreeMap<BigInteger, ServiceLocation> hashRing 
 		= new TreeMap<BigInteger, ServiceLocation>();
-	public static ReentrantLock hashRingLock = new ReentrantLock();
+	private static ReentrantLock hashRingLock = new ReentrantLock();
 
 	public void addNodesFromInfraMD(InfraMetadata md) {
 		for (ServiceLocation srv : md.getServerLocations()) {
@@ -170,6 +170,57 @@ public class ConsistentHash {
 				hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
 			}
 			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
+		}
+		
+		hashRingLock.unlock();
+		return hashRange;
+	}
+	
+	/*****************************************************************************
+	 * Get hash range given a server
+	 * Duplicated Code with the previous method, just return BigInteger
+	 * 
+	 * @param	serverInfo	Server information
+	 * @return 	hashRange	BigInteger[0] = low
+	 * 						BigInteger[1] = high
+	 * 
+	 * @throws	Exception	if the hashRing has not been constructed
+	 * Note: if low > high, meaning it loops around the ring
+	 *****************************************************************************/
+	public BigInteger[] getHashRangeInteger(ServiceLocation serverInfo) throws Exception {
+		if (serverInfo == null) {
+			throw new Exception("[ConsistentHash.java/getHashRange]ServerInfo is null!");
+		}
+		
+		BigInteger[] hashRange = new BigInteger[2];
+		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
+		BigInteger MD5ServerInfo = MD5.getMD5(serverHashString);
+		
+		// TODO: if only one element in hashRing
+		// TODO: the serverMD5 is 0x0000
+		hashRingLock.lock();
+		if (hashRing.size() == 0) {
+			hashRingLock.unlock();
+			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
+		} else if (hashRing.size() == 1) {
+			if (MD5ServerInfo.compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
+				hashRange[0] = BigInteger.ZERO;
+			} else {
+				hashRange[0] = MD5ServerInfo.add(BigInteger.ONE);
+			}
+			hashRange[1] = MD5ServerInfo;
+		} else {
+			Entry<BigInteger, ServiceLocation>predecessorEntry = hashRing.lowerEntry(MD5ServerInfo);
+			if (predecessorEntry == null) {
+				//if the server is the first element
+				predecessorEntry = hashRing.lastEntry();
+			}
+			if (predecessorEntry.getKey().compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
+				hashRange[0] = BigInteger.ZERO;
+			} else {
+				hashRange[0] = (predecessorEntry.getKey().add(BigInteger.ONE));
+			}
+			hashRange[1] = MD5ServerInfo;
 		}
 		
 		hashRingLock.unlock();
