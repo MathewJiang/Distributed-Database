@@ -4,10 +4,11 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 import org.apache.log4j.Logger;
+
+import app_kvECS.ECS;
 
 import shared.ConnectionUtil;
 import shared.ConsistentHash;
@@ -17,89 +18,50 @@ import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
-import app_kvClient.ClientSocketListener;
-import app_kvClient.ClientSocketListener.SocketStatus;
 
 public class KVStore extends Thread implements KVCommInterface {
-
 	private Logger logger = Logger.getRootLogger();
-	private Set<ClientSocketListener> listeners;
 	private boolean running;
 
-	public Socket clientSocket;		//FXIME: change back to private
-	private String address;
-	private int port;
-	
+	// Resolved and resets on every request.
+	private Socket srvSocket;
+	private ServiceLocation target;
+
+	private ECS ecs;
+	private final int PORT_ECS = 40000;
+
 	private InfraMetadata metaData;
-	private final int portECS = 40000;
-	private ConsistentHash clientHash = new ConsistentHash();	// FIXME: every client has a hash ring
+	private ConsistentHash clientHash;
 
-	public KVStore(String address, int port) {
-		this.address = address;
-		this.port = port;
+	// REMOVE THIS
+	private InfraMetadata mockTestMD() {
+		InfraMetadata md = new InfraMetadata();
+		ServiceLocation sl = new ServiceLocation("mock", "localhost", 5000);
+		List<ServiceLocation> list = new ArrayList<ServiceLocation>();
+		list.add(sl);
+		md.setServerLocations(list);
+		return md;
 	}
-
-	/**
-	 * Initializes and starts the client connection. Loops until the connection
-	 * is closed or aborted by the client.
-	 */
-	public void run() {
-		try {
-			clientSocket.getOutputStream();
-			clientSocket.getInputStream();
-			ConnectionUtil conn = new ConnectionUtil();
-			while (isRunning()) {
-				try {
-					CommMessage latestMsg = conn
-							.receiveCommMessage(clientSocket.getInputStream());
-					for (ClientSocketListener listener : listeners) {
-						listener.handleNewCommMessage(latestMsg);
-					}
-				} catch (IOException ioe) {
-					if (isRunning()) {
-						logger.error("Connection lost!");
-						try {
-							tearDownConnection();
-							for (ClientSocketListener listener : listeners) {
-								listener.handleStatus(SocketStatus.CONNECTION_LOST);
-							}
-						} catch (IOException e) {
-							logger.error("Unable to close connection!");
-						}
-					}
-				}
-			}
-		} catch (IOException ioe) {
-			logger.error("Connection could not be established!");
-
-		} finally {
-			if (isRunning()) {
-				closeConnection();
-			}
-		}
+	
+	// REMOVE THIS
+	public KVStore(String a, Integer b) {
+		
 	}
-
-	public synchronized void closeConnection() {
-		logger.info("try to close connection ...");
-
-		try {
-			tearDownConnection();
-			for (ClientSocketListener listener : listeners) {
-				listener.handleStatus(SocketStatus.DISCONNECTED);
-			}
-		} catch (IOException ioe) {
-			logger.error("Unable to close connection!");
-		}
-	}
-
-	private void tearDownConnection() throws IOException {
-		setRunning(false);
-		logger.info("tearing down the connection ...");
-		if (clientSocket != null) {
-			clientSocket.close();
-			clientSocket = null;
-			logger.info("connection closed!");
-		}
+	
+	public KVStore() throws IOException, InterruptedException {
+		// Retrieve metadata from ecs.
+		ecs = new ECS();
+		
+		// REMOVE THIS
+		// metaData = mockTestMD();
+		
+		// USE THIS
+		ecs.connect("localhost", PORT_ECS);
+		metaData = ecs.getMD();
+		
+		// Load metadata into a hash ring.
+		clientHash = new ConsistentHash();
+		clientHash.addNodesFromInfraMD(metaData);
 	}
 
 	public boolean isRunning() {
@@ -110,57 +72,64 @@ public class KVStore extends Thread implements KVCommInterface {
 		running = run;
 	}
 
-	public void addListener(ClientSocketListener listener) {
-		listeners.add(listener);
+	public void resetClusterHash(InfraMetadata md) {
+		metaData = md;
+		clientHash = new ConsistentHash();
+		clientHash.addNodesFromInfraMD(metaData);
 	}
 
-	/**
-	 * Method sends a PUT message using this socket.
-	 * 
-	 * @param msg
-	 *            the message that is to be sent.
-	 * @throws IOException
-	 *             some I/O error regarding the output stream
-	 */
+	private void resolveKVServer(String key) throws UnknownHostException,
+			IOException {
+		target = clientHash.getServer(key);
+		logger.info("Resolved key " + key + " -> server" + target);
+	}
 
+	// Connect to target host (initialized by calling resolveKVServer).
 	@Override
 	public void connect() throws UnknownHostException, IOException {
-		clientSocket = new Socket(address, port);
-		listeners = new HashSet<ClientSocketListener>();
+		if (target == null) {
+			throw new UnknownHostException("Target host is null!");
+		}
 		setRunning(true);
+		logger.info("Connectiong to target server " + target);
+		srvSocket = new Socket(target.host, target.port);
 		logger.info("Connection established");
 	}
 
+	// Disconnect from host and reset target location to null.
 	@Override
 	public void disconnect() {
-		closeConnection();
+		try {
+			srvSocket.close();
+			target = null;
+		} catch (IOException e) {
+			logger.error("Error closing server socket");
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
 		try {
+			// Resolve KV server destination and try to establish a connection.
+			resolveKVServer(key);
+			connect();
+			logger.info("Connection established!");
+
 			CommMessage cm = new CommMessageBuilder()
 					.setStatus(KVMessage.StatusType.PUT).setKey(key)
 					.setValue(value).build();
 			ConnectionUtil conn = new ConnectionUtil();
-			conn.sendCommMessage(clientSocket.getOutputStream(), cm);
+			conn.sendCommMessage(srvSocket.getOutputStream(), cm);
 
-			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
+			CommMessage latestMsg = conn.receiveCommMessage(srvSocket
 					.getInputStream());
-			
+			System.out.println("Response: " + latestMsg);
 			return latestMsg;
 		} catch (IOException ioe) {
-			if (isRunning()) {
-				logger.error("Connection lost!");
-				try {
-					tearDownConnection();
-					for (ClientSocketListener listener : listeners) {
-						listener.handleStatus(SocketStatus.CONNECTION_LOST);
-					}
-				} catch (IOException e) {
-					logger.error("Unable to close connection!");
-				}
-			}
+			logger.error("Connection lost!");
+		} finally {
+			disconnect();
 		}
 		return null;
 	}
@@ -168,95 +137,25 @@ public class KVStore extends Thread implements KVCommInterface {
 	@Override
 	public KVMessage get(String key) throws Exception {
 		try {
+			// Resolve KV server destination and try to establish a connection.
+			resolveKVServer(key);
+			connect();
+			logger.info("Connection established!");
+
 			CommMessage cm = new CommMessage(StatusType.GET, key.toString(),
 					null);
 			ConnectionUtil conn = new ConnectionUtil();
-			conn.sendCommMessage(clientSocket.getOutputStream(), cm);
+			conn.sendCommMessage(srvSocket.getOutputStream(), cm);
 
-			CommMessage latestMsg = conn.receiveCommMessage(clientSocket
+			CommMessage latestMsg = conn.receiveCommMessage(srvSocket
 					.getInputStream());
-			
+			System.out.println("Response: " + latestMsg);
 			return latestMsg;
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
-			try {
-				tearDownConnection();
-				for (ClientSocketListener listener : listeners) {
-					listener.handleStatus(SocketStatus.CONNECTION_LOST);
-				}
-			} catch (IOException e) {
-				logger.error("Unable to close connection!");
-			}
+		} finally {
+			disconnect();
 		}
 		return null;
 	}
-	
-	
-	/*
-	 * Helper Methods
-	 */
-	
-	/*****************************************************************************
-	 * constructClientHashRing
-	 * construct the hashring structure on the client side
-	 * 
-	 * @return		true on success
-	 * 				false on failure
-	 *****************************************************************************/
-	public void setMetaData(InfraMetadata iMetaData) {
-		this.metaData = iMetaData;
-	}
-	
-	/*****************************************************************************
-	 * constructClientHashRing
-	 * construct the hashring structure on the client side
-	 * 
-	 * @return		true on success
-	 * 				false on failure
-	 *****************************************************************************/
-	public boolean constructClientHash() {
-		// FIXME: need to determine which directory
-		// should the metaData output to
-		String mataDataFilePath = System.getProperty("user.home");
-		InfraMetadata infraMetaData = metaData;
-		ArrayList<ServiceLocation> serverLocations = new ArrayList<ServiceLocation>();
-		
-		/*
-		try {
-			infraMetaData = InfraMetadata.fromConfigFile(mataDataFilePath);
-		} catch (Exception e) {
-			e.printStackTrace();
-			logger.error("[Error!]KVStore.java: constructHashRing(), metadata file parsing failed");
-			return false;
-		}
-		*/
-		
-		if (infraMetaData == null) {
-			logger.error("[Error!]KVStore.java: constructHashRing(), metadata file is null");
-			return false;
-		} else {
-			serverLocations = (ArrayList<ServiceLocation>)infraMetaData.getServerLocations();
-			
-			for (ServiceLocation sl : serverLocations) {
-				clientHash.addServerNode(sl);		//add server nodes into the client hash ring
-			}
-		}
-		
-		return true;
-	}
-	
-	/*****************************************************************************
-	 * getServer
-	 * get the responsible server given the key
-	 * 
-	 * @param		key		the key that would be discovered
-	 * 						under which server
-	 * 
-	 * @return		corresponding server info on success
-	 * 				null on failure 
-	 *****************************************************************************/
-	public ServiceLocation getServer (String key) {
-		return clientHash.getServer(key);
-	}
-	
 }

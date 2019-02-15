@@ -7,7 +7,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 
 public class CommMessage implements KVMessage {
-	
+
 	// Status and data of this CommMessage.
 	private StatusType status;
 	private String key;
@@ -20,12 +20,13 @@ public class CommMessage implements KVMessage {
 		this.key = null;
 		this.value = null;
 	}
-	
+
 	public CommMessage(StatusType status, String key, String value) {
 		this.status = status;
 		this.key = key;
 		this.value = value;
 	}
+
 	@Override
 	public String getKey() {
 		return this.key;
@@ -52,29 +53,29 @@ public class CommMessage implements KVMessage {
 	public void setStatus(StatusType status) {
 		this.status = status;
 	}
-	
+
 	public KVAdminMessage getAdminMessage() {
 		return this.adminMessage;
 	}
-	
+
 	public void setAdminMessage(KVAdminMessage adminMessage) {
 		this.adminMessage = adminMessage;
 	}
-	
+
 	// Serialize a CommMessage into a byte array that represents a JSON string.
 	public static byte[] serialize(CommMessage msg) {
 		Gson gson = new GsonBuilder().serializeNulls().create();
 		return gson.toJson(msg).getBytes();
 	}
-	
+
 	// Deserialize a CommMessage from given byte array data. Throws Exception
 	// if the JSON string embedded in data is not of the correct format.
-	public static CommMessage deserialize(byte[] data) throws JsonSyntaxException{
+	public static CommMessage deserialize(byte[] data)
+			throws JsonSyntaxException {
 		Gson gson = new GsonBuilder().serializeNulls().create();
 		return gson.fromJson(new String(data), CommMessage.class);
 	}
-	
-	
+
 	@Override
 	public String toString() {
 		StringBuilder id = new StringBuilder();
@@ -82,11 +83,11 @@ public class CommMessage implements KVMessage {
 		id.append("{ Status: ");
 		id.append(this.status);
 		id.append(" }");
-		
+
 		id.append("{ key: ");
 		id.append(this.key);
 		id.append(" }");
-		
+
 		id.append("{ value: ");
 		id.append(this.value);
 		id.append(" }");
@@ -98,7 +99,7 @@ public class CommMessage implements KVMessage {
 		}
 		
 		id.append("}");
-		
+
 		return id.toString();
 	}
 
