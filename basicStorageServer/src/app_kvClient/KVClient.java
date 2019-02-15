@@ -180,53 +180,53 @@ public class KVClient implements IKVClient {
 		
 			
 		//only for testing purposes
-		case "shutdown":
-			try {
-				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
-				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.SHUTDOWN);
-				ConnectionUtil conn = new ConnectionUtil();
-				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-				
-				System.out.println("Serve should be closed now");
-			} catch (IOException ioe) {
-				logger.error("Connection lost!");
-			}
-			break;
-		
-		//only for testing purposes
-		case "stop":
-			//Stop all the servers (should be issued from ECS)
-			try {
-				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
-				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.STOP);
-				ConnectionUtil conn = new ConnectionUtil();
-				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-				
-				System.out.println("Serve should be closed now");
-			} catch (IOException ioe) {
-				logger.error("Connection lost!");
-			}
-			break;
-			
-		case "start":
-			//Start all the servers (should be issued from ECS)
-			try {
-				CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null, null);
-				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.START);
-				ConnectionUtil conn = new ConnectionUtil();
-				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-				
-				System.out.println("Serve should be started now");
-			} catch (IOException ioe) {
-				logger.error("Connection lost!");
-			}
-			break;
+//		case "shutdown":
+//			try {
+//				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
+//				cm.setAdminMessage(new KVAdminMessage());
+//				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.SHUTDOWN);
+//				ConnectionUtil conn = new ConnectionUtil();
+//				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+//				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+//				
+//				System.out.println("Serve should be closed now");
+//			} catch (IOException ioe) {
+//				logger.error("Connection lost!");
+//			}
+//			break;
+//		
+//		//only for testing purposes
+//		case "stop":
+//			//Stop all the servers (should be issued from ECS)
+//			try {
+//				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
+//				cm.setAdminMessage(new KVAdminMessage());
+//				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.STOP);
+//				ConnectionUtil conn = new ConnectionUtil();
+//				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+//				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+//				
+//				System.out.println("Serve should be closed now");
+//			} catch (IOException ioe) {
+//				logger.error("Connection lost!");
+//			}
+//			break;
+//			
+//		case "start":
+//			//Start all the servers (should be issued from ECS)
+//			try {
+//				CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null, null);
+//				cm.setAdminMessage(new KVAdminMessage());
+//				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.START);
+//				ConnectionUtil conn = new ConnectionUtil();
+//				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+//				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
+//				
+//				System.out.println("Serve should be started now");
+//			} catch (IOException ioe) {
+//				logger.error("Connection lost!");
+//			}
+//			break;
 			
 		default:
 			printError("Unknown command");
