@@ -24,6 +24,9 @@ import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
+import shared.messages.KVAdminMessage;
+import shared.messages.KVAdminMessage.KVAdminMessageType;
 import app_kvServer.KVServer;
 import ecs.ECSNode;
 import ecs.IECSNode;
@@ -529,6 +532,10 @@ public class ECSClient implements IECSClient {
 			if (tokens.length == 1) {
 				ecs.unlock();
 			}
+			break;
+		case "test":
+			
+			
 			break;
 		default:
 			printError("Unknown command");

@@ -29,6 +29,10 @@ import org.apache.zookeeper.ZooKeeper;
 
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
+import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
+import shared.messages.KVAdminMessage;
+import shared.messages.KVAdminMessage.KVAdminMessageType;
 import ecs.ECSNode;
 import ecs.IECSNode;
 
@@ -494,5 +498,13 @@ public class ECS {
 			// rm -r everything
 			deleteHeadRecursive("/" + curr);
 		}
+	}
+	
+	public CommMessage getCmd() {
+			KVAdminMessage adminMsg = new KVAdminMessage();
+			adminMsg.setKVAdMessageType(KVAdminMessageType.START);
+			CommMessage cm = new CommMessageBuilder().setInfraMetadata(getMD()).build();
+			cm.setAdminMessage(adminMsg);
+			return cm;
 	}
 }
