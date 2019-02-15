@@ -502,7 +502,7 @@ public class ECS {
 	
 	public CommMessage getCmd() {
 			KVAdminMessage adminMsg = new KVAdminMessage();
-			adminMsg.setKVAdMessageType(KVAdminMessageType.START);
+			adminMsg.setKVAdminMessageType(KVAdminMessageType.START);
 			CommMessage cm = new CommMessageBuilder().setInfraMetadata(getMD()).build();
 			cm.setAdminMessage(adminMsg);
 			return cm;

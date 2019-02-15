@@ -28,32 +28,14 @@ public class KVStore extends Thread implements KVCommInterface {
 	private ServiceLocation target;
 
 	private ECS ecs;
-	private final int PORT_ECS = 40000;
+	private final int PORT_ECS = 39678;
 
 	private InfraMetadata metaData;
 	private ConsistentHash clientHash;
-
-	// REMOVE THIS
-	private InfraMetadata mockTestMD() {
-		InfraMetadata md = new InfraMetadata();
-		ServiceLocation sl = new ServiceLocation("mock", "localhost", 5000);
-		List<ServiceLocation> list = new ArrayList<ServiceLocation>();
-		list.add(sl);
-		md.setServerLocations(list);
-		return md;
-	}
-	
-	// REMOVE THIS
-	public KVStore(String a, Integer b) {
-		
-	}
 	
 	public KVStore() throws IOException, InterruptedException {
 		// Retrieve metadata from ecs.
 		ecs = new ECS();
-		
-		// REMOVE THIS
-		// metaData = mockTestMD();
 		
 		// USE THIS
 		ecs.connect("localhost", PORT_ECS);
