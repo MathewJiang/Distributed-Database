@@ -41,6 +41,7 @@ public class ECS {
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
 	spinlock globalLock = new spinlock();
+	String prevCmd = "null";
 	//String logConfigFileLocation = "./";
 	
 	/*****************************************************************************
@@ -327,6 +328,7 @@ public class ECS {
 		byte[] emptyByte = null;
 		String alias = "server_";
 		create(nodeRoot, emptyByte, "-p");
+		byte[] nullByte = "null".getBytes(StandardCharsets.UTF_8);
 		for(int i = 0; i < launchedNodes.size();i++) {
 			IECSNode node = launchedNodes.get(i);
 			String nodeDir = nodeRoot + "/" + alias + Integer.toString(i);
@@ -335,6 +337,8 @@ public class ECS {
 			create(nodeDir + "/NodePort",Integer.toString(node.getNodePort()).getBytes(StandardCharsets.UTF_8),  "-p");
 			create(nodeDir + "/from",node.getNodeHashRange()[0].getBytes(StandardCharsets.UTF_8),  "-p");
 			create(nodeDir + "/to",node.getNodeHashRange()[1].getBytes(StandardCharsets.UTF_8),  "-p");
+			create(nodeDir + "/cmd", "null".getBytes(StandardCharsets.UTF_8), "-p");
+			create(nodeDir + "/state", "init".getBytes(StandardCharsets.UTF_8), "-p");
 		}
 		setConfigured();
 	}
@@ -371,16 +375,12 @@ public class ECS {
 
 		return "not valid";
 	}
-	private boolean watchStringChange(final String path) {
-		//echo("watching " + path);
+	private boolean watchStringDelete(final String path) {
 		final boolean valid[] = {true};
 		Latch = new CountDownLatch(1);
 			try {
 				zk.exists(path, new Watcher() {
 					public void process(WatchedEvent e) {
-						//echo("trapped");
-						//echo("e.path = "+e.getPath());
-						//echo(getTypeName(e.getType()));
 						if (e.getType() == EventType.NodeDeleted) {
 							Latch.countDown();
 						} else {
@@ -391,22 +391,55 @@ public class ECS {
 				}
 				);
 			} catch (KeeperException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-		
-			//echo("latched");
 			try {
 				Latch.await();
 			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 			Latch = null;
 			return valid[0];
+	}
+	
+	private String watchStringDataChanged(final String path) {
+		final boolean valid[] = {true};
+		Latch = new CountDownLatch(1);
+		byte[] data = null;
+		try {
+			data = zk.getData(path, new Watcher() {
+					public void process(WatchedEvent e) {
+						if (e.getType() == EventType.NodeDataChanged) {
+							Latch.countDown();
+						} else {
+							valid[0] = false;
+							Latch.countDown();
+						}
+					}
+				}
+				,null);
+		} catch (KeeperException e1) {
+			e1.printStackTrace();
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		try {
+			Latch.await();
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		Latch = null;
+		if(valid[0]) {
+			if(data == null) {
+				return "data == null";
+			}
+			String result = new String(data, StandardCharsets.US_ASCII);
+			return result;
+		} else {
+			return "";
+		}
 	}
 	
 	public void lock() {
@@ -441,7 +474,7 @@ public class ECS {
 					String appendZero = ("0000000000" + waitFor);
 					String fillMSBZero = appendZero.substring(appendZero.length() - 10);
 					//echo("waitfor " + fillMSBZero + " I am " + n);
-					watchStringChange("/lock/spinlock/" + fillMSBZero);
+					watchStringDelete("/lock/spinlock/" + fillMSBZero);
 				}
 			}
 		}
@@ -499,12 +532,64 @@ public class ECS {
 			deleteHeadRecursive("/" + curr);
 		}
 	}
+	private String getCmdFromZk(String serverName) {
+		String result = null;
+		String check = getData("/nodes/" + serverName + "/cmd");
+		if(!check.equals(prevCmd)) {
+			// try to recover missed cmd
+			prevCmd = check;
+			return check;
+		}
+		result = watchStringDataChanged("/nodes/" + serverName + "/cmd");
+		result = getData("/nodes/" + serverName + "/cmd");
+		prevCmd = result;
+		return result;
+	}
 	
-	public CommMessage getCmd() {
-			KVAdminMessage adminMsg = new KVAdminMessage();
-			adminMsg.setKVAdMessageType(KVAdminMessageType.START);
-			CommMessage cm = new CommMessageBuilder().setInfraMetadata(getMD()).build();
-			cm.setAdminMessage(adminMsg);
-			return cm;
+	private KVAdminMessageType StringToKVAdminMessageType(String a) {
+		switch(a) {
+			case "START":
+				return KVAdminMessageType.START;
+			case "STOP":
+				return KVAdminMessageType.STOP;
+			case "SHUTDOWN":
+				return KVAdminMessageType.SHUTDOWN;
+			case "UPDATE":
+				return KVAdminMessageType.UPDATE;
+			case "LOCK_WRITE":
+				return KVAdminMessageType.LOCK_WRITE;
+			case "UNLOCK_WRITE":
+				return KVAdminMessageType.UNLOCK_WRITE;
+		}
+		return null;
+	}
+	
+	public String KVAdminMessageTypeToString(KVAdminMessageType a) {
+		if(a == KVAdminMessageType.START) {
+			return "START";
+		} else if(a == KVAdminMessageType.STOP) {
+			return "STOP";
+		} else if(a == KVAdminMessageType.SHUTDOWN) {
+			return "SHUTDOWN";
+		} else if(a == KVAdminMessageType.UPDATE) {
+			return "UPDATE";
+		} else if(a == KVAdminMessageType.LOCK_WRITE) {
+			return "LOCK_WRITE";
+		} else if(a == KVAdminMessageType.UNLOCK_WRITE) {
+			return "UNLOCK_WRITE";
+		}
+		return "INVALID KVAdminMessageType";
+	}
+	
+	public CommMessage getCmd(String serverName) {
+		KVAdminMessage adminMsg = new KVAdminMessage();
+		adminMsg.setKVAdminMessageType(StringToKVAdminMessageType(getCmdFromZk(serverName)));
+		CommMessage cm = new CommMessageBuilder().setInfraMetadata(getMD()).build();
+		cm.setAdminMessage(adminMsg);
+		return cm;
+	}
+
+	public void setCmd(String serverName, String command) {
+		setData("/nodes/" + serverName + "/cmd", command);
 	}
 }

@@ -408,6 +408,8 @@ public class ECSClient implements IECSClient {
 					} else {
 						currDir = "/";
 					}
+				} else if(tokens[1].equals("/")) { 
+					currDir = "/";
 				} else {
 				
 					echo("ecs_shell cd: " + tokens[1] + " : No such file or directory");
@@ -533,9 +535,15 @@ public class ECSClient implements IECSClient {
 				ecs.unlock();
 			}
 			break;
-		case "test":
-			
-			
+		case "getcmd":
+			if (tokens.length == 2) {
+				echo(ecs.KVAdminMessageTypeToString(ecs.getCmd(tokens[1]).getAdminMessage().getKVAdminMessageType()));
+			}
+			break;
+		case "setcmd":
+			if(tokens.length == 3) {
+				ecs.setCmd(tokens[1], tokens[2]);
+			}
 			break;
 		default:
 			printError("Unknown command");
