@@ -201,7 +201,7 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
-		Disk.setDbName("/kvdb/" + this.serverMD.serviceName + "-kvdb");
+		Disk.setDbName("/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
@@ -292,14 +292,13 @@ public class KVServer extends Thread implements IKVServer {
 		return clusterMD;
 	}
 	
-	public void retrieveClusterFromECS() {
+	public void retrieveClusterFromECS(Integer ECS_PORT) throws IOException, InterruptedException {
 		if (ecs == null) {
 			ecs = new ECS();
 		}
 		
-		// TODO: ECS Provides: 
-		// ?: ecs.connect();
-		// clusterMD = ecs.getMetadata();
+		ecs.connect("localhost", ECS_PORT);
+		clusterMD = ecs.getMD();
 		
 		// Compute server side consistent hash.
 		clusterHash = new ConsistentHash();
@@ -310,17 +309,14 @@ public class KVServer extends Thread implements IKVServer {
 		// Coordinate and initialize server w.r.t ECS metadata.
 		// Initialize clusterMD and compute clusterHash.
 		KVServer server = new KVServer();
-		server.retrieveClusterFromECS();
+		server.retrieveClusterFromECS(Integer.parseInt(args[0]));
 		
 		// Calculate server instance specific metadata.
 		server.serverMD = server.clusterMD.locationOfService(args[1]);
 		server.port = server.serverMD.port;
 
-		// Read configuration file for cache & server configs.
-		Properties props = new Properties();
-		props.load(new FileInputStream(configPath));
-		server.cacheSize = Integer.parseInt(props.getProperty("cache_limit"));
-		server.strategy = parseCacheStrategy(props.getProperty("cache_policy"));
+		server.cacheSize = Integer.parseInt(args[2]);
+		server.strategy = parseCacheStrategy(args[3]);
 
 		return server;
 	}
@@ -341,67 +337,12 @@ public class KVServer extends Thread implements IKVServer {
 				new LogSetup("logs/server-default.log", Level.ALL);
 			}
 
-			if (args.length > 4) {
+			if (args.length != 4) {
 				System.out.println("Error! Invalid number of arguments!");
 				System.out.println("Usage: Server <port>!");
 				return;
 			}
-			KVServer server = null;
-			if (args.length == 2) {
-				server = initServerFromECS(args);
-			} else {
-				String host = "127.0.0.1";
-				int port = 0;
-				String cacheStrategy = null;
-				int cacheSize = 0;
-
-				if (args.length == 0) {
-					System.out.println("[Error]Missing port number");
-					System.exit(1);
-				} else if (args.length == 1) {
-					try {
-						port = Integer.parseInt(args[0]);
-					} catch (NumberFormatException e) {
-						System.out.println("[Error]Port number format exception");
-						System.exit(1);
-					}
-				} else if (args.length == 3) {
-					try {
-						port = Integer.parseInt(args[0]);
-						cacheSize = Integer.parseInt(args[2]);
-					} catch (NumberFormatException e) {
-						System.out.println("[Error]Port number format exception");
-						System.exit(1);
-					}
-					cacheStrategy = args[1];
-				}
-
-				// No ECS startup. Mock cluster metadata.
-				if (cacheStrategy != null) {
-					server = new KVServer(port, cacheSize, cacheStrategy);
-				} else {
-					server = new KVServer();
-					// Read configuration file for cache & server configs.
-					Properties props = new Properties();
-					props.load(new FileInputStream(configPath));
-					server.cacheSize = Integer.parseInt(props.getProperty("cache_limit"));
-					server.strategy = parseCacheStrategy(props.getProperty("cache_policy"));
-				}
-
-				System.out.println("[debug]server port: " + server.getPort() + ", cacheStrategy: "
-						+ server.getCacheStrategy() + ", cacheSize: " + server.getCacheSize());
-				server.port = Integer.parseInt(args[0]);
-				
-				// Generate cluster metadata that consists of only this server.
-				server.serverMD = new ServiceLocation(UUID.randomUUID().toString(), "127.0.0.1", server.port);
-				server.clusterMD = new InfraMetadata();
-				server.clusterMD.getServerLocations().add(server.serverMD);
-				
-				// Computer consistent hashes.
-				server.clusterHash = new ConsistentHash();
-				server.clusterHash.addNodesFromInfraMD(server.clusterMD);
-			}
-
+			KVServer server = initServerFromECS(args);
 			System.out.println("Service: " + server.serverMD.serviceName + " will listen on " + server.serverMD.host
 					+ ":" + server.serverMD.port);
 
