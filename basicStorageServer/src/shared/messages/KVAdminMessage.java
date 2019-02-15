@@ -23,11 +23,11 @@ public class KVAdminMessage {
 
     private KVAdminMessageType adminMessageType;
     
-    public KVAdminMessageType getKVAdMessageType() {
+    public KVAdminMessageType getKVAdminMessageType() {
     	return adminMessageType;
     }
 
-    public void setKVAdMessageType(KVAdminMessageType adminMessageType) {
+    public void setKVAdminMessageType(KVAdminMessageType adminMessageType) {
     	this.adminMessageType = adminMessageType;
     }
 }

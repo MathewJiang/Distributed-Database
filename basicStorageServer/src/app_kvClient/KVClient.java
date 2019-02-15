@@ -272,7 +272,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			try {
 				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
 				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.SHUTDOWN);
+				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.SHUTDOWN);
 				ConnectionUtil conn = new ConnectionUtil();
 				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
 				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
@@ -289,7 +289,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			try {
 				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
 				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.STOP);
+				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.STOP);
 				ConnectionUtil conn = new ConnectionUtil();
 				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
 				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
@@ -305,7 +305,7 @@ public class KVClient implements IKVClient, ClientSocketListener {
 			try {
 				CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null, null);
 				cm.setAdminMessage(new KVAdminMessage());
-				cm.getAdminMessage().setKVAdMessageType(KVAdminMessageType.START);
+				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.START);
 				ConnectionUtil conn = new ConnectionUtil();
 				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
 				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());

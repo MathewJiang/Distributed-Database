@@ -38,7 +38,7 @@ public class KVServer extends Thread implements IKVServer {
 	private CacheStrategy strategy;
 	private ServerSocket serverSocket;
 	private boolean running;
-	private boolean suspending;
+	private ServiceLocation serverInfo;	//TODO: get the serverInfo
 
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
@@ -88,6 +88,12 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void setRunning(boolean running) {
 		this.running = running;
+	}
+	
+	public ServiceLocation getServerInfo() {
+		//FIXME: hardcoded value
+		serverInfo = new ServiceLocation("server1", "127.0.0.1", 5000);
+		return serverInfo;
 	}
 
 	@Override
@@ -195,7 +201,7 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
-		Disk.setDbName("/" + this.serverMD.serviceName + "-kvdb");
+		Disk.setDbName("/kvdb/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;

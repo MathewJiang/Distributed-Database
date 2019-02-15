@@ -93,7 +93,7 @@ public class CommMessage implements KVMessage {
 		
 		if (adminMessage != null) {
 			id.append(" | {AdminMessage Object: ");
-			id.append(adminMessage.getKVAdMessageType().toString());
+			id.append(adminMessage.getKVAdminMessageType().toString());
 			id.append("} ");
 		}
 		
