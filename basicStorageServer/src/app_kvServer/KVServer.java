@@ -201,7 +201,7 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
-		Disk.setDbName("/kvdb/" + this.serverMD.serviceName + "-kvdb");
+		Disk.setDbName("/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
