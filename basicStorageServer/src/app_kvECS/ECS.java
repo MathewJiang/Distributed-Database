@@ -596,6 +596,29 @@ public class ECS {
 	}
 
 	public void setCmd(String serverName, String command) {
+		echo(serverName + ": " + command);
 		setData("/nodes/" + serverName + "/cmd", command);
+	}
+	
+	public void broadast(String cmd) {
+		try {
+			if(zk.exists("/nodes",true) == null) {
+				return;
+			}
+		} catch (KeeperException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		InfraMetadata latestMD = getMD();
+		List<ServiceLocation> allServers = latestMD.getServerLocations();
+		for(int i = 0; i < allServers.size(); i++) {
+			String serverName = allServers.get(i).serviceName;
+			setCmd(serverName, cmd);
+		}
+	}
+	
+	public void ack(String serverName, String action) {
+		echo(serverName+ " acking " + action);
 	}
 }

@@ -61,32 +61,20 @@ public class ECSClient implements IECSClient {
 	// set start = true for all client server
     @Override
     public boolean start() {
-        info("start()");
-        warn("start() implementation in progress");
-        byte[] test = hexStringToByteArray("e04fd020ea3a6910a2d808002b30309d");
-        /*try {
-			zk.create("/node1", test);
-		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-        return false;
+    	ecs.broadast("START");
+    	return true;
     }
 
     @Override
     public boolean stop() {
-        // TODO
-        return false;
+    	ecs.broadast("STOP");
+    	return true;
     }
 
     @Override
     public boolean shutdown() {
-        // TODO
-
-        return false;
+    	ecs.broadast("SHUTDOWN");
+        return true;
     }
 
     @Override
@@ -138,6 +126,7 @@ public class ECSClient implements IECSClient {
     		return ecs.getECSNodeCollection();
     	}
     	loadECSconfigFromFile();
+    	hashRing.removeAllServerNodes();
     	hashRing.addNodesFromInfraMD(MD);
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 
@@ -331,9 +320,7 @@ public class ECSClient implements IECSClient {
 			if (tokens.length != 1 && tokens.length != 2) {
 				warn("start does not have any arguments");
 			} else {
-				if (ecs != null) {
-					ecs.setCmd(tokens[1], "START");
-				}
+				
 				start();
 			}
 			break;
@@ -343,27 +330,12 @@ public class ECSClient implements IECSClient {
 			if (tokens.length != 1 && tokens.length != 2) {
 				warn("stop does not have any arguments");
 			} else {
-				if (ecs != null) {
-					ecs.setCmd(tokens[1], "STOP");
-				}
 				stop();
 			}
 			break;
 			
 		case "shutDown":
-			// FIXME: remove the second condition
-			if (tokens.length != 1 && tokens.length != 2) {
-				warn("shutDown does not have any arguments");
-			} else {
-				System.out.println("token[1] is : " + tokens[1]);
-				//Shutdown one server on selections
-				if (ecs != null) {
-		    		ecs.setCmd(tokens[1], "SHUTDOWN");
-		    	} else {
-		    		logger.error("[ECSClient.java]");
-		    	}
-				shutdown();
-			}
+			shutdown();
 			break;
 			
 		case "addNode":
@@ -542,6 +514,7 @@ public class ECSClient implements IECSClient {
 		case "reset":
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
+					ecs.broadast("SHUTDOWN");
 					ecs.reset();
 					ecs.init();
 				}
@@ -577,7 +550,7 @@ public class ECSClient implements IECSClient {
 		case "migrate":
 			if (tokens.length == 2) {
 				// migrate all the files towards the destinated server
-				ecs.setCmd(tokens[1], "UPDATE");
+				ecs.broadast("UPDATE");
 			}
 			break;
 		default:

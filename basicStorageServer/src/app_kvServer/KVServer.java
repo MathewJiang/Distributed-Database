@@ -228,11 +228,9 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.init(cacheSize);
 		serverOn = true;
 		
-		
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
-
 		
 		if (serverSocket != null) {
 			while (isRunning()) {
@@ -257,6 +255,11 @@ public class KVServer extends Thread implements IKVServer {
 	@Override
 	public void kill() {
 		running = false;
+		try {
+			Storage.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		logger.info("Server being killed");
 		System.exit(1);
 	}
