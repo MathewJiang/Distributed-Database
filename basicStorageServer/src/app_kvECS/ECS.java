@@ -599,6 +599,16 @@ public class ECS {
 	}
 
 	public void setCmd(String serverName, String command) {
+		echo(serverName + ": " + command);
 		setData("/nodes/" + serverName + "/cmd", command);
+	}
+	
+	public void broadast(String cmd) {
+		InfraMetadata latestMD = getMD();
+		List<ServiceLocation> allServers = latestMD.getServerLocations();
+		for(int i = 0; i < allServers.size(); i++) {
+			String serverName = allServers.get(i).serviceName;
+			setCmd(serverName, cmd);
+		}
 	}
 }
