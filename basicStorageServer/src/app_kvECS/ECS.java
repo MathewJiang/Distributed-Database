@@ -601,6 +601,15 @@ public class ECS {
 	}
 	
 	public void broadast(String cmd) {
+		try {
+			if(zk.exists("/nodes",true) == null) {
+				return;
+			}
+		} catch (KeeperException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		InfraMetadata latestMD = getMD();
 		List<ServiceLocation> allServers = latestMD.getServerLocations();
 		for(int i = 0; i < allServers.size(); i++) {
