@@ -47,7 +47,7 @@ public class ECSClient implements IECSClient {
 	private ConsistentHash hashRing;
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
-	
+	private int ECSport = 39678;
     private static Logger logger = Logger.getRootLogger();
 	private static final String PROMPT = "ecs_shell>";
 	private BufferedReader stdin;
@@ -121,13 +121,13 @@ public class ECSClient implements IECSClient {
 		}
 	}
 
-    private void launch(String ip, int port) {
+    private void launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
     	Runtime run = Runtime.getRuntime();
     	Process proc;
-    	info("launch(ip = " + ip + " port = " + port + ")");
-    	if(ip.equals("127.0.0.1") || ip.equals("localhost")) {
+    	info("launch(ip = " + remoteIP + " port = " + ECSport + ")");
+    	if(remoteIP.equals("127.0.0.1") || remoteIP.equals("localhost")) {
     		try {
-				proc = run.exec(nossh_launch(ip, port));
+				proc = Runtime.getRuntime().exec(nossh_launch_array(serverName, ECSport, strategy, cache_size));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -135,7 +135,7 @@ public class ECSClient implements IECSClient {
     	} else {
     		
     		try {
-    			proc = run.exec(ssh_launch(ip, port));
+    			proc = run.exec(ssh_launch(remoteIP, serverName, ECSport, strategy, cache_size));
     		} catch (IOException e) {
     			e.printStackTrace();
     		}
@@ -172,10 +172,17 @@ public class ECSClient implements IECSClient {
 				e.printStackTrace();
 			}
 			
+			// private void launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
+			//launch(curr.host, curr.serviceName, ECSport, cacheStrategy, cacheSize);
 			
 		}
-		info("launched " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
-        ecs.setLaunchedNodes(launchedNodes);
+		info("About to launch " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
+        List<IECSNode> aliased = ecs.setLaunchedNodes(launchedNodes);
+        for(int i = 0; i < aliased.size(); i++) {
+        	IECSNode curr = aliased.get(i);
+        	echo("Launching " + curr.getNodeName());
+        	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
+        }
 		return launchedNodes;
     }
     
@@ -214,19 +221,32 @@ public class ECSClient implements IECSClient {
     	warn("no implementation");
     }
     
-    private String ssh_launch(String ip, int port) {
-    	return "ssh -n "+ ip +" nohup \"sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar &" + port + "\'\"";
+    private String ssh_launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
+    	echo("ssh -n "+ remoteIP +" nohup \"sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'\"");
+    	return "ssh -n "+ remoteIP +" nohup \"sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'\"";
     }
     
-    private String nossh_launch(String ip, int port) {
-    	return "sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar &" + port + "\'\"";
+    private String nossh_launch(String serverName, int ECSport, String strategy, int cache_size) {
+    	echo("sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
+    	return("sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
     }
- 
-
-
-	
+    
+    private String[] nossh_launch_array(String serverName, int ECSport, String strategy, int cache_size) {
+    	String[] cmd = new String[3];
+    	cmd[0] = "sh";
+    	cmd[1] = "-c";
+    	cmd[2] = "cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &";
+    	echo(cmd[0]);
+    	echo(cmd[1]);
+    	echo(cmd[2]);
+    	return cmd;
+    }
+    
 	private void set_workDir () {
 		workDir = System.getProperty("user.dir");
 		info("work directory is: " + workDir);

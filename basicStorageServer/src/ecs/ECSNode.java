@@ -35,4 +35,8 @@ public class ECSNode implements IECSNode {
 		return NodeHashRange;
 	}
 
+	public void setNodeName(String a) {
+		NodeName = a;
+	}
+
 }

@@ -328,12 +328,13 @@ public class ECS {
 	private void setConfigured() {
 		setData("/configureStatus", "true");
 	}
-	public void setLaunchedNodes(List<IECSNode> launchedNodes) {
+	public List<IECSNode> setLaunchedNodes(List<IECSNode> launchedNodes) {
 		String nodeRoot = "/nodes";
 		byte[] emptyByte = null;
 		String alias = "server_";
 		create(nodeRoot, emptyByte, "-p");
 		byte[] nullByte = "null".getBytes(StandardCharsets.UTF_8);
+		List<IECSNode> aliasedNodes = new ArrayList<IECSNode>(launchedNodes);
 		for(int i = 0; i < launchedNodes.size();i++) {
 			IECSNode node = launchedNodes.get(i);
 			String nodeDir = nodeRoot + "/" + alias + Integer.toString(i);
@@ -344,8 +345,10 @@ public class ECS {
 			create(nodeDir + "/to",node.getNodeHashRange()[1].getBytes(StandardCharsets.UTF_8),  "-p");
 			create(nodeDir + "/cmd", "null".getBytes(StandardCharsets.UTF_8), "-p");
 			create(nodeDir + "/state", "init".getBytes(StandardCharsets.UTF_8), "-p");
+			((ECSNode)aliasedNodes.get(i)).setNodeName(alias + Integer.toString(i));
 		}
 		setConfigured();
+		return aliasedNodes;
 	}
 	
 	/*
@@ -591,6 +594,7 @@ public class ECS {
 		adminMsg.setKVAdminMessageType(StringToKVAdminMessageType(getCmdFromZk(serverName)));
 		CommMessage cm = new CommMessageBuilder().setInfraMetadata(getMD()).build();
 		cm.setAdminMessage(adminMsg);
+		setCmd(serverName, "null");
 		return cm;
 	}
 
