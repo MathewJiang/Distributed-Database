@@ -16,21 +16,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
-import shared.messages.CommMessage;
-import shared.messages.CommMessageBuilder;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVAdminMessage.KVAdminMessageType;
 import ecs.ECSNode;
@@ -333,6 +329,7 @@ public class ECS {
 		byte[] emptyByte = null;
 		String alias = "server_";
 		create(nodeRoot, emptyByte, "-p");
+		@SuppressWarnings("unused")
 		byte[] nullByte = "null".getBytes(StandardCharsets.UTF_8);
 		List<IECSNode> aliasedNodes = new ArrayList<IECSNode>(launchedNodes);
 		for(int i = 0; i < launchedNodes.size();i++) {
@@ -368,6 +365,7 @@ public class ECS {
 		return path;
 	}
 	private CountDownLatch Latch = null;
+	@SuppressWarnings("unused")
 	private String getTypeName (Watcher.Event.EventType type) {
 			if(type == EventType.None) {
 				return "None";
@@ -589,13 +587,12 @@ public class ECS {
 		return "INVALID KVAdminMessageType";
 	}
 	
-	public CommMessage getCmd(String serverName) {
+	public KVAdminMessage getCmd(String serverName) {
 		KVAdminMessage adminMsg = new KVAdminMessage();
 		adminMsg.setKVAdminMessageType(StringToKVAdminMessageType(getCmdFromZk(serverName)));
-		CommMessage cm = new CommMessageBuilder().setInfraMetadata(getMD()).build();
-		cm.setAdminMessage(adminMsg);
+		adminMsg.MD = getMD();
 		setCmd(serverName, "null");
-		return cm;
+		return adminMsg;
 	}
 
 	public void setCmd(String serverName, String command) {

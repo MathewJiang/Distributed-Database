@@ -3,12 +3,8 @@ package client;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.log4j.Logger;
-
-import app_kvECS.ECS;
 
 import shared.ConnectionUtil;
 import shared.ConsistentHash;
@@ -18,6 +14,7 @@ import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import app_kvECS.ECS;
 
 public class KVStore extends Thread implements KVCommInterface {
 	private Logger logger = Logger.getRootLogger();

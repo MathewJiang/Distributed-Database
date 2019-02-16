@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -19,16 +18,11 @@ import shared.InfraMetadata.ServiceLocation;
 import shared.MD5;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
-import shared.messages.KVAdminMessage;
-import shared.messages.KVAdminMessage.KVAdminMessageType;
-import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 
 import com.google.gson.JsonSyntaxException;
-
-import ecs.IECSNode;
 
 /**
  * Represents a connection end point for a particular client that is connected
@@ -165,73 +159,6 @@ public class ClientConnection implements Runnable {
 				}
 			} catch (IOException ioe) {
 				logger.error("Error! Unable to tear down connection!", ioe);
-			}
-		}
-	}
-
-	/**********************************
-	 * Helper methods
-	 **********************************/
-
-	/****************************************************************************
-	 * processAdminMessage
-	 * process the incoming AdminMessage
-	 * 
-	 * @param	latestMsg		message recieved externally
-	 * @param   conn			current connection with the callingServer
-	 * 
-	 * @throws 	IOException
-	 ****************************************************************************/
-	private void processAdminMessage(CommMessage latestMsg, ConnectionUtil conn) throws IOException {
-		if (latestMsg.getAdminMessage() != null) {
-			// if this is an AdminMessage
-			KVAdminMessage adminMessage = latestMsg.getAdminMessage();
-			KVAdminMessageType adminMessageType = adminMessage.getKVAdminMessageType();
-
-			switch (adminMessageType) {
-			case START:
-				clientConnectionDown = false;
-				break;
-			case STOP:
-				//Reject all client messages during this period
-				clientConnectionDown = true;
-				//CommMessage responseMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_STOPPED).build();
-				//conn.sendCommMessage(output, responseMsg);
-				break;
-			case SHUTDOWN:
-				isOpen = false;
-				KVServer.serverOn = false;
-				callingServer.close();
-				break;
-			case UPDATE:
-				/*
-				 * Update requires all servers stop responding
-				 * client requests (i.e. KVAdminMessage == null)
-				 */
-				//TODO:
-				//no longer accept client requests
-				clientConnectionDown = true;
-				//isMigrating = willMigrate();
-				
-				if (isMigrating) {
-					//TODO: 
-				}
-				
-				// find out if I am the one who needs migration
-				// if so, migrate
-				// if not, keep waiting
-				
-				
-				break;
-				
-			case LOCK_WRITE:
-				// TODO:
-				break;
-			case UNLOCK_WRITE:
-				// TODO:
-				break;
-			default:
-				break;
 			}
 		}
 	}
