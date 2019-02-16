@@ -326,6 +326,8 @@ public class KVServer extends Thread implements IKVServer {
 	public void setClusterMD(InfraMetadata newMetadata) {
 		serverLock.lock();
 		this.clusterMD = newMetadata;
+		clusterHash = new ConsistentHash();
+		clusterHash.addNodesFromInfraMD(newMetadata);
 		serverLock.unlock();
 	}
 	
@@ -389,11 +391,9 @@ public class KVServer extends Thread implements IKVServer {
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize server!");
 			e.printStackTrace();
-			System.exit(1);
 		} catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port>! Not a number!");
 			System.out.println("Usage: Server <port>!");
-			System.exit(1);
 		}
 	}
 }
