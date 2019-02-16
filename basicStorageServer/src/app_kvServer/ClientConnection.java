@@ -79,6 +79,7 @@ public class ClientConnection implements Runnable {
 						// null)
 						throw new IOException();
 					}
+					
 
 					if (clientConnectionDown) {
 						if (latestMsg.getAdminMessage() != null) {

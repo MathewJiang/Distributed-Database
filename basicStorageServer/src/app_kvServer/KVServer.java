@@ -33,6 +33,7 @@ public class KVServer extends Thread implements IKVServer {
 	private ConsistentHash clusterHash = null;
 	private ServiceLocation serverMD = null;
 
+	private String serverName = null;
 	private int port;
 	private int cacheSize;
 	private CacheStrategy strategy;
@@ -96,6 +97,14 @@ public class KVServer extends Thread implements IKVServer {
 		return serverInfo;
 	}
 
+	public ECS getECS(){
+		return ecs;
+	}
+	
+	public String getServerName() {
+		return serverName;
+	}
+	
 	@Override
 	public int getPort() {
 		return port;
@@ -201,11 +210,17 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
-		Disk.setDbName("/" + this.serverMD.serviceName + "-kvdb");
+		Disk.setDbName("/kvdb/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
+		
+		
+		ZKConnection zkConnection = new ZKConnection(this);
+		Thread newZKConnection = new Thread(zkConnection);
+		newZKConnection.start();
 
+		
 		if (serverSocket != null) {
 			while (isRunning()) {
 				try {
@@ -314,6 +329,7 @@ public class KVServer extends Thread implements IKVServer {
 		// Calculate server instance specific metadata.
 		server.serverMD = server.clusterMD.locationOfService(args[1]);
 		server.port = server.serverMD.port;
+		server.serverName = server.serverMD.serviceName;
 
 		server.cacheSize = Integer.parseInt(args[2]);
 		server.strategy = parseCacheStrategy(args[3]);
@@ -339,7 +355,7 @@ public class KVServer extends Thread implements IKVServer {
 
 			if (args.length != 4) {
 				System.out.println("Error! Invalid number of arguments!");
-				System.out.println("Usage: Server <port>!");
+				System.out.println("Usage: Server <port>! || Server <ECS_port> <serverName> <cacheSize> <cacheStrategy>");
 				return;
 			}
 			KVServer server = initServerFromECS(args);

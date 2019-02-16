@@ -304,6 +304,11 @@ public class ECS {
 	public void printMD() {
 		InfraMetadata MD = getMD();
 		List<ServiceLocation> serverLocations = MD.getServerLocations();
+		if (serverLocations == null) {
+			echo("[ECS.java/printMD]MD empty!");
+			return;
+		}
+		
 		for(int i = 0; i < serverLocations.size();i++) {
 			echo(serverLocations.get(i).serviceName + ":" +serverLocations.get(i).host + ":" + serverLocations.get(i).port);
 		}

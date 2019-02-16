@@ -94,6 +94,7 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean shutdown() {
         // TODO
+
         return false;
     }
 
@@ -332,9 +333,15 @@ public class ECSClient implements IECSClient {
 			break;
 			
 		case "shutDown":
-			if (tokens.length != 1) {
+			// FIXME: remove the second condition
+			if (tokens.length != 1 && tokens.length != 2) {
 				warn("shutDown does not have any arguments");
 			} else {
+				System.out.println("token[1] is : " + tokens[1]);
+				//Shutdown one server on selections
+				if (ecs != null) {
+		    		ecs.setCmd(tokens[1], "SHUTDOWN");
+		    	}
 				shutdown();
 			}
 			break;
