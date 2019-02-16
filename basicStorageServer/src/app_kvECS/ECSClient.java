@@ -514,6 +514,7 @@ public class ECSClient implements IECSClient {
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
 					ecs.reset();
+					ecs.broadast("SHUTDOWN");
 					ecs.init();
 				}
 			}

@@ -608,4 +608,8 @@ public class ECS {
 			setCmd(serverName, cmd);
 		}
 	}
+	
+	public void ack(String serverName, String action) {
+		echo(serverName+ " acking " + action);
+	}
 }
