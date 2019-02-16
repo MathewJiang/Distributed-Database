@@ -513,8 +513,8 @@ public class ECSClient implements IECSClient {
 		case "reset":
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
-					ecs.reset();
 					ecs.broadast("SHUTDOWN");
+					ecs.reset();
 					ecs.init();
 				}
 			}
