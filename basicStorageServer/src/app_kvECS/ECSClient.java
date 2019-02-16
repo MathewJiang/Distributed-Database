@@ -138,6 +138,7 @@ public class ECSClient implements IECSClient {
     		return ecs.getECSNodeCollection();
     	}
     	loadECSconfigFromFile();
+    	hashRing.removeAllServerNodes();
     	hashRing.addNodesFromInfraMD(MD);
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 

@@ -39,18 +39,18 @@ public class ConnectionUtil {
 		byte[] bufferBytes = new byte[BUFFER_SIZE];
 
 		/* read first char from stream */
-		byte read = (byte) 0;
-		while (KVServer.serverOn) {
-			if (input.available() > 0) {
-				read = (byte) input.read();
-				break;
-			}
-		}
-		
-		if (!KVServer.serverOn) {
-			return null;					//server is down
-											//this also makes the JUnit: InteractiveTest fail
-		}
+		byte read = (byte) input.read();
+//		while (KVServer.serverOn) {
+//			if (input.available() > 0) {
+//				read = (byte) input.read();
+//				break;
+//			}
+//		}
+//		
+//		if (!KVServer.serverOn) {
+//			return null;					//server is down
+//											//this also makes the JUnit: InteractiveTest fail
+//		}
 		
 //		byte read = (byte) input.read();
 		boolean reading = true;
@@ -94,16 +94,16 @@ public class ConnectionUtil {
 			// deal with cases where server shut down when client is sending a message
 			// in this case, we should still try to process the request
 			// only quit if only partial message has been sent
-			if (input.available() == 0) {
-				return null;
-			} else {
-				if (!KVServer.serverOn) {
-					return null;
-				} else {
-					read = (byte) input.read();
-				}
-			}
-//			read = (byte) input.read();
+//			if (input.available() == 0) {
+//				return null;
+//			} else {
+//				if (!KVServer.serverOn) {
+//					return null;
+//				} else {
+//					read = (byte) input.read();
+//				}
+//			}
+			read = (byte) input.read();
 			
 //			while (KVServer.serverOn) {
 //				if (input.available() > 0) {

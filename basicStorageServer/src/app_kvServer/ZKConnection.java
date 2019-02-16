@@ -36,43 +36,41 @@ public class ZKConnection implements Runnable {
 
 				switch (cm.getKVAdminMessageType()) {
 				case START:
-					System.out.println("[ZKConnection.java/run()]START!");
+					logger.info("[ZKConnection.java/run()]START!");
 					// TODO
 					callingServer.setSuspended(false);
 					break;
 
 				case STOP:
-					System.out.println("[ZKConnection.java/run()]STOP!");
+					logger.info("[ZKConnection.java/run()]STOP!");
 					callingServer.setSuspended(true);
 					break;
 
 				case SHUTDOWN:
-					System.out.println("[ZKConnection.java/run()]SHUTDOWN!");
+					logger.info("[ZKConnection.java/run()]SHUTDOWN!");
 					callingServer.close();
 					isOpen = false;
 					break;
 
 				case UPDATE:
-					System.out.println("[ZKConnection.java/run()]UPDATE!");
+					logger.info("[ZKConnection.java/run()]UPDATE!");
 					callingServer.setSuspended(true);
 
 					getChangedNode(callingServer.getClusterMD(), cm.MD);
 					break;
 
 				case UPDATE_COMPLETE:
-					System.out
-							.println("[ZKConnection.java/run()]UPDATE_COMPLETE!");
+					logger.info("[ZKConnection.java/run()]UPDATE_COMPLETE!");
 					callingServer.setSuspended(false);
 					callingServer.setClusterMD(cm.MD);
 					break;
 
 				case LOCK_WRITE:
-					System.out.println("[ZKConnection.java/run()]LOCK_WRITE!");
+					logger.info("[ZKConnection.java/run()]LOCK_WRITE!");
 					break;
 
 				case UNLOCK_WRITE:
-					System.out
-							.println("[ZKConnection.java/run()]UNLOCK_WRITE!");
+					logger.info("[ZKConnection.java/run()]UNLOCK_WRITE!");
 					break;
 
 				default:

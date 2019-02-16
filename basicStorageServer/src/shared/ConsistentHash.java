@@ -252,10 +252,10 @@ public class ConsistentHash {
 		System.out.println("key3: " + String.format("0x%32X", MD5.getMD5("key3")));
 		
 		ch.addServerNode(server0);
-		ch.addServerNode(server1);
-		ch.addServerNode(server2);
-		ch.addServerNode(server3);
-		ch.addServerNode(server4);
+//		ch.addServerNode(server1);
+//		ch.addServerNode(server2);
+//		ch.addServerNode(server3);
+//		ch.addServerNode(server4);
 		//ch.addServerNode(server5);
 		
 		String[] server0HashRange = null;
@@ -266,10 +266,10 @@ public class ConsistentHash {
 		String[] server5HashRange = null;
 		try {
 			server0HashRange = ch.getHashRange(server0);
-			server1HashRange = ch.getHashRange(server1);
-			server2HashRange = ch.getHashRange(server2);
-			server3HashRange = ch.getHashRange(server3);
-			server4HashRange = ch.getHashRange(server4);
+//			server1HashRange = ch.getHashRange(server1);
+//			server2HashRange = ch.getHashRange(server2);
+//			server3HashRange = ch.getHashRange(server3);
+//			server4HashRange = ch.getHashRange(server4);
 			//server5HashRange = ch.getHashRange(server5);
 		} catch (Exception e) {
 			System.out.println("gg!");
@@ -277,10 +277,10 @@ public class ConsistentHash {
 		}
 		
 		System.out.println("---server0 range from: " + server0HashRange[0] + "~" + server0HashRange[1] + "---");
-		System.out.println("---server1 range from: " + server1HashRange[0] + "~" + server1HashRange[1] + "---");
-		System.out.println("---server2 range from: " + server2HashRange[0] + "~" + server2HashRange[1] + "---");
-		System.out.println("---server3 range from: " + server3HashRange[0] + "~" + server3HashRange[1] + "---");
-		System.out.println("---server4 range from: " + server4HashRange[0] + "~" + server4HashRange[1] + "---");
+//		System.out.println("---server1 range from: " + server1HashRange[0] + "~" + server1HashRange[1] + "---");
+//		System.out.println("---server2 range from: " + server2HashRange[0] + "~" + server2HashRange[1] + "---");
+//		System.out.println("---server3 range from: " + server3HashRange[0] + "~" + server3HashRange[1] + "---");
+//		System.out.println("---server4 range from: " + server4HashRange[0] + "~" + server4HashRange[1] + "---");
 		//System.out.println("---server5 range from: " + server5HashRange[0] + "~" + server5HashRange[1] + "---");
 		
 		System.out.println("---round 1----");
