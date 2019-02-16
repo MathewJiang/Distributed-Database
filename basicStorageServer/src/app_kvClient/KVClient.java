@@ -13,11 +13,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
-import shared.ConnectionUtil;
-import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-import shared.messages.KVAdminMessage;
-import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.messages.KVMessage.StatusType;
 import app_kvServer.KVServer;
 import client.KVCommInterface;

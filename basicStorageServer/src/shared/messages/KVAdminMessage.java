@@ -9,6 +9,8 @@
  ***************************************************************/
 package shared.messages;
 
+import shared.InfraMetadata;
+
 public class KVAdminMessage {
     public enum KVAdminMessageType {
     	START,			/* Tell the server to start (accepting client requests) */
@@ -21,6 +23,8 @@ public class KVAdminMessage {
     	LOCK_WRITE,		/* Lock the server for write operations */
     	UNLOCK_WRITE	/* Unlock the server for write operations*/
     }
+    
+    public InfraMetadata MD;
 
     private KVAdminMessageType adminMessageType;
     

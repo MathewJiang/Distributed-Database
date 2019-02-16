@@ -7,7 +7,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
 import logger.LogSetup;

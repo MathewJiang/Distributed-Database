@@ -1,16 +1,15 @@
 package testing;
 import java.io.IOException;
 
+import junit.framework.TestCase;
+import logger.LogSetup;
+
 import org.apache.log4j.Level;
 import org.junit.Test;
 
-import app_kvServer.KVServer;
-
-import client.KVStore;
-import junit.framework.TestCase;
-import logger.LogSetup;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import app_kvServer.KVServer;
 import client.KVStore;
 
 

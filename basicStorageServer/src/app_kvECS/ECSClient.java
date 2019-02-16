@@ -24,18 +24,9 @@ import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
-import shared.messages.CommMessageBuilder;
-import shared.messages.KVAdminMessage;
-import shared.messages.KVAdminMessage.KVAdminMessageType;
 import app_kvServer.KVServer;
 import ecs.ECSNode;
 import ecs.IECSNode;
-import app_kvECS.ECS;
-import app_kvECS.ECS.spinlock;
-import app_kvServer.KVServer;
-
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class ECSClient implements IECSClient {
 
@@ -573,7 +564,7 @@ public class ECSClient implements IECSClient {
 			break;
 		case "getcmd":
 			if (tokens.length == 2) {
-				echo(ecs.KVAdminMessageTypeToString(ecs.getCmd(tokens[1]).getAdminMessage().getKVAdminMessageType()));
+				echo(ecs.KVAdminMessageTypeToString(ecs.getCmd(tokens[1]).getKVAdminMessageType()));
 			}
 			break;
 		case "setcmd":
