@@ -17,6 +17,7 @@ public class KVAdminMessage {
     	UPDATE,			/* Tell the server to update their metadata files
     	 			   	   Servers also need to do necessary migration
     	 			  	   During this period, no clientConnection allowed*/
+    	UPDATE_COMPLETE,/* tell the other server that the update has been completed */
     	LOCK_WRITE,		/* Lock the server for write operations */
     	UNLOCK_WRITE	/* Unlock the server for write operations*/
     }

@@ -39,6 +39,7 @@ public class KVServer extends Thread implements IKVServer {
 	private CacheStrategy strategy;
 	private ServerSocket serverSocket;
 	private boolean running;
+	private boolean suspended = true;
 	private ServiceLocation serverInfo;	//TODO: get the serverInfo
 
 	public static int totalNumClientConnection = 0;
@@ -88,12 +89,15 @@ public class KVServer extends Thread implements IKVServer {
 	}
 
 	public void setRunning(boolean running) {
+		serverLock.lock();
 		this.running = running;
+		serverLock.unlock();
 	}
 	
 	public ServiceLocation getServerInfo() {
-		//FIXME: hardcoded value
-		serverInfo = new ServiceLocation("server1", "127.0.0.1", 5000);
+		if (serverInfo != null) {
+			serverInfo = new ServiceLocation(getServerName(), getHostname(), getPort());
+		}
 		return serverInfo;
 	}
 
@@ -103,6 +107,16 @@ public class KVServer extends Thread implements IKVServer {
 	
 	public String getServerName() {
 		return serverName;
+	}
+	
+	public boolean isSuspended() {
+		return suspended;
+	}
+	
+	public void setSuspended(boolean suspended) {
+		serverLock.lock();
+		this.suspended = suspended;
+		serverLock.unlock();
 	}
 	
 	@Override
@@ -238,7 +252,7 @@ public class KVServer extends Thread implements IKVServer {
 			}
 		}
 		serverOn = false;
-		logger.info("Server stopped.");
+		logger.info("Server shutdown.");
 	}
 
 	@Override
@@ -250,6 +264,7 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public void close() {
+		serverLock.lock();
 		running = false;
 		try {
 			Storage.flush();
@@ -257,6 +272,8 @@ public class KVServer extends Thread implements IKVServer {
 			serverOn = false;
 		} catch (IOException e) {
 			logger.error("Error! " + "Unable to close socket on port: " + port, e);
+		} finally {
+			serverLock.unlock();
 		}
 	}
 
@@ -305,6 +322,12 @@ public class KVServer extends Thread implements IKVServer {
 	
 	public InfraMetadata getClusterMD() {
 		return clusterMD;
+	}
+	
+	public void setClusterMD(InfraMetadata newMetadata) {
+		serverLock.lock();
+		this.clusterMD = newMetadata;
+		serverLock.unlock();
 	}
 	
 	public void retrieveClusterFromECS(Integer ECS_PORT) throws IOException, InterruptedException {

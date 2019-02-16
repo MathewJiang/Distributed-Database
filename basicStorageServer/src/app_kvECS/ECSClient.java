@@ -299,15 +299,15 @@ public class ECSClient implements IECSClient {
 	}
 	
 	private void warn(String line) {
-		System.out.println("Warning: " + line);
+		System.out.println("[ECSClient.java]Warning: " + line);
 	}
 	
 	private void info(String line) {
-		System.out.println("Info: " + line);
+		System.out.println("[ECSClient.java]Info: " + line);
 	}
 
 	private void echo(String line) {
-		System.out.println(line);
+		System.out.println("[ECSClient.java]: " + line);
 	}
 
 	private void handleCommand(String cmdLine) {
@@ -337,17 +337,24 @@ public class ECSClient implements IECSClient {
 			break;
 			
 		case "start":
-			if (tokens.length != 1) {
+			if (tokens.length != 1 && tokens.length != 2) {
 				warn("start does not have any arguments");
 			} else {
+				if (ecs != null) {
+					ecs.setCmd(tokens[1], "START");
+				}
 				start();
 			}
 			break;
 			
 		case "stop":
-			if (tokens.length != 1) {
-				warn("end does not have any arguments");
+			// FIXME: remove the second condition
+			if (tokens.length != 1 && tokens.length != 2) {
+				warn("stop does not have any arguments");
 			} else {
+				if (ecs != null) {
+					ecs.setCmd(tokens[1], "STOP");
+				}
 				stop();
 			}
 			break;
@@ -361,6 +368,8 @@ public class ECSClient implements IECSClient {
 				//Shutdown one server on selections
 				if (ecs != null) {
 		    		ecs.setCmd(tokens[1], "SHUTDOWN");
+		    	} else {
+		    		logger.error("[ECSClient.java]");
 		    	}
 				shutdown();
 			}
@@ -570,6 +579,14 @@ public class ECSClient implements IECSClient {
 		case "setcmd":
 			if(tokens.length == 3) {
 				ecs.setCmd(tokens[1], tokens[2]);
+			}
+			break;
+			
+		// testing purposes only
+		case "migrate":
+			if (tokens.length == 2) {
+				// migrate all the files towards the destinated server
+				ecs.setCmd(tokens[1], "UPDATE");
 			}
 			break;
 		default:

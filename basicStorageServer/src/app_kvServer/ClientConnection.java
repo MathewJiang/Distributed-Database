@@ -81,70 +81,62 @@ public class ClientConnection implements Runnable {
 					}
 					
 
-					if (clientConnectionDown) {
-						if (latestMsg.getAdminMessage() != null) {
-							processAdminMessage(latestMsg, conn);
-						} else {
-							// Sending messages to inform client that the server has been stopped
-							// as a way to ignoring the request
-							CommMessage responseMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_STOPPED).build();
-							conn.sendCommMessage(output, responseMsg);
-						}
+					if (callingServer.isSuspended()) {
+						// Sending messages to inform client that the server has been stopped
+						// as a way to ignoring the request
+						CommMessage responseMsg = new CommMessageBuilder().setStatus(StatusType.SERVER_STOPPED).build();
+						conn.sendCommMessage(output, responseMsg);
 					} else {
-						if (latestMsg.getAdminMessage() != null) {
-							processAdminMessage(latestMsg, conn);
+						StatusType op = latestMsg.getStatus();
+						String key = latestMsg.getKey();
+						String value = latestMsg.getValue();
+
+						CommMessage responseMsg = new CommMessage();
+
+						// If request key is not in server range. Issue an
+						// update message to requesting client.
+						if (!callingServer.hasKey(key)) {
+							responseMsg.setInfraMetadata(callingServer.getClusterMD());
+							responseMsg.setStatus(StatusType.SERVER_NOT_RESPONSIBLE);
 						} else {
-							StatusType op = latestMsg.getStatus();
-							String key = latestMsg.getKey();
-							String value = latestMsg.getValue();
-	
-							CommMessage responseMsg = new CommMessage();
-	
-							// If request key is not in server range. Issue an
-							// update message to requesting client.
-							if (!callingServer.hasKey(key)) {
-								responseMsg.setInfraMetadata(callingServer.getClusterMD());
-								responseMsg.setStatus(StatusType.SERVER_NOT_RESPONSIBLE);
-							} else {
-								switch (op) {
-								case PUT: 
-									try {
-										KVServer.serverLock.lock();
-										StatusType status = handlePUT(key, value);
-										responseMsg.setKey(key);
-										responseMsg.setValue(value);
-										responseMsg.setStatus(status);
-									} catch (IOException e) {
-										responseMsg.setStatus(StatusType.PUT_ERROR);
-									} finally {
-										KVServer.serverLock.unlock();
-									}
-									break;
-									
-								case GET:
-									try {
-										KVServer.serverLock.lock();
-										value = handleGET(key);
-		
-										responseMsg.setKey(key);
-										responseMsg.setValue(value);
-										responseMsg.setStatus(StatusType.GET_SUCCESS);
-									} catch (Exception e) {
-										value = null;
-										responseMsg.setStatus(StatusType.GET_ERROR);
-									} finally {
-										KVServer.serverLock.unlock();
-									}
-									break;
-									
-								default:
-									logger.error("[Error]ClientConnection.java/run(): Unknown type of message");
-									throw new IOException();
+							switch (op) {
+							case PUT: 
+								try {
+									KVServer.serverLock.lock();
+									StatusType status = handlePUT(key, value);
+									responseMsg.setKey(key);
+									responseMsg.setValue(value);
+									responseMsg.setStatus(status);
+								} catch (IOException e) {
+									responseMsg.setStatus(StatusType.PUT_ERROR);
+								} finally {
+									KVServer.serverLock.unlock();
 								}
+								break;
+								
+							case GET:
+								try {
+									KVServer.serverLock.lock();
+									value = handleGET(key);
+	
+									responseMsg.setKey(key);
+									responseMsg.setValue(value);
+									responseMsg.setStatus(StatusType.GET_SUCCESS);
+								} catch (Exception e) {
+									value = null;
+									responseMsg.setStatus(StatusType.GET_ERROR);
+								} finally {
+									KVServer.serverLock.unlock();
+								}
+								break;
+								
+							default:
+								logger.error("[Error]ClientConnection.java/run(): Unknown type of message");
+								throw new IOException();
 							}
-						
-							conn.sendCommMessage(output, responseMsg);
 						}
+					
+						conn.sendCommMessage(output, responseMsg);
 					}
 
 				/*
