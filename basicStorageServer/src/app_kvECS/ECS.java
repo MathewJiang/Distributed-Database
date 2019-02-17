@@ -24,6 +24,7 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
 
 import shared.ConsistentHash;
 import shared.InfraMetadata;
@@ -421,8 +422,9 @@ public class ECS {
 	private boolean watchStringDelete(final String path) {
 		final boolean valid[] = {true};
 		Latch = new CountDownLatch(1);
+		Stat check = null;
 			try {
-				zk.exists(path, new Watcher() {
+				check = zk.exists(path, new Watcher() {
 					public void process(WatchedEvent e) {
 						if (e.getType() == EventType.NodeDeleted) {
 							Latch.countDown();
@@ -438,13 +440,17 @@ public class ECS {
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
-			try {
-				Latch.await();
-			} catch (InterruptedException e1) {
-				e1.printStackTrace();
+			if(check != null) {
+				try {
+					Latch.await();
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
+				Latch = null;
+				return valid[0];
 			}
-			Latch = null;
-			return valid[0];
+			Latch.countDown();
+			return true;
 	}
 	private int watchNodeChildren(final String path, int th) {
 		echo("watching " + path + "count is " + th);
@@ -519,7 +525,7 @@ public class ECS {
 			String result = new String(data, StandardCharsets.US_ASCII);
 			return result;
 		} else {
-			return "";
+			return  "";
 		}
 	}
 	
@@ -534,16 +540,20 @@ public class ECS {
 		private String lockPath = "";
 		public void lock() {
 			String n = lock_create(); // full path
+			echo("n = " + n);
 			while(true) {
 				List<String> raceList = returnDirList("/lock/spinlock");
 				int array[] = new int[raceList.size()];
 				for(int i=0;i<raceList.size();i++) {
+					//echo(raceList.get(i));
 					int entry = Integer.parseInt(raceList.get(i));
+					//echo(i+": "+entry);
 					array[i] = entry;
 				}
 				Arrays.sort(array);
+				
 				int winner = array[0];
-				int ticket = Integer.parseInt(Character.toString(n.charAt(n.length()-1)));
+				int ticket = Integer.parseInt(n.substring(16));
 				if(ticket==winner || ticket == 0) {
 					setData(n, "true");
 					// locked
@@ -554,7 +564,7 @@ public class ECS {
 					int waitFor = ticket - 1;
 					String appendZero = ("0000000000" + waitFor);
 					String fillMSBZero = appendZero.substring(appendZero.length() - 10);
-					//echo("waitfor " + fillMSBZero + " I am " + n);
+					echo("waitfor " + fillMSBZero + " I am " + n);
 					watchStringDelete("/lock/spinlock/" + fillMSBZero);
 				}
 			}
@@ -697,43 +707,37 @@ public class ECS {
 	
 	public void makeSureAckIsSet() {
 		try {
-			lock();
 			if(zk.exists("/ack",true) == null) {
 				create("/ack", null, "-p");
-				unlock();
 				return;
 			}
-			unlock();
 		} catch (KeeperException | InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
 	public void makeSureAckIssueIsSet(String issue) {
 		try {
-			lock();
 			if(zk.exists("/ack/" + issue ,true) == null) {
 				create("/ack/" + issue, null, "-p");
-				unlock();
 				return;
 			}
-			unlock();
 		} catch (KeeperException | InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
 	public void ack(String serverName, String action) {
-		//makeSureAckIsSet();
 		echo(serverName+ " acking " + action);
-		//makeSureAckIssueIsSet(action);
 		create("/ack/" + action + "/" + serverName, null, "-p");
 	}
 	
 	public void waitAck(String action, int countDown) {
-		echo("waitAck " + action + countDown);
-		//makeSureAckIsSet();
+		echo("waitAck " + action + " " + countDown);
+		makeSureAckIsSet();
 		echo(action + "(" + countDown + ")");
 		makeSureAckIssueIsSet(action);
+		unlock();
 		while(watchNodeChildren("/ack/" + action, countDown) != countDown){};
+		echo("clear " + action);
 		// clear the wait
 		deleteHeadRecursive("/ack/" + action);
 		return;

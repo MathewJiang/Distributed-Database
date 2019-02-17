@@ -110,8 +110,7 @@ public class ECSClient implements IECSClient {
 			ecs.refreshHash(hashRing);
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
 			ecs.setCmd(newNode.getNodeName(), "UPDATE");
-			ecs.unlock();
-			ecs.waitAck("migrate", launchedNodes.size());
+			ecs.waitAck("migrate", launchedNodes.size()); // internal unlock
 			return newNode;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -596,6 +595,14 @@ public class ECSClient implements IECSClient {
 		// testing purposes only
 		case "migrate":
 			ecs.broadast("UPDATE");
+			break;
+		case "locktest":
+			for(int i = 0; i < 2000; i++) {
+				ecs.lock();
+				ecs.unlock();
+				echo("lock(" + i + ")");
+			}
+			echo("done");
 			break;
 		default:
 			printError("Unknown command");
