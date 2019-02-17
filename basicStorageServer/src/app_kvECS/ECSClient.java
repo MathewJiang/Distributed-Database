@@ -557,10 +557,7 @@ public class ECSClient implements IECSClient {
 			break;
 		// testing purposes only
 		case "migrate":
-			if (tokens.length == 2) {
-				// migrate all the files towards the destinated server
-				ecs.broadast("UPDATE");
-			}
+			ecs.broadast("UPDATE");
 			break;
 		default:
 			printError("Unknown command");
