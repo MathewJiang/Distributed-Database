@@ -233,11 +233,11 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-		
+
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
-		
+
 		if (serverSocket != null) {
 			ecs.ack(serverName, "launched");
 			while (isRunning()) {
@@ -366,12 +366,9 @@ public class KVServer extends Thread implements IKVServer {
 			ecs = new ECS();
 		}
 
-		ecs.connect("localhost", ECS_PORT);
-		clusterMD = ecs.getMD();
-
 		// Compute server side consistent hash.
-		clusterHash = new ConsistentHash();
-		clusterHash.addNodesFromInfraMD(clusterMD);
+		ecs.connect("localhost", ECS_PORT);
+		setClusterMD(ecs.getMD());
 	}
 
 	// Compute new hash ring with given metadata, and migrate all storages
@@ -404,8 +401,8 @@ public class KVServer extends Thread implements IKVServer {
 					.build();
 			msg.setFromServer(true);
 			ServiceLocation target = clusterHash.getServer(key);
-			
-			// Send and await ack.
+
+			// Send and await ack from target server.
 			Socket socket = new Socket(target.host, target.port);
 			conn.sendCommMessage(socket.getOutputStream(), msg);
 			CommMessage serverResponse = conn.receiveCommMessage(socket
