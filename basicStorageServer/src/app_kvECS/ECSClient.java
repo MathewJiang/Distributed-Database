@@ -545,7 +545,16 @@ public class ECSClient implements IECSClient {
 				ecs.setCmd(tokens[1], tokens[2]);
 			}
 			break;
-			
+		case "ack":
+			if (tokens.length == 3) {
+				ecs.ack(tokens[1], tokens[2]);
+			}
+			break;
+		case "waitAck":
+			if (tokens.length == 3) {
+				ecs.waitAck(tokens[1], Integer.parseInt(tokens[2]));
+			}
+			break;
 		// testing purposes only
 		case "migrate":
 			if (tokens.length == 2) {
