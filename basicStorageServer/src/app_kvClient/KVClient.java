@@ -1,7 +1,10 @@
 package app_kvClient;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
@@ -173,7 +176,38 @@ public class KVClient implements IKVClient {
 			}
 
 			break;
-		
+		case "runScript":
+			File file = new File(tokens[1]); 
+			  
+			BufferedReader br;
+			try {
+				br = new BufferedReader(new FileReader(file));
+				String st; 
+				try {
+					while ((st = br.readLine()) != null) {
+						String lines[] = st.split("\\s+"); 
+						if(lines[0].equals("get")) {
+							get(lines[1]);
+						} else if(lines[0].equals("put")) {
+							if(lines.length >= 3) {
+								int i = 2;
+								String value = "";
+								while(i < lines.length) {
+									value += lines[i];
+									i++;
+								}
+								put(lines[1], value);
+							}
+						}
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				} 
+			} catch (FileNotFoundException e1) {
+				e1.printStackTrace();
+			} 
+			  
+			break;
 			
 		//only for testing purposes
 //		case "shutdown":
@@ -299,7 +333,53 @@ public class KVClient implements IKVClient {
 				"resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
+	
+	public void get(String key) {
+		try {
+			CommMessage latestMsg = (CommMessage) backend.get(key);
 
+			// getting a metaData file from the server
+			// need to do a retry on the corresponding server
+			int i = 0;
+			while (latestMsg != null
+					&& latestMsg.getStatus().equals(
+							StatusType.SERVER_NOT_RESPONSIBLE)
+					&& latestMsg.getInfraMetadata() != null) {
+				// FIXME: should we just retry once???
+				System.out.println("[debug]Round " + i);
+				i++;
+
+				backend.resetClusterHash(latestMsg.getInfraMetadata());
+				latestMsg = (CommMessage) backend.get(key);
+			}
+		} catch (Exception e) {
+			printError("Error getting key " + key + ": "
+					+ e.toString());
+		}
+	}
+	public void put(String key, String value) {
+		try {
+			CommMessage latestMsg = null;
+
+			latestMsg = (CommMessage) backend.put(key, value);
+			// getting a metaData file from the server
+			// need to do a retry on the corresponding server
+			int i = 0;
+			while (latestMsg != null
+					&& latestMsg.getStatus().equals(
+							StatusType.SERVER_NOT_RESPONSIBLE)
+					&& latestMsg.getInfraMetadata() != null) {
+				// FIXME: should we just retry once???
+				System.out.println("[debug]Round " + i);
+				i++;
+
+				backend.resetClusterHash(latestMsg.getInfraMetadata());
+				latestMsg = (CommMessage) backend.put(key, value);
+			}
+		} catch (Exception e) {
+			printError("Put Error: " + e.toString());
+		}
+	}
 	/**
 	 * Main entry point for the echo server application.
 	 * 
