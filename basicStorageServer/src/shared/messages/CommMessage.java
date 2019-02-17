@@ -10,9 +10,11 @@ public class CommMessage implements KVMessage {
 
 	// Status and data of this CommMessage.
 	private StatusType status;
+	private Boolean fromServer;
+	private InfraMetadata infraMetadata;
+	
 	private String key;
 	private String value;
-	private InfraMetadata infraMetadata;
 
 	public CommMessage() {
 		this.status = null;
@@ -94,5 +96,13 @@ public class CommMessage implements KVMessage {
 
 	public void setInfraMetadata(InfraMetadata infraMetadata) {
 		this.infraMetadata = infraMetadata;
+	}
+
+	public Boolean getFromServer() {
+		return fromServer;
+	}
+
+	public void setFromServer(Boolean fromServer) {
+		this.fromServer = fromServer;
 	}
 }
