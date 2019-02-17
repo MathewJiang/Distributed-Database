@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 import shared.messages.KVMessage.StatusType;
 
@@ -44,6 +46,19 @@ public class Disk {
 			}
 		}
 		// this point, we have a db dir initialized
+	}
+	
+	public static List<String> getAllKeys() {
+		File dir = new File(db_dir);
+		if (!dir.isDirectory()) {
+			System.out.println("what the fuck");
+			return null;
+		}
+		List<String> keyList = new ArrayList<String>();
+		for (File f : dir.listFiles()) {
+			keyList.add(f.getName());
+		}
+		return keyList;
 	}
 
 	public static String getKV(String key) throws Exception {
