@@ -335,6 +335,14 @@ public class KVServer extends Thread implements IKVServer {
 				"resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
+	
+	private static void resetServerLogger(String serviceName) throws Exception {
+		Properties props = new Properties();
+		props.load(new FileInputStream(
+				"resources/config/server-log4j.properties"));
+		props.put("log4j.appender.fileLog.File", "logs/" + serviceName +"-log.out");
+		PropertyConfigurator.configure(props);
+	}
 
 	// If key is in the range this server is responsible for.
 	public boolean hasKey(String key) {
@@ -454,6 +462,7 @@ public class KVServer extends Thread implements IKVServer {
 				return;
 			}
 			KVServer server = initServerFromECS(args);
+			resetServerLogger(server.getServerName());
 			System.out.println("Service: " + server.serverMD.serviceName
 					+ " will listen on " + server.serverMD.host + ":"
 					+ server.serverMD.port);

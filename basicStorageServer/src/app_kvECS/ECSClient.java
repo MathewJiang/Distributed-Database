@@ -155,7 +155,6 @@ public class ECSClient implements IECSClient {
 				item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, hashRing.getHashRange(curr));
 				launchedNodes.add(item_to_be_added);	
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
@@ -564,10 +563,7 @@ public class ECSClient implements IECSClient {
 			break;
 		// testing purposes only
 		case "migrate":
-			if (tokens.length == 2) {
-				// migrate all the files towards the destinated server
-				ecs.broadast("UPDATE");
-			}
+			ecs.broadast("UPDATE");
 			break;
 		default:
 			printError("Unknown command");

@@ -10,7 +10,7 @@ public class CommMessage implements KVMessage {
 
 	// Status and data of this CommMessage.
 	private StatusType status;
-	private Boolean fromServer;
+	private Boolean fromServer = false; // Unless explicitly set to true.
 	private InfraMetadata infraMetadata;
 	
 	private String key;
@@ -73,6 +73,7 @@ public class CommMessage implements KVMessage {
 	public String toString() {
 		StringBuilder id = new StringBuilder();
 		id.append("{ CommMessage Object: ");
+		
 		id.append("{ Status: ");
 		id.append(this.status);
 		id.append(" }");
@@ -83,6 +84,10 @@ public class CommMessage implements KVMessage {
 
 		id.append("{ value: ");
 		id.append(this.value);
+		id.append(" }");
+		
+		id.append("{ fromServer: ");
+		id.append(this.fromServer);
 		id.append(" }");
 		
 		id.append("}");
