@@ -233,12 +233,13 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-
+		
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
-
+		
 		if (serverSocket != null) {
+			ecs.ack(serverName, "launched");
 			while (isRunning()) {
 				try {
 					Socket client = serverSocket.accept();

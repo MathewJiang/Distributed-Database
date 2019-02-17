@@ -732,18 +732,18 @@ public class ECS {
 	
 	public void waitAck(String action, int countDown) {
 		echo("waitAck " + action + " " + countDown);
-		makeSureAckIsSet();
-		echo(action + "(" + countDown + ")");
-		makeSureAckIssueIsSet(action);
-		unlock();
+		
 		while(watchNodeChildren("/ack/" + action, countDown) != countDown){};
 		echo("clear " + action);
 		// clear the wait
 		deleteHeadRecursive("/ack/" + action);
 		return;
 	}
-
-	public boolean inited() {
+	public void waitAckSetup(String action) {
+		makeSureAckIsSet();
+		makeSureAckIssueIsSet(action);
+	}
+	public boolean inited() { 
 		try {
 			if(zk.exists("/nodes", false) != null) {
 				return true;
