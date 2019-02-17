@@ -241,6 +241,7 @@ public class ConsistentHash {
 		ServiceLocation server4 = new ServiceLocation("server4", "127.0.0.1", 50006);
 		ServiceLocation server5 = new ServiceLocation("server5", "127.0.0.1", 50004);
 		
+		System.out.println("server1 MD5: " + MD5.getMD5("127.0.0.1:50001"));
 		System.out.println("server1 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50000")));
 		System.out.println("server2 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50001")));
 		System.out.println("server3 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50002")));
