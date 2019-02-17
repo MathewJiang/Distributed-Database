@@ -409,7 +409,45 @@ public class ECS {
 			Latch = null;
 			return valid[0];
 	}
-	
+	private int watchNodeChildren(final String path, int th) {
+		echo("watching " + path + "count is " + th);
+		final int count[] = {returnDirList(path).size()};
+		final boolean valid[] = {true};
+		if(count[0] == th) {
+			return th; // no more event is going to happen
+		}
+		Latch = new CountDownLatch(1);
+			try {
+				count[0] = zk.getChildren(path, new Watcher() {
+					public void process(WatchedEvent e) {
+						echo(getTypeName(e.getType()));
+						if (e.getType() == EventType.NodeChildrenChanged) {
+							count[0] = returnDirList(path).size();
+							Latch.countDown();
+						} else {
+							valid[0] = false;
+							Latch.countDown();
+						}
+					}
+				}
+				).size();
+			} catch (KeeperException e1) {
+				e1.printStackTrace();
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			try {
+				Latch.await();
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			echo("action " + path + " count is " + count[0]);
+			if(valid[0]) {
+				return count[0];
+			} else {
+				return 0;
+			}
+	}
 	private String watchStringDataChanged(final String path) {
 		final boolean valid[] = {true};
 		Latch = new CountDownLatch(1);
@@ -520,6 +558,7 @@ public class ECS {
 		try {
 			zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 			zk.create("/lock/spinlock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 		} catch (KeeperException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -618,7 +657,46 @@ public class ECS {
 		}
 	}
 	
+	public void makeSureAckIsSet() {
+		try {
+			lock();
+			if(zk.exists("/ack",true) == null) {
+				create("/ack", null, "-p");
+				unlock();
+				return;
+			}
+			unlock();
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	public void makeSureAckIssueIsSet(String issue) {
+		try {
+			lock();
+			if(zk.exists("/ack/" + issue ,true) == null) {
+				create("/ack/" + issue, null, "-p");
+				unlock();
+				return;
+			}
+			unlock();
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 	public void ack(String serverName, String action) {
+		makeSureAckIsSet();
 		echo(serverName+ " acking " + action);
+		makeSureAckIssueIsSet(action);
+		create("/ack/" + action + "/" + serverName, null, "-p");
+	}
+	
+	public void waitAck(String action, int countDown) {
+		makeSureAckIsSet();
+		echo(action + "(" + countDown + ")");
+		makeSureAckIssueIsSet(action);
+		while(watchNodeChildren("/ack/" + action, countDown) != countDown){};
+		// clear the wait
+		deleteHeadRecursive("/ack/" + action);
+		return;
 	}
 }
