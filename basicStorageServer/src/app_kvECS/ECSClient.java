@@ -74,6 +74,9 @@ public class ECSClient implements IECSClient {
     @Override
     public boolean shutdown() {
     	ecs.broadast("SHUTDOWN");
+    	launchedNodes.clear();
+    	launchedServer.clear();
+    	ecs.setConfigured(false);
         return true;
     }
 
@@ -125,9 +128,13 @@ public class ECSClient implements IECSClient {
     	if(ecs.configured()) {
     		return ecs.getECSNodeCollection();
     	}
+    	
+    	if(ecs.inited()) {
+    		ecs.deleteHeadRecursive("/nodes");
+    		ecs.create("/nodes", null, "-p");
+    	}
     	loadECSconfigFromFile();
     	hashRing.removeAllServerNodes();
-    	hashRing.addNodesFromInfraMD(MD);
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 
 		info("Launching " + count + "/" + servers.size() + " servers on file");

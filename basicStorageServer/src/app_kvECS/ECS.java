@@ -321,14 +321,24 @@ public class ECS {
 		}
 	}
 	
-	private void setConfigured() {
-		setData("/configureStatus", "true");
+	public void setConfigured(boolean condition) {
+		if(condition) {
+			setData("/configureStatus", "true");
+		} else {
+			setData("/configureStatus", "false");
+		}
 	}
 	public List<IECSNode> setLaunchedNodes(List<IECSNode> launchedNodes) {
 		String nodeRoot = "/nodes";
 		byte[] emptyByte = null;
 		String alias = "server_";
-		create(nodeRoot, emptyByte, "-p");
+		try {
+			if(zk.exists("/nodes", null)==null) {
+				create(nodeRoot, emptyByte, "-p");
+			}
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
 		@SuppressWarnings("unused")
 		byte[] nullByte = "null".getBytes(StandardCharsets.UTF_8);
 		List<IECSNode> aliasedNodes = new ArrayList<IECSNode>(launchedNodes);
@@ -344,7 +354,7 @@ public class ECS {
 			create(nodeDir + "/state", "init".getBytes(StandardCharsets.UTF_8), "-p");
 			((ECSNode)aliasedNodes.get(i)).setNodeName(alias + Integer.toString(i));
 		}
-		setConfigured();
+		setConfigured(true);
 		return aliasedNodes;
 	}
 	
@@ -558,6 +568,7 @@ public class ECS {
 		try {
 			zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 			zk.create("/lock/spinlock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+			zk.create("/nodes", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 		} catch (KeeperException | InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -699,4 +710,16 @@ public class ECS {
 		deleteHeadRecursive("/ack/" + action);
 		return;
 	}
+
+	public boolean inited() {
+		try {
+			if(zk.exists("/nodes", false) != null) {
+				return true;
+			}
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 }
