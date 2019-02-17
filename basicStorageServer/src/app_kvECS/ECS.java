@@ -25,6 +25,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 
+import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 import shared.messages.KVAdminMessage;
@@ -356,6 +357,32 @@ public class ECS {
 		}
 		setConfigured(true);
 		return aliasedNodes;
+	}
+	
+	public void addOneLaunchedNodes(IECSNode node) {
+		String nodeRoot = "/nodes";
+		byte[] emptyByte = null;
+		String alias = "server_";
+		try {
+			if(zk.exists("/nodes", null)==null) {
+				create(nodeRoot, emptyByte, "-p");
+			}
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		@SuppressWarnings("unused")
+		byte[] nullByte = "null".getBytes(StandardCharsets.UTF_8);
+			String nodeDir = nodeRoot + "/" + alias + Integer.toString(getMD().getServerLocations().size());
+			create(nodeDir ,emptyByte,  "-p");
+			create(nodeDir + "/NodeHost",node.getNodeHost().getBytes(StandardCharsets.UTF_8),  "-p");
+			create(nodeDir + "/NodePort",Integer.toString(node.getNodePort()).getBytes(StandardCharsets.UTF_8),  "-p");
+			create(nodeDir + "/from",node.getNodeHashRange()[0].getBytes(StandardCharsets.UTF_8),  "-p");
+			create(nodeDir + "/to",node.getNodeHashRange()[1].getBytes(StandardCharsets.UTF_8),  "-p");
+			create(nodeDir + "/cmd", "null".getBytes(StandardCharsets.UTF_8), "-p");
+			create(nodeDir + "/state", "init".getBytes(StandardCharsets.UTF_8), "-p");
+			
+		setConfigured(true);
+		return;
 	}
 	
 	/*
@@ -695,14 +722,15 @@ public class ECS {
 		}
 	}
 	public void ack(String serverName, String action) {
-		makeSureAckIsSet();
+		//makeSureAckIsSet();
 		echo(serverName+ " acking " + action);
-		makeSureAckIssueIsSet(action);
+		//makeSureAckIssueIsSet(action);
 		create("/ack/" + action + "/" + serverName, null, "-p");
 	}
 	
 	public void waitAck(String action, int countDown) {
-		makeSureAckIsSet();
+		echo("waitAck " + action + countDown);
+		//makeSureAckIsSet();
 		echo(action + "(" + countDown + ")");
 		makeSureAckIssueIsSet(action);
 		while(watchNodeChildren("/ack/" + action, countDown) != countDown){};
@@ -720,6 +748,29 @@ public class ECS {
 			e.printStackTrace();
 		}
 		return false;
+	}
+
+	public void refreshHash(ConsistentHash hashRing) {
+		InfraMetadata new_MD = getMD();
+		List<ServiceLocation> serversInZk = new_MD.getServerLocations();
+		String nodeRoot = "/nodes";
+		String alias = "server_";
+		for(int i = 0; i < serversInZk.size(); i++) {
+			ServiceLocation curr = serversInZk.get(i);
+			String nodeDir = nodeRoot + "/" + alias + Integer.toString(i);
+			
+			String range[];
+			try {
+				range = hashRing.getHashRange(curr);
+				echo(range[0] + " ~ "+ range[1]);
+				deleteHead(nodeDir + "/from");
+				deleteHead(nodeDir + "/to");
+				create(nodeDir + "/from", range[0].getBytes(StandardCharsets.UTF_8),  "-p");
+				create(nodeDir + "/to", range[1].getBytes(StandardCharsets.UTF_8),  "-p");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 }

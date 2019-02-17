@@ -62,7 +62,7 @@ public class ZKConnection implements Runnable {
 						
 						InfraMetadata newMD = ecs.getMD();
 						try {
-							callingServer.migrateWithNewMD(newMD);
+							//callingServer.migrateWithNewMD(newMD);
 						} catch (Exception e) {
 							logger.error("Error migrating data on server " + callingServer.getServerInfo());
 							e.printStackTrace();

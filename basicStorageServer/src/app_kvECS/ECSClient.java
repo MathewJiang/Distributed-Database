@@ -35,6 +35,7 @@ public class ECSClient implements IECSClient {
 	private InfraMetadata MD = new InfraMetadata();
 	List<ServiceLocation> launchedServer = new ArrayList<ServiceLocation>();
 	List<IECSNode> launchedNodes = new ArrayList<IECSNode>();
+	List<ServiceLocation> avaliableSlots = new ArrayList<ServiceLocation>();
 	private ConsistentHash hashRing;
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
@@ -83,8 +84,40 @@ public class ECSClient implements IECSClient {
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
     	info("addNode(cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
-        warn("Not implemented yet");
-        return null;
+    	hashRing.removeAllServerNodes();
+    	int serial = launchedNodes.size();
+    	String name = "server_" + serial;
+    	
+    	// pick not taken slot
+    	ServiceLocation spot = avaliableSlots.get(0);
+    	avaliableSlots.remove(0);
+    	
+    	// hash
+    	InfraMetadata new_MD = ecs.getMD();
+    	List<ServiceLocation> tmp = new_MD.getServerLocations();
+    	tmp.add(spot);
+    	new_MD.setServerLocations(tmp);
+    	hashRing.addNodesFromInfraMD(new_MD);
+    	try {
+			IECSNode newNode = new ECSNode(name, spot.host, spot.port, hashRing.getHashRange(spot));
+			launchedNodes.add(newNode);
+			// launchedServer not handled
+			// incrementally update MD
+			
+			ecs.lock();
+			ecs.broadast("UPDATE");
+			ecs.addOneLaunchedNodes(newNode);
+			ecs.refreshHash(hashRing);
+			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
+			ecs.setCmd(newNode.getNodeName(), "UPDATE");
+			ecs.unlock();
+			ecs.waitAck("migrate", launchedNodes.size());
+			return newNode;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return null;
     }
 
     @Override
@@ -145,6 +178,9 @@ public class ECSClient implements IECSClient {
 			ServiceLocation curr = servers.get(i);
 			selectedServers.add(curr);
 		}
+		for(int i = count; i < servers.size(); i++) {
+			avaliableSlots.add(servers.get(i));
+		}
 		new_MD.setServerLocations(selectedServers);
 		hashRing.addNodesFromInfraMD(new_MD);
 		for(int i = 0; i < count; i++) {
@@ -157,10 +193,6 @@ public class ECSClient implements IECSClient {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			
-			// private void launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
-			//launch(curr.host, curr.serviceName, ECSport, cacheStrategy, cacheSize);
-			
 		}
 		info("About to launch " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
         List<IECSNode> aliased = ecs.setLaunchedNodes(launchedNodes);
@@ -169,7 +201,7 @@ public class ECSClient implements IECSClient {
         	echo("Launching " + curr.getNodeName());
         	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
         }
-		return launchedNodes;
+		return aliased;
     }
     
 
@@ -346,7 +378,7 @@ public class ECSClient implements IECSClient {
 			
 		case "addNode":
 			if (tokens.length == 3) {
-				addNode(tokens[3], Integer.parseInt(tokens[2]));
+				addNode(tokens[2], Integer.parseInt(tokens[1]));
 			} else {
 				warn("Usage addNode <cacheSize> <replacementStrategy>");
 			}
