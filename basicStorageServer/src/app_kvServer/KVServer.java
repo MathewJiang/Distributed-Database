@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.BindException;
@@ -229,6 +230,10 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
+		File kvdbFolder = new File("kvdb");
+		if (!kvdbFolder.exists()) {
+			kvdbFolder.mkdir();
+		}
 		Disk.setDbName("/kvdb/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
@@ -360,7 +365,7 @@ public class KVServer extends Thread implements IKVServer {
 		clusterHash = new ConsistentHash();
 		clusterHash.addNodesFromInfraMD(clusterMD);
 	}
-	
+
 	// Compute new hash ring with given metadata, and migrate all storages
 	// that no longer belongs to this server. Returns only after all
 	// migrations complete. Thread-safe.
@@ -400,7 +405,7 @@ public class KVServer extends Thread implements IKVServer {
 						+ serverName + " to server " + target.serviceName);
 			}
 			socket.close();
-			
+
 			// Remove local copy.
 			Disk.putKV(key, null);
 		}
