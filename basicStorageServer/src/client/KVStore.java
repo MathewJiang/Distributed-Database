@@ -64,7 +64,7 @@ public class KVStore extends Thread implements KVCommInterface {
 	private void resolveKVServer(String key) throws UnknownHostException,
 			IOException {
 		target = clientHash.getServer(key);
-		logger.info("Resolved key " + key + " -> server" + target);
+		logger.info("Resolved key " + key + " -> server " + target);
 	}
 
 	// Connect to target host (initialized by calling resolveKVServer).
@@ -74,9 +74,8 @@ public class KVStore extends Thread implements KVCommInterface {
 			throw new UnknownHostException("Target host is null!");
 		}
 		setRunning(true);
-		logger.info("Connectiong to target server " + target);
+		logger.info("Connecting to target server " + target);
 		srvSocket = new Socket(target.host, target.port);
-		logger.info("Connection established");
 	}
 
 	// Disconnect from host and reset target location to null.
