@@ -46,7 +46,7 @@ public class MD5 {
 	
 	
 	public static void main(String[] args) {
-		String str = "localhost:1024";
+		String str = "127.0.0.1:50001";
 		BigInteger num = MD5.getMD5(str);
 		System.out.println(String.format("0x%32X", num));
 		
