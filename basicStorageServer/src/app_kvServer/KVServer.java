@@ -31,8 +31,6 @@ import app_kvServer.storage.Storage;
 public class KVServer extends Thread implements IKVServer {
 	private static Logger logger = Logger.getRootLogger();
 
-	private static String configPath = "resources/config/config.properties";
-
 	private ECS ecs = null;
 	private InfraMetadata clusterMD = null;
 	private ConsistentHash clusterHash = null;
@@ -467,14 +465,14 @@ public class KVServer extends Thread implements IKVServer {
 			}
 			KVServer server = initServerFromECS(args);
 			resetServerLogger(server.getServerName());
-			System.out.println("Service: " + server.serverMD.serviceName
+			logger.info("Service: " + server.serverMD.serviceName
 					+ " will listen on " + server.serverMD.host + ":"
 					+ server.serverMD.port);
 
 			// Start server.
 			server.start();
 		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize server!");
+			logger.error("Error! Unable to initialize server!\n" + e);
 			e.printStackTrace();
 		} catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port>! Not a number!");
