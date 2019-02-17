@@ -45,6 +45,7 @@ public class KVServer extends Thread implements IKVServer {
 	private ServerSocket serverSocket;
 	private boolean running;
 	private boolean suspended = true;
+	private boolean shuttingDown = false;
 	private ServiceLocation serverInfo; // TODO: get the serverInfo
 
 	public static int totalNumClientConnection = 0;
@@ -282,14 +283,16 @@ public class KVServer extends Thread implements IKVServer {
 	public void close() {
 		serverLock.lock();
 		running = false;
-		
+
 		try {
 			Storage.flush();
 			serverSocket.close();
 			serverOn = false;
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port,
-					e);
+			if (!shuttingDown) {
+				logger.error("Error! " + "Unable to close socket on port: "
+						+ port, e);
+			}
 		} finally {
 			serverLock.unlock();
 		}
@@ -335,12 +338,13 @@ public class KVServer extends Thread implements IKVServer {
 				"resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-	
+
 	private static void resetServerLogger(String serviceName) throws Exception {
 		Properties props = new Properties();
 		props.load(new FileInputStream(
 				"resources/config/server-log4j.properties"));
-		props.put("log4j.appender.fileLog.File", "logs/" + serviceName +"-log.out");
+		props.put("log4j.appender.fileLog.File", "logs/" + serviceName
+				+ "-log.out");
 		PropertyConfigurator.configure(props);
 	}
 
@@ -476,5 +480,9 @@ public class KVServer extends Thread implements IKVServer {
 			System.out.println("Error! Invalid argument <port>! Not a number!");
 			System.out.println("Usage: Server <port>!");
 		}
+	}
+
+	public void setShuttingDown(boolean shuttingDown) {
+		this.shuttingDown = shuttingDown;
 	}
 }
