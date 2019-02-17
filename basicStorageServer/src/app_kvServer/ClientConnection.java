@@ -3,19 +3,11 @@ package app_kvServer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import shared.ConnectionUtil;
-import shared.ConsistentHash;
-import shared.InfraMetadata;
-import shared.InfraMetadata.ServiceLocation;
-import shared.MD5;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage.StatusType;
@@ -73,7 +65,7 @@ public class ClientConnection implements Runnable {
 					throw new IOException();
 				}
 
-				if (callingServer.isSuspended()) {
+				if (callingServer.isSuspended() && !latestMsg.getFromServer()) {
 					// Sending messages to inform client that the server has
 					// been stopped
 					// as a way to ignoring the request
@@ -164,177 +156,6 @@ public class ClientConnection implements Runnable {
 	}
 
 	/****************************************************************************
-	 * willMigrate Will the current server do migration !Assume: only one server
-	 * needs migration at a time
-	 * 
-	 * @return true if the callingServer will do migration false if the
-	 *         callingServer will not do migration
-	 * 
-	 * @throws Exception
-	 *             if failed to find range !!!!!FIXME: need to change to
-	 *             "private" !!!!!FIXME: does not consider server collision case
-	 *             e.g. newly added server MD5 value coincides with existing
-	 *             server
-	 * 
-	 ****************************************************************************/
-	public boolean willMigrate(InfraMetadata oldMetaData,
-			InfraMetadata newMetaData) throws Exception {
-		ArrayList<ServiceLocation> oldServiceLocations = (ArrayList) oldMetaData
-				.getServerLocations();
-		ArrayList<ServiceLocation> newServiceLocations = (ArrayList) newMetaData
-				.getServerLocations();
-		boolean isAddNode = false;
-
-		if (oldServiceLocations.size() == newServiceLocations.size()) {
-			return false;
-		} else if (oldServiceLocations.size() < newServiceLocations.size()) {
-			isAddNode = true;
-		} else {
-			isAddNode = false;
-		}
-
-		ServiceLocation newNode = getChangedNode(oldMetaData, newMetaData);
-		if (newNode == null) {
-			return false;
-		}
-
-		BigInteger newNodeMD5 = MD5.getMD5(new String(newNode.host + ":"
-				+ newNode.port));
-
-		// FIXME: SUPER SUPER SLOW!!!
-		ConsistentHash oldHash = new ConsistentHash();
-		oldHash.addNodesFromInfraMD(oldMetaData);
-
-		ConsistentHash newHash = new ConsistentHash();
-		newHash.addNodesFromInfraMD(newMetaData);
-
-		BigInteger[] selfRange = null;
-		try {
-			// FIXME: getName incorrect!!!
-			ServiceLocation sl = new ServiceLocation(callingServer.getName(),
-					callingServer.getHostname(), callingServer.getPort());
-			selfRange = oldHash.getHashRangeInteger(sl);
-		} catch (Exception e) {
-			logger.error("[ClientConnection/willMigrate]failed to get selfRange!");
-			e.printStackTrace();
-			throw new Exception();
-		}
-
-		if (isAddNode) {
-			if (((selfRange[1].compareTo(newNodeMD5)) == 1)
-					&& ((selfRange[0].compareTo(newNodeMD5)) == -1)) {
-				return true;
-			} else {
-				return false;
-			}
-		} else {
-			if (selfRange[0].compareTo(newNodeMD5.add(BigInteger.ONE)) == 0) {
-				return true;
-			} else {
-				return false;
-			}
-		}
-	}
-
-	/****************************************************************************
-	 * getChangedNode Get node that has been added/removed from the system
-	 * 
-	 * @return corresponding ServiceLocation null if no change
-	 * 
-	 *         !!!!!FIXME: need to change to "private"
-	 ****************************************************************************/
-	public ServiceLocation getChangedNode(InfraMetadata oldMetaData,
-			InfraMetadata newMetaData) {
-		ArrayList<ServiceLocation> oldServiceLocations = (ArrayList) oldMetaData
-				.getServerLocations();
-		ArrayList<ServiceLocation> newServiceLocations = (ArrayList) newMetaData
-				.getServerLocations();
-		ServiceLocation newNode = null;
-
-		// determine whether adding or removing node
-		if (oldServiceLocations.size() == newServiceLocations.size()) {
-			return null;
-		} else if (oldServiceLocations.size() < newServiceLocations.size()) {
-			// detect a new node being added
-			HashSet<String> oldServiceLocationsSet = new HashSet<String>();
-			for (ServiceLocation sl : oldServiceLocations) {
-				oldServiceLocationsSet.add(sl.serviceName);
-			}
-
-			for (ServiceLocation sl : newServiceLocations) {
-				if (!oldServiceLocationsSet.contains(sl.serviceName)) {
-					newNode = sl;
-					break;
-				}
-			}
-			logger.info("[ClienConnection.java/willMigrate]New: "
-					+ newNode.serviceName + " has been added!");
-			System.out.println("[debug]ClienConnection.java/willMigrate: New: "
-					+ newNode.serviceName + " has been added!");
-		} else {
-			// detect a node being removed
-			HashSet<String> newServiceLocationsSet = new HashSet<String>();
-
-			for (ServiceLocation sl : newServiceLocations) {
-				newServiceLocationsSet.add(sl.serviceName);
-			}
-
-			for (ServiceLocation sl : oldServiceLocations) {
-				if (!newServiceLocationsSet.contains(sl.serviceName)) {
-					newNode = sl;
-					break;
-				}
-			}
-			logger.info("[ClienConnection.java/willMigrate]Node: "
-					+ newNode.serviceName + " has been removed!");
-			System.out
-					.println("[debug]ClienConnection.java/willMigrate: Node: "
-							+ newNode.serviceName + " has been removed!");
-		}
-
-		return newNode;
-	}
-
-	/****************************************************************************
-	 * migrationTo Migrate data to the other server !Assume: only one server
-	 * needs migration at a time
-	 * 
-	 * @throws IOException
-	 ****************************************************************************/
-	private void migrationTo(InfraMetadata oldMetaData,
-			InfraMetadata newMetaData) throws IOException {
-		// flush all data to the disk first
-		try {
-			Storage.flush();
-		} catch (IOException e) {
-			throw new IOException();
-		}
-
-		// clear up the cache
-		callingServer.clearCache();
-
-		ServiceLocation serverInfo = callingServer.getServerInfo();
-
-		// check which server needs migration
-
-		// check how many <key, value> pairs need to be migrated to
-	}
-
-	/****************************************************************************
-	 * migrationFrom Received the data migrated from the other server !Assume:
-	 * server invoking this method must the newly added server
-	 * 
-	 ****************************************************************************/
-	private void migrationFrom(InfraMetadata newMetaData,
-			InfraMetadata oldMetaData) {
-		// check how many <key, value> pairs need to be migrated from
-
-		// receive the number of times
-
-		// migration done
-	}
-
-	/****************************************************************************
 	 * handlePUT store the <key, value> pairs in persistent disk
 	 * 
 	 * @param key
@@ -371,83 +192,6 @@ public class ClientConnection implements Runnable {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
 		return Storage.getKV(key);
-	}
-
-	/* Testing purposes only */
-	public static void main(String[] args) {
-		ClientConnection conn = new ClientConnection(new Socket(),
-				new KVServer(50006, 5, "LRU"));
-		InfraMetadata newMetaData = null;
-		InfraMetadata oldMetaData = null;
-		try {
-			newMetaData = InfraMetadata
-					.fromConfigFile("/nfs/ug/homes-3/j/jiangz32/ECE419/ECE419-Distributed-Systems/basicStorageServer/newMetaData.properties");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		if (newMetaData == null) {
-			System.out.println("newMetaData null!");
-		}
-
-		try {
-			oldMetaData = InfraMetadata
-					.fromConfigFile("/nfs/ug/homes-3/j/jiangz32/ECE419/ECE419-Distributed-Systems/basicStorageServer/oldMetaData.properties");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		if (oldMetaData == null) {
-			System.out.println("oldMetaData null!");
-		}
-
-		ServiceLocation sl = conn.getChangedNode(oldMetaData, newMetaData);
-		System.out.println(sl);
-
-		ConsistentHash ch = new ConsistentHash();
-		ch.addNodesFromInfraMD(oldMetaData);
-
-		List<ServiceLocation> sls = oldMetaData.getServerLocations();
-		for (ServiceLocation s : sls) {
-			try {
-				String[] hashrang = ch.getHashRange(s);
-				System.out.println(s.serviceName + "'s Hashrange: "
-						+ hashrang[0] + "~" + hashrang[1]);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-
-		System.out
-				.println("==================================================");
-		ConsistentHash oldch = new ConsistentHash();
-		ch.addNodesFromInfraMD(newMetaData);
-
-		List<ServiceLocation> slss = newMetaData.getServerLocations();
-		for (ServiceLocation s : slss) {
-			try {
-				String[] hashrang = ch.getHashRange(s);
-				System.out.println(s.serviceName + "'s Hashrange: "
-						+ hashrang[0] + "~" + hashrang[1]);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-
-		System.out.println("server4's MD5 value: "
-				+ MD5.getMD5String("127.0.0.1:50003"));
-
-		try {
-			if (conn.willMigrate(oldMetaData, newMetaData)) {
-				System.out.println("willMigrate");
-			} else {
-				System.out.println("willNotMigrate");
-			}
-		} catch (Exception e) {
-			System.exit(1);
-			e.printStackTrace();
-		}
-
 	}
 
 }

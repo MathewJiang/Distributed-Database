@@ -1,11 +1,13 @@
 package app_kvServer;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,9 +17,13 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
+import shared.ConnectionUtil;
 import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
+import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
+import shared.messages.KVMessage.StatusType;
 import app_kvECS.ECS;
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
@@ -39,7 +45,7 @@ public class KVServer extends Thread implements IKVServer {
 	private ServerSocket serverSocket;
 	private boolean running;
 	private boolean suspended = true;
-	private ServiceLocation serverInfo;	//TODO: get the serverInfo
+	private ServiceLocation serverInfo; // TODO: get the serverInfo
 
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
@@ -92,32 +98,33 @@ public class KVServer extends Thread implements IKVServer {
 		this.running = running;
 		serverLock.unlock();
 	}
-	
+
 	public ServiceLocation getServerInfo() {
 		if (serverInfo != null) {
-			serverInfo = new ServiceLocation(getServerName(), getHostname(), getPort());
+			serverInfo = new ServiceLocation(getServerName(), getHostname(),
+					getPort());
 		}
 		return serverInfo;
 	}
 
-	public ECS getECS(){
+	public ECS getECS() {
 		return ecs;
 	}
-	
+
 	public String getServerName() {
 		return serverName;
 	}
-	
+
 	public boolean isSuspended() {
 		return suspended;
 	}
-	
+
 	public void setSuspended(boolean suspended) {
 		serverLock.lock();
 		this.suspended = suspended;
 		serverLock.unlock();
 	}
-	
+
 	@Override
 	public int getPort() {
 		return port;
@@ -223,28 +230,35 @@ public class KVServer extends Thread implements IKVServer {
 		running = initializeServer();
 
 		// Initialize storage units.
+		File kvdbFolder = new File("kvdb");
+		if (!kvdbFolder.exists()) {
+			kvdbFolder.mkdir();
+		}
 		Disk.setDbName("/kvdb/" + this.serverMD.serviceName + "-kvdb");
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-		
+
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
-		
+
 		if (serverSocket != null) {
 			while (isRunning()) {
 				try {
 					Socket client = serverSocket.accept();
-					ClientConnection connection = new ClientConnection(client, this);
+					ClientConnection connection = new ClientConnection(client,
+							this);
 					Thread newConnection = new Thread(connection);
 					threadCollection.add(newConnection);
 					newConnection.start();
 
-					logger.info(
-							"Connected to " + client.getInetAddress().getHostName() + " on port " + client.getPort());
+					logger.info("Connected to "
+							+ client.getInetAddress().getHostName()
+							+ " on port " + client.getPort());
 				} catch (IOException e) {
-					logger.error("Error! " + "Unable to establish connection. \n", e);
+					logger.error("Error! "
+							+ "Unable to establish connection. \n", e);
 				}
 			}
 		}
@@ -268,12 +282,14 @@ public class KVServer extends Thread implements IKVServer {
 	public void close() {
 		serverLock.lock();
 		running = false;
+		
 		try {
 			Storage.flush();
 			serverSocket.close();
 			serverOn = false;
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port, e);
+			logger.error("Error! " + "Unable to close socket on port: " + port,
+					e);
 		} finally {
 			serverLock.unlock();
 		}
@@ -288,7 +304,8 @@ public class KVServer extends Thread implements IKVServer {
 		try {
 			serverSocket = new ServerSocket(port);
 			port = serverSocket.getLocalPort();
-			logger.info("Server listening on port: " + serverSocket.getLocalPort());
+			logger.info("Server listening on port: "
+					+ serverSocket.getLocalPort());
 			return true;
 		} catch (IOException e) {
 			logger.error("Error! Cannot open server socket:");
@@ -307,42 +324,93 @@ public class KVServer extends Thread implements IKVServer {
 			return CacheStrategy.LRU;
 		if (str.equals("LFU"))
 			return CacheStrategy.LFU;
-		logger.warn("Invalid cache strategy: " + str + ". Using pure disk storage.");
+		logger.warn("Invalid cache strategy: " + str
+				+ ". Using pure disk storage.");
 		return CacheStrategy.None;
 	}
 
 	private static void setUpServerLogger() throws Exception {
 		Properties props = new Properties();
-		props.load(new FileInputStream("resources/config/server-log4j.properties"));
+		props.load(new FileInputStream(
+				"resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-	
+
 	// If key is in the range this server is responsible for.
 	public boolean hasKey(String key) {
-		return clusterHash.getServer(key).serviceName.equals(serverMD.serviceName);
+		return clusterHash.getServer(key).serviceName
+				.equals(serverMD.serviceName);
 	}
-	
+
 	public InfraMetadata getClusterMD() {
 		return clusterMD;
 	}
-	
+
+	// Not Thread-safe!
 	public void setClusterMD(InfraMetadata newMetadata) {
-		serverLock.lock();
 		this.clusterMD = newMetadata;
-		serverLock.unlock();
+		clusterHash = new ConsistentHash();
+		clusterHash.addNodesFromInfraMD(newMetadata);
 	}
-	
-	public void retrieveClusterFromECS(Integer ECS_PORT) throws IOException, InterruptedException {
+
+	public void retrieveClusterFromECS(Integer ECS_PORT) throws IOException,
+			InterruptedException {
 		if (ecs == null) {
 			ecs = new ECS();
 		}
-		
+
 		ecs.connect("localhost", ECS_PORT);
 		clusterMD = ecs.getMD();
-		
+
 		// Compute server side consistent hash.
 		clusterHash = new ConsistentHash();
 		clusterHash.addNodesFromInfraMD(clusterMD);
+	}
+
+	// Compute new hash ring with given metadata, and migrate all storages
+	// that no longer belongs to this server. Returns only after all
+	// migrations complete. Thread-safe.
+	public void migrateWithNewMD(InfraMetadata newMD) throws Exception {
+		serverLock.lock();
+		Storage.flush();
+
+		// Re-compute new consistent hash ring and provision all keys to
+		// migrate.
+		setClusterMD(newMD);
+		List<String> migrants = new ArrayList<String>();
+		for (String key : Disk.getAllKeys()) {
+			// Key stays on this server.
+			if (clusterHash.getServer(key).serviceName
+					.equals(serverMD.serviceName)) {
+				continue;
+			}
+			migrants.add(key);
+		}
+
+		// Remove and send all migrating keys.
+		logger.info("Say goodbye to " + migrants);
+		ConnectionUtil conn = new ConnectionUtil();
+		for (String key : migrants) {
+			// Construct target and server message.
+			CommMessage msg = new CommMessageBuilder().setKey(key)
+					.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
+					.build();
+			msg.setFromServer(true);
+			ServiceLocation target = clusterHash.getServer(key);
+
+			// Send and await ack.
+			Socket socket = new Socket(target.host, target.port);
+			conn.sendCommMessage(socket.getOutputStream(), msg);
+			if (conn.receiveCommMessage(socket.getInputStream()).getStatus() != StatusType.PUT_SUCCESS) {
+				logger.error("Error migrating message " + msg + " from server "
+						+ serverName + " to server " + target.serviceName);
+			}
+			socket.close();
+
+			// Remove local copy.
+			Disk.putKV(key, null);
+		}
+		serverLock.unlock();
 	}
 
 	public static KVServer initServerFromECS(String[] args) throws Exception {
@@ -350,7 +418,7 @@ public class KVServer extends Thread implements IKVServer {
 		// Initialize clusterMD and compute clusterHash.
 		KVServer server = new KVServer();
 		server.retrieveClusterFromECS(Integer.parseInt(args[0]));
-		
+
 		// Calculate server instance specific metadata.
 		server.serverMD = server.clusterMD.locationOfService(args[1]);
 		server.port = server.serverMD.port;
@@ -373,30 +441,31 @@ public class KVServer extends Thread implements IKVServer {
 			try {
 				setUpServerLogger();
 			} catch (Exception e) {
-				System.out.println("Unable to read from resources/config/server-log4j.properties");
+				System.out
+						.println("Unable to read from resources/config/server-log4j.properties");
 				System.out.println("Using default logger from skeleton code.");
 				new LogSetup("logs/server-default.log", Level.ALL);
 			}
 
 			if (args.length != 4) {
 				System.out.println("Error! Invalid number of arguments!");
-				System.out.println("Usage: Server <port>! || Server <ECS_port> <serverName> <cacheSize> <cacheStrategy>");
+				System.out
+						.println("Usage: Server <port>! || Server <ECS_port> <serverName> <cacheSize> <cacheStrategy>");
 				return;
 			}
 			KVServer server = initServerFromECS(args);
-			System.out.println("Service: " + server.serverMD.serviceName + " will listen on " + server.serverMD.host
-					+ ":" + server.serverMD.port);
+			System.out.println("Service: " + server.serverMD.serviceName
+					+ " will listen on " + server.serverMD.host + ":"
+					+ server.serverMD.port);
 
 			// Start server.
 			server.start();
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize server!");
 			e.printStackTrace();
-			System.exit(1);
 		} catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port>! Not a number!");
 			System.out.println("Usage: Server <port>!");
-			System.exit(1);
 		}
 	}
 }

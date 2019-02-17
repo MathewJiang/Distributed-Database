@@ -42,7 +42,11 @@ public class KVStore extends Thread implements KVCommInterface {
 		clientHash = new ConsistentHash();
 		clientHash.addNodesFromInfraMD(metaData);
 	}
-
+	
+	public KVStore(ConsistentHash hash) {
+		clientHash = hash;
+	}
+	
 	public boolean isRunning() {
 		return running;
 	}
