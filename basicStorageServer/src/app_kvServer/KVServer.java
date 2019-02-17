@@ -282,6 +282,7 @@ public class KVServer extends Thread implements IKVServer {
 	public void close() {
 		serverLock.lock();
 		running = false;
+		
 		try {
 			Storage.flush();
 			serverSocket.close();
