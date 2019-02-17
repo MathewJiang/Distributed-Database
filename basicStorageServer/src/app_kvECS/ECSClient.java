@@ -148,7 +148,6 @@ public class ECSClient implements IECSClient {
 				item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, hashRing.getHashRange(curr));
 				launchedNodes.add(item_to_be_added);	
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
