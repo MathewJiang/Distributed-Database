@@ -55,7 +55,11 @@ public class ZKConnection implements Runnable {
 					case UPDATE:
 						logger.info("[ZKConnection.java/run()]UPDATE!");
 						callingServer.setSuspended(true);
-						// 1. Try geting lock
+						
+						// Await ECS to finish updating metadata.
+						ecs.lock();
+						ecs.unlock();
+						
 						InfraMetadata newMD = ecs.getMD();
 						try {
 							callingServer.migrateWithNewMD(newMD);
@@ -63,7 +67,7 @@ public class ZKConnection implements Runnable {
 							logger.error("Error migrating data on server " + callingServer.getServerInfo());
 							e.printStackTrace();
 						}
-						// 2. Ack ecs (non-blocking).
+						ecs.ack(callingServer.getServerName(), "migrate");
 						break;
 	
 					case UPDATE_COMPLETE:
