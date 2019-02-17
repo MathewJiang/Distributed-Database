@@ -31,8 +31,6 @@ import app_kvServer.storage.Storage;
 public class KVServer extends Thread implements IKVServer {
 	private static Logger logger = Logger.getRootLogger();
 
-	private static String configPath = "resources/config/config.properties";
-
 	private ECS ecs = null;
 	private InfraMetadata clusterMD = null;
 	private ConsistentHash clusterHash = null;
@@ -45,6 +43,7 @@ public class KVServer extends Thread implements IKVServer {
 	private ServerSocket serverSocket;
 	private boolean running;
 	private boolean suspended = true;
+	private boolean shuttingDown = false;
 	private ServiceLocation serverInfo; // TODO: get the serverInfo
 
 	public static int totalNumClientConnection = 0;
@@ -282,14 +281,16 @@ public class KVServer extends Thread implements IKVServer {
 	public void close() {
 		serverLock.lock();
 		running = false;
-		
+
 		try {
 			Storage.flush();
 			serverSocket.close();
 			serverOn = false;
 		} catch (IOException e) {
-			logger.error("Error! " + "Unable to close socket on port: " + port,
-					e);
+			if (!shuttingDown) {
+				logger.error("Error! " + "Unable to close socket on port: "
+						+ port, e);
+			}
 		} finally {
 			serverLock.unlock();
 		}
@@ -335,12 +336,13 @@ public class KVServer extends Thread implements IKVServer {
 				"resources/config/server-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-	
+
 	private static void resetServerLogger(String serviceName) throws Exception {
 		Properties props = new Properties();
 		props.load(new FileInputStream(
 				"resources/config/server-log4j.properties"));
-		props.put("log4j.appender.fileLog.File", "logs/" + serviceName +"-log.out");
+		props.put("log4j.appender.fileLog.File", "logs/" + serviceName
+				+ "-log.out");
 		PropertyConfigurator.configure(props);
 	}
 
@@ -463,18 +465,22 @@ public class KVServer extends Thread implements IKVServer {
 			}
 			KVServer server = initServerFromECS(args);
 			resetServerLogger(server.getServerName());
-			System.out.println("Service: " + server.serverMD.serviceName
+			logger.info("Service: " + server.serverMD.serviceName
 					+ " will listen on " + server.serverMD.host + ":"
 					+ server.serverMD.port);
 
 			// Start server.
 			server.start();
 		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize server!");
+			logger.error("Error! Unable to initialize server!\n" + e);
 			e.printStackTrace();
 		} catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port>! Not a number!");
 			System.out.println("Usage: Server <port>!");
 		}
+	}
+
+	public void setShuttingDown(boolean shuttingDown) {
+		this.shuttingDown = shuttingDown;
 	}
 }

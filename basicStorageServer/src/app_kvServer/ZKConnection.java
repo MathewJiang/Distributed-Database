@@ -48,6 +48,7 @@ public class ZKConnection implements Runnable {
 	
 					case SHUTDOWN:
 						logger.info("[ZKConnection.java/run()]SHUTDOWN!");
+						callingServer.setShuttingDown(true);
 						callingServer.close();
 						isOpen = false;
 						break;
