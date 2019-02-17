@@ -108,8 +108,12 @@ public class ECSClient implements IECSClient {
 			ecs.broadast("UPDATE");
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
+			ecs.waitAckSetup("launched");
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
 			ecs.setCmd(newNode.getNodeName(), "UPDATE");
+			ecs.waitAck("launched", 1);
+			ecs.waitAckSetup("migrate");
+			ecs.unlock();
 			ecs.waitAck("migrate", launchedNodes.size()); // internal unlock
 			return newNode;
 		} catch (Exception e) {
@@ -165,6 +169,7 @@ public class ECSClient implements IECSClient {
     		ecs.deleteHeadRecursive("/nodes");
     		ecs.create("/nodes", null, "-p");
     	}
+    	ecs.waitAckSetup("launched");
     	loadECSconfigFromFile();
     	hashRing.removeAllServerNodes();
 		List<ServiceLocation> servers = MD.getServerLocations();
@@ -200,6 +205,7 @@ public class ECSClient implements IECSClient {
         	echo("Launching " + curr.getNodeName());
         	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
         }
+        ecs.waitAck("launched", count);
 		return aliased;
     }
     
@@ -212,14 +218,25 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
-        // TODO
-        return false;
+        // check if name exists
+    	InfraMetadata currMD = ecs.getMD();
+    	List<String> nodeNamesList = (List<String>) nodeNames;
+    	List<ServiceLocation> nodesFromMD = currMD.getServerLocations();
+    	for(int j = 0; j < nodeNames.size(); j++) {
+    		for(int i = 0; i < nodesFromMD.size(); i++) {
+    			if(nodesFromMD.get(i).serviceName.equals(nodeNamesList.get(j))) {
+    				// we found one match
+    				removeNode(nodeNamesList.get(j));
+    			}
+    		}
+    	}
+    	return false;
     }
     
-    public boolean removeNode(int index) {
-    	info("removeNode(index=" + index+")");
-        warn("no implementation");
-        return false;
+    public boolean removeNode(String name) {
+    	info("removeNode(name = " + name);
+        	
+    	return false;
     }
 
     @Override
@@ -383,11 +400,15 @@ public class ECSClient implements IECSClient {
 			}
 			break;
 			
-		case "removeNode":
-			if (tokens.length == 2) {
-				removeNode(Integer.parseInt(tokens[1]));
+		case "removeNodes":
+			if (tokens.length >= 2) {
+				List<String> serverNames = new ArrayList<String>();
+				for(int i = 1; i < tokens.length; i++) {
+					serverNames.add(tokens[i]);
+				}
+				removeNodes(serverNames);
 			} else {
-				warn("Usage removeNode <index>");
+				warn("Usage removeNodes <string>[]");
 			}
 			break;
 			
