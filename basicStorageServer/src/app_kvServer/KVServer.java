@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import logger.LogSetup;
@@ -44,7 +45,6 @@ public class KVServer extends Thread implements IKVServer {
 	private boolean running;
 	private boolean suspended = true;
 	private boolean shuttingDown = false;
-	private ServiceLocation serverInfo; // TODO: get the serverInfo
 
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
@@ -99,11 +99,7 @@ public class KVServer extends Thread implements IKVServer {
 	}
 
 	public ServiceLocation getServerInfo() {
-		if (serverInfo != null) {
-			serverInfo = new ServiceLocation(getServerName(), getHostname(),
-					getPort());
-		}
-		return serverInfo;
+		return serverMD;
 	}
 
 	public ECS getECS() {
@@ -407,13 +403,16 @@ public class KVServer extends Thread implements IKVServer {
 					.build();
 			msg.setFromServer(true);
 			ServiceLocation target = clusterHash.getServer(key);
-
+			
 			// Send and await ack.
 			Socket socket = new Socket(target.host, target.port);
 			conn.sendCommMessage(socket.getOutputStream(), msg);
-			if (conn.receiveCommMessage(socket.getInputStream()).getStatus() != StatusType.PUT_SUCCESS) {
+			CommMessage serverResponse = conn.receiveCommMessage(socket
+					.getInputStream());
+			if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
 				logger.error("Error migrating message " + msg + " from server "
-						+ serverName + " to server " + target.serviceName);
+						+ serverName + " to server " + target.serviceName
+						+ "\nResponse: " + serverResponse);
 			}
 			socket.close();
 
