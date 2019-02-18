@@ -385,6 +385,7 @@ public class KVServer extends Thread implements IKVServer {
 			}
 			Disk.putKV(key, null);
 		}
+		serverLock.unlock();
 	}
 
 	// Compute new hash ring with given metadata, and migrate all storages

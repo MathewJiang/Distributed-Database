@@ -83,6 +83,7 @@ public class ZKConnection implements Runnable {
 						try {
 							callingServer.removeMigratedKeys(ecs.getMD());
 							callingServer.setWriteLock(false);
+							callingServer.setSuspended(false);
 						} catch (Exception e) {
 							logger.error("Error remving migrants on server "
 									+ callingServer.getServerName() + ": " + e);
