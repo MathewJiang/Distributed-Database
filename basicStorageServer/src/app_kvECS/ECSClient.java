@@ -228,6 +228,7 @@ public class ECSClient implements IECSClient {
 		}
 		new_MD.setServerLocations(selectedServers);
 		hashRing.addNodesFromInfraMD(new_MD);
+		launchedNodes.clear();
 		for(int i = 0; i < count; i++) {
 			ServiceLocation curr = servers.get(i);
 			launchedServer.add(curr);
