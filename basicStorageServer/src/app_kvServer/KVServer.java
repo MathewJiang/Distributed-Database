@@ -392,7 +392,7 @@ public class KVServer extends Thread implements IKVServer {
 		}
 
 		// Remove and send all migrating keys.
-		logger.info("Say goodbye to " + migrants);
+		logger.info("[KVServer.java/migrateWithNewMD]Say goodbye to " + migrants);
 		ConnectionUtil conn = new ConnectionUtil();
 		for (String key : migrants) {
 			// Construct target and server message.
