@@ -82,6 +82,14 @@ public class ECSClient implements IECSClient {
     }
 
     private String getNewServerName() {
+    	List<String> serverList = ecs.returnDirList("/nodes");
+    	String alias = "server_";
+    	for(int i = 0; i < serverList.size(); i++) {
+    		if(!serverList.get(i).equals(alias + i)) {
+    			// inconsistency
+    			return alias + i;
+    		}
+    	}
     	int serial = launchedNodes.size();
     	String name = "server_" + serial;
     	return name;
@@ -253,15 +261,68 @@ public class ECSClient implements IECSClient {
     }
     
     private ServiceLocation getReturnedSlot(String name) {
+    	for(int i = 0; i < launchedNodes.size(); i++) {
+    		if(launchedNodes.get(i).getNodeName().equals(name)) {
+    			IECSNode toBeRemoved = launchedNodes.get(i);
+    			launchedNodes.remove(i);
+    			ServiceLocation toBeRemovedSL = new ServiceLocation(toBeRemoved.getNodeName(), toBeRemoved.getNodeHost(), toBeRemoved.getNodePort());
+    			return toBeRemovedSL;
+    		}
+    	}
     	return null;
+    }
+    
+    private int indexServiceLocation(List<ServiceLocation> target, String name) {
+    	for(int i = 0; i < target.size(); i++) {
+    		if(target.get(i).serviceName.equals(name)) {
+    			return i;
+    		}
+    	}
+    	return -1;
     }
     public boolean removeNode(String name) {
     	info("removeNode(name = " + name + ")");
-    	hashRing.removeAllServerNodes();
     	
     	ServiceLocation returnedSlot = getReturnedSlot(name);
-    	avaliableSlots.add(returnedSlot);
-    	return false;
+    	
+    	InfraMetadata new_MD = ecs.getMD();
+    	List<ServiceLocation> tmp = new_MD.getServerLocations();
+    	int deleteIndex = indexServiceLocation(tmp, returnedSlot.serviceName);
+    	if(deleteIndex == -1) {
+    		warn("delete node not found");
+    		launchedNodes.add((IECSNode) returnedSlot); // recover
+    		return false;
+    	}
+    	hashRing.removeAllServerNodes();
+    	tmp.remove(deleteIndex);
+    	new_MD.setServerLocations(tmp);
+    	hashRing.addNodesFromInfraMD(new_MD);
+    
+    	ecs.lock();
+		
+		String affectedServerName;
+		try {
+			affectedServerName = hashRing.getPredeccessor(returnedSlot).serviceName;
+			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE");
+			ecs.setCmd(affectedServerName, "LOCK_WRITE");
+			
+			
+			ecs.refreshHash(hashRing);
+			ecs.waitAckSetup("migrate");
+			ecs.unlock();
+			ecs.waitAck("migrate", 2, 50); // internal unlock
+			ecs.waitAckSetup("sync");
+			ecs.broadast("SYNC");
+			ecs.waitAck("sync", launchedNodes.size(), 50); 
+			
+	    	avaliableSlots.add(returnedSlot);
+	    	return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		return false;
+		
     }
 
     @Override
