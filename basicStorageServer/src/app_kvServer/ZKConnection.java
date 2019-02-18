@@ -1,5 +1,8 @@
 package app_kvServer;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.apache.log4j.Logger;
 
 import shared.InfraMetadata;
@@ -21,7 +24,7 @@ public class ZKConnection implements Runnable {
 	public void run() {
 		ECS ecs = callingServer.getECS();
 		String serverName = callingServer.getServerName();
-		
+
 		while (isOpen) {
 			logger.info("[ZKConnection.java]Before getting cmd from ECS");
 			KVAdminMessage cm = ecs.getCmd(serverName);
@@ -40,50 +43,52 @@ public class ZKConnection implements Runnable {
 						// TODO
 						callingServer.setSuspended(false);
 						break;
-	
+
 					case STOP:
 						logger.info("[ZKConnection.java/run()]STOP!");
 						callingServer.setSuspended(true);
 						break;
-	
+
 					case SHUTDOWN:
 						logger.info("[ZKConnection.java/run()]SHUTDOWN!");
 						callingServer.setShuttingDown(true);
 						callingServer.close();
 						isOpen = false;
 						break;
-	
-					case UPDATE:
+
+					case LOCK_WRITE:
 						logger.info("[ZKConnection.java/run()]UPDATE!");
-						callingServer.setSuspended(true);
-						
+						callingServer.setWriteLock(true);
+
 						// Await ECS to finish updating metadata.
 						ecs.lock();
 						ecs.unlock();
-						
-						InfraMetadata newMD = ecs.getMD();
 						try {
-							callingServer.migrateWithNewMD(newMD);
+							// 1. Does not replace current metadata.
+							// 2. Only sending copies of migrating keys.
+							callingServer.migrateWithNewMD(ecs.getMD());
 						} catch (Exception e) {
-							logger.error("Error migrating data on server " + callingServer.getServerInfo());
-							e.printStackTrace();
+							logger.error("Error migrating data on server "
+									+ callingServer.getServerName() + ": " + e);
 						}
 						ecs.ack(callingServer.getServerName(), "migrate");
 						break;
-	
+
 					case UPDATE_COMPLETE:
 						logger.info("[ZKConnection.java/run()]UPDATE_COMPLETE!");
 						callingServer.setSuspended(false);
 						break;
-	
-					case LOCK_WRITE:
-						logger.info("[ZKConnection.java/run()]LOCK_WRITE!");
+
+					case SYNC:
+						try {
+							callingServer.removeMigratedKeys(ecs.getMD());
+							callingServer.setWriteLock(false);
+						} catch (Exception e) {
+							logger.error("Error remving migrants on server "
+									+ callingServer.getServerName() + ": " + e);
+						}
 						break;
-	
-					case UNLOCK_WRITE:
-						logger.info("[ZKConnection.java/run()]UNLOCK_WRITE!");
-						break;
-	
+
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;
@@ -92,7 +97,7 @@ public class ZKConnection implements Runnable {
 			}
 		}
 	}
-	
+
 	/**
 	 * Testing purposes only
 	 */

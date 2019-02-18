@@ -47,6 +47,15 @@ public class ClientConnection implements Runnable {
 		this.isOpen = true;
 	}
 
+	private boolean shouldInformServerStopped(CommMessage msg) {
+		return callingServer.isSuspended() && !msg.getFromServer();
+	}
+
+	private boolean shouldInformServerWriteLock(CommMessage msg) {
+		return callingServer.isWriteLock() && !msg.getFromServer()
+				&& msg.getStatus() == StatusType.PUT;
+	}
+
 	/**
 	 * Initializes and starts the client connection. Loops until the connection
 	 * is closed or aborted by the client.
@@ -65,12 +74,18 @@ public class ClientConnection implements Runnable {
 					throw new IOException();
 				}
 
-				if (callingServer.isSuspended() && !latestMsg.getFromServer()) {
+				if (shouldInformServerStopped(latestMsg)) {
 					// Sending messages to inform client that the server has
-					// been stopped
-					// as a way to ignoring the request
+					// been stopped as a way to ignoring the request.
 					CommMessage responseMsg = new CommMessageBuilder()
 							.setStatus(StatusType.SERVER_STOPPED).build();
+					conn.sendCommMessage(output, responseMsg);
+				} else if (shouldInformServerWriteLock(latestMsg)) {
+					// Server is write-locked. The message is a put request from
+					// client, reject. If the message is a get request or a
+					// server put request, still accepts the operation.
+					CommMessage responseMsg = new CommMessageBuilder()
+							.setStatus(StatusType.SERVER_WRITE_LOCK).build();
 					conn.sendCommMessage(output, responseMsg);
 				} else {
 					StatusType op = latestMsg.getStatus();
