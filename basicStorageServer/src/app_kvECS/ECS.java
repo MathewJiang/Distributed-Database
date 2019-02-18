@@ -14,7 +14,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -452,10 +459,10 @@ public class ECS {
 			Latch.countDown();
 			return true;
 	}
-	private int watchNodeChildren(final String path, int th) {
+	private int watchNodeChildren(final String path, int th, int timeoutSeconds) {
 		echo("watching " + path + "count is " + th);
 		final int count[] = {returnDirList(path).size()};
-		final boolean valid[] = {true};
+		final int valid[] = {0};
 		if(count[0] == th) {
 			return th; // no more event is going to happen
 		}
@@ -466,9 +473,10 @@ public class ECS {
 						echo(getTypeName(e.getType()));
 						if (e.getType() == EventType.NodeChildrenChanged) {
 							count[0] = returnDirList(path).size();
+							valid[0] = 1;
 							Latch.countDown();
 						} else {
-							valid[0] = false;
+							valid[0] = -1;
 							Latch.countDown();
 						}
 					}
@@ -480,15 +488,17 @@ public class ECS {
 				e1.printStackTrace();
 			}
 			try {
-				Latch.await();
+				Latch.await(timeoutSeconds, TimeUnit.SECONDS);
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
 			echo("action " + path + " count is " + count[0]);
-			if(valid[0]) {
-				return count[0];
+			if(valid[0] == 1) {
+				return count[0]; // valid
+			} else if (valid[0] == 0){
+				return 0; // timeout
 			} else {
-				return 0;
+				return -1; // invalid
 			}
 	}
 	private String watchStringDataChanged(final String path) {
@@ -653,6 +663,8 @@ public class ECS {
 				return KVAdminMessageType.LOCK_WRITE;
 			case "UNLOCK_WRITE":
 				return KVAdminMessageType.UNLOCK_WRITE;
+			case "SYNC":
+				return KVAdminMessageType.SYNC;
 		}
 		return null;
 	}
@@ -670,6 +682,8 @@ public class ECS {
 			return "LOCK_WRITE";
 		} else if(a == KVAdminMessageType.UNLOCK_WRITE) {
 			return "UNLOCK_WRITE";
+		} else if(a == KVAdminMessageType.SYNC) {
+			return "SYNC";
 		}
 		return "INVALID KVAdminMessageType";
 	}
@@ -687,15 +701,21 @@ public class ECS {
 		setData("/nodes/" + serverName + "/cmd", command);
 	}
 	
-	public void broadast(String cmd) {
+	private boolean exists (String entry) {
 		try {
-			if(zk.exists("/nodes",true) == null) {
-				return;
+			if(zk.exists(entry,true) != null) {
+				return true;
 			}
 		} catch (KeeperException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+		}
+		return false;
+	}
+	public void broadast(String cmd) {
+		if(! exists("/nodes")) {
+			return;
 		}
 		InfraMetadata latestMD = getMD();
 		List<ServiceLocation> allServers = latestMD.getServerLocations();
@@ -727,13 +747,23 @@ public class ECS {
 	}
 	public void ack(String serverName, String action) {
 		echo(serverName+ " acking " + action);
-		create("/ack/" + action + "/" + serverName, null, "-p");
+		if(exists("/ack")) {
+			if(exists("/ack/" + action)) {
+				create("/ack/" + action + "/" + serverName, null, "-p");
+			}
+		}
 	}
 	
-	public void waitAck(String action, int countDown) {
+	public void waitAck(String action, int countDown, int timeOutSeconds) {
 		echo("waitAck " + action + " " + countDown);
-		
-		while(watchNodeChildren("/ack/" + action, countDown) != countDown){};
+		int result = 0;
+		while(result != countDown){
+			result = watchNodeChildren("/ack/" + action, countDown, timeOutSeconds);
+			if(result == 0) {
+				echo("Warn: timeout (" + timeOutSeconds + ")");
+				break;
+			}
+		};
 		echo("clear " + action);
 		// clear the wait
 		deleteHeadRecursive("/ack/" + action);

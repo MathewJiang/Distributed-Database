@@ -81,12 +81,17 @@ public class ECSClient implements IECSClient {
         return true;
     }
 
+    private String getNewServerName() {
+    	int serial = launchedNodes.size();
+    	String name = "server_" + serial;
+    	return name;
+    }
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
     	info("addNode(cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
+    	
     	hashRing.removeAllServerNodes();
-    	int serial = launchedNodes.size();
-    	String name = "server_" + serial;
+    	String name = getNewServerName();
     	
     	// pick not taken slot
     	ServiceLocation spot = avaliableSlots.get(0);
@@ -105,16 +110,29 @@ public class ECSClient implements IECSClient {
 			// incrementally update MD
 			
 			ecs.lock();
-			ecs.broadast("UPDATE");
+			
+			
+			//ecs.broadast("UPDATE");
+			// we changed to use unit cast to affected node
+			
+			String affectedServerName = ;
+			ecs.setCmd(affectedServerName, "LOCK_WRITE");
+			
+			
+			
+			
+			
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
-			ecs.setCmd(newNode.getNodeName(), "UPDATE");
-			ecs.waitAck("launched", 1);
+			ecs.setCmd(newNode.getNodeName(), "LOCK_WRITE");
+			ecs.waitAck("launched", 1, 50);
 			ecs.waitAckSetup("migrate");
 			ecs.unlock();
-			ecs.waitAck("migrate", launchedNodes.size()); // internal unlock
+			ecs.waitAck("migrate", launchedNodes.size(), 50); // internal unlock
+			ecs.broadast("SYNC");
+			ecs.waitAck("sync", launchedNodes.size(), 50); 
 			return newNode;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -205,7 +223,7 @@ public class ECSClient implements IECSClient {
         	echo("Launching " + curr.getNodeName());
         	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
         }
-        ecs.waitAck("launched", count);
+        ecs.waitAck("launched", count, 5);
 		return aliased;
     }
     
@@ -233,9 +251,15 @@ public class ECSClient implements IECSClient {
     	return false;
     }
     
+    private ServiceLocation getReturnedSlot(String name) {
+    	return null;
+    }
     public boolean removeNode(String name) {
-    	info("removeNode(name = " + name);
-        	
+    	info("removeNode(name = " + name + ")");
+    	hashRing.removeAllServerNodes();
+    	
+    	ServiceLocation returnedSlot = getReturnedSlot(name);
+    	avaliableSlots.add(returnedSlot);
     	return false;
     }
 
@@ -609,8 +633,9 @@ public class ECSClient implements IECSClient {
 			}
 			break;
 		case "waitAck":
-			if (tokens.length == 3) {
-				ecs.waitAck(tokens[1], Integer.parseInt(tokens[2]));
+			if (tokens.length == 4) {
+				ecs.waitAckSetup(tokens[1]);
+				ecs.waitAck(tokens[1], Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3]));
 			}
 			break;
 		// testing purposes only
