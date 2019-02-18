@@ -46,7 +46,7 @@ public class KVServer extends Thread implements IKVServer {
 	private boolean suspended = true;
 	private boolean shuttingDown = false;
 	private boolean writeLock = false;
-	
+
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
 	ArrayList<Thread> threadCollection = new ArrayList<>();
@@ -372,65 +372,80 @@ public class KVServer extends Thread implements IKVServer {
 		setClusterMD(ecs.getMD());
 	}
 
-	public void removeMigratedKeys(InfraMetadata newMD) throws Exception {
+	public void removeMigratedKeys(InfraMetadata newMD) {
 		serverLock.lock();
-		Storage.flush();
+		try {
+			Storage.flush();
 
-		setClusterMD(newMD);
-		for (String key : Disk.getAllKeys()) {
-			// Key stays on this server.
-			if (clusterHash.getServer(key).serviceName
-					.equals(serverMD.serviceName)) {
-				continue;
+			setClusterMD(newMD);
+			for (String key : Disk.getAllKeys()) {
+				// Key stays on this server.
+				if (clusterHash.getServer(key).serviceName
+						.equals(serverMD.serviceName)) {
+					continue;
+				}
+				Disk.putKV(key, null);
 			}
-			Disk.putKV(key, null);
+		} catch (IOException e) {
+			logger.error("Error remving migrants on server " + getServerName()
+					+ ": " + e);
+		} finally {
+			serverLock.unlock();
 		}
-		serverLock.unlock();
 	}
 
 	// Compute new hash ring with given metadata, and migrate all storages
 	// that no longer belongs to this server. Returns only after all
 	// migrations complete. Thread-safe.
-	public void migrateWithNewMD(InfraMetadata newMD) throws Exception {
+	public void migrateWithNewMD(InfraMetadata newMD) {
 		serverLock.lock();
-		Storage.flush();
+		try {
+			Storage.flush();
 
-		// Generate a temporary new consistent hash ring and provision all keys
-		// to migrate.
-		ConsistentHash newHash = new ConsistentHash();
-		newHash.addNodesFromInfraMD(newMD);
-		List<String> migrants = new ArrayList<String>();
-		for (String key : Disk.getAllKeys()) {
-			// Key stays on this server.
-			if (newHash.getServer(key).serviceName.equals(serverMD.serviceName)) {
-				continue;
+			// Generate a temporary new consistent hash ring and provision all
+			// keys
+			// to migrate.
+			ConsistentHash newHash = new ConsistentHash();
+			newHash.addNodesFromInfraMD(newMD);
+			List<String> migrants = new ArrayList<String>();
+			for (String key : Disk.getAllKeys()) {
+				// Key stays on this server.
+				if (newHash.getServer(key).serviceName
+						.equals(serverMD.serviceName)) {
+					continue;
+				}
+				migrants.add(key);
 			}
-			migrants.add(key);
-		}
 
-		logger.info("Sending copies of " + migrants);
-		ConnectionUtil conn = new ConnectionUtil();
-		for (String key : migrants) {
-			// Construct target and server message.
-			CommMessage msg = new CommMessageBuilder().setKey(key)
-					.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
-					.build();
-			msg.setFromServer(true);
-			ServiceLocation target = newHash.getServer(key);
+			logger.info("Sending copies of " + migrants);
+			ConnectionUtil conn = new ConnectionUtil();
+			for (String key : migrants) {
+				// Construct target and server message.
+				CommMessage msg = new CommMessageBuilder().setKey(key)
+						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
+						.build();
+				msg.setFromServer(true);
+				ServiceLocation target = newHash.getServer(key);
 
-			// Send and await ack from target server.
-			Socket socket = new Socket(target.host, target.port);
-			conn.sendCommMessage(socket.getOutputStream(), msg);
-			CommMessage serverResponse = conn.receiveCommMessage(socket
-					.getInputStream());
-			if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
-				logger.error("Error migrating message " + msg + " from server "
-						+ serverName + " to server " + target.serviceName
-						+ "\nResponse: " + serverResponse);
+				// Send and await ack from target server.
+				Socket socket = new Socket(target.host, target.port);
+				conn.sendCommMessage(socket.getOutputStream(), msg);
+				CommMessage serverResponse = conn.receiveCommMessage(socket
+						.getInputStream());
+				if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
+					logger.error("Error migrating message " + msg
+							+ " from server " + serverName + " to server "
+							+ target.serviceName + "\nResponse: "
+							+ serverResponse);
+				}
+				socket.close();
 			}
-			socket.close();
+		} catch (Exception e) {
+			logger.error("Error migrating data on server " + getServerName()
+					+ ": " + e);
+		} finally {
+			serverLock.unlock();
 		}
-		serverLock.unlock();
 	}
 
 	public static KVServer initServerFromECS(String[] args) throws Exception {
@@ -499,6 +514,8 @@ public class KVServer extends Thread implements IKVServer {
 	}
 
 	public void setWriteLock(boolean writeLock) {
+		serverLock.lock();
 		this.writeLock = writeLock;
+		serverLock.unlock();
 	}
 }
