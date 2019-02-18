@@ -87,6 +87,7 @@ public class ZKConnection implements Runnable {
 							logger.error("Error remving migrants on server "
 									+ callingServer.getServerName() + ": " + e);
 						}
+						ecs.ack(callingServer.getServerName(), "sync");
 						break;
 
 					default:
