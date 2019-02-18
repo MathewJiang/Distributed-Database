@@ -113,9 +113,11 @@ public class ECSClient implements IECSClient {
     	hashRing.removeAllServerNodes();
     	String name = getNewServerName();
     	
-    	// pick not taken slot
-    	ServiceLocation spot = avaliableSlots.get(0);
-    	avaliableSlots.remove(0);
+    	ServiceLocation spot;
+    	spot = avaliableSlots.get(0);
+		avaliableSlots.remove(0);
+		
+    	spot.serviceName = name;
     	
     	// hash
     	InfraMetadata new_MD = ecs.getMD();
@@ -328,6 +330,7 @@ public class ECSClient implements IECSClient {
 			ecs.waitAckSetup("sync");
 			
 			// TODO: move HASH for deleted
+			ecs.setCmd(returnedSlot.serviceName, "SHUTDOWN");
 			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50);

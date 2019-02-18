@@ -383,7 +383,7 @@ public class ECS {
 		}
 		@SuppressWarnings("unused")
 		byte[] nullByte = "null".getBytes(StandardCharsets.UTF_8);
-			String nodeDir = nodeRoot + "/" + alias + Integer.toString(getMD().getServerLocations().size());
+			String nodeDir = nodeRoot + "/" + node.getNodeName();
 			create(nodeDir ,emptyByte,  "-p");
 			create(nodeDir + "/NodeHost",node.getNodeHost().getBytes(StandardCharsets.UTF_8),  "-p");
 			create(nodeDir + "/NodePort",Integer.toString(node.getNodePort()).getBytes(StandardCharsets.UTF_8),  "-p");
