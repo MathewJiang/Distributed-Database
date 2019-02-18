@@ -13,6 +13,9 @@
 package shared;
 
 import java.math.BigInteger;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -153,11 +156,11 @@ public class ConsistentHash {
 			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
 		} else if (hashRing.size() == 1) {
 			if (MD5ServerInfo.compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
-				hashRange[0] = String.format("0x%32X", BigInteger.ZERO);
+				hashRange[0] = String.format("0x%032X", BigInteger.ZERO);
 			} else {
-				hashRange[0] = String.format("0x%32X", MD5ServerInfo.add(BigInteger.ONE));
+				hashRange[0] = String.format("0x%032X", MD5ServerInfo.add(BigInteger.ONE));
 			}
-			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
+			hashRange[1] = String.format("0x%032X", MD5ServerInfo);
 		} else {
 			Entry<BigInteger, ServiceLocation>predecessorEntry = hashRing.lowerEntry(MD5ServerInfo);
 			if (predecessorEntry == null) {
@@ -165,11 +168,11 @@ public class ConsistentHash {
 				predecessorEntry = hashRing.lastEntry();
 			}
 			if (predecessorEntry.getKey().compareTo(BigInteger.ONE.shiftLeft(32)) == 0) {
-				hashRange[0] = String.format("0x%32X", BigInteger.ZERO);
+				hashRange[0] = String.format("0x%032X", BigInteger.ZERO);
 			} else {
-				hashRange[0] = String.format("0x%32X", (predecessorEntry.getKey().add(BigInteger.ONE)));
+				hashRange[0] = String.format("0x%032X", (predecessorEntry.getKey().add(BigInteger.ONE)));
 			}
-			hashRange[1] = String.format("0x%32X", MD5ServerInfo);
+			hashRange[1] = String.format("0x%032X", MD5ServerInfo);
 		}
 		
 		hashRingLock.unlock();
@@ -227,6 +230,111 @@ public class ConsistentHash {
 		return hashRange;
 	}
 	
+	
+	/*****************************************************************************
+	 * getSuccessor
+	 * Get the successor of the given server
+	 * 
+	 * @param	serverInfo	Server information
+	 * @return 	successor	The successor of the input server
+	 * 
+	 * @throws	Exception	if the hashRing has not been constructed
+	 * Note: returns itself if only one element within the system
+	 *****************************************************************************/
+	public ServiceLocation getSuccessor(ServiceLocation serverInfo) throws Exception {
+		if (serverInfo == null) {
+			System.err.println("[ConsistentHash.java/getSuccessor]ServiceLocation is null!");
+			return null;
+		}
+		
+		hashRingLock.lock();
+		if (hashRing.size() == 0) {
+			hashRingLock.unlock();
+			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
+		}
+		
+		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
+		BigInteger MD5ServerInfo = MD5.getMD5(serverHashString);
+		ServiceLocation sl = null;
+		
+		if (hashRing.size() == 1) {
+			hashRingLock.unlock();
+			return serverInfo;
+		} else {
+			Entry<BigInteger, ServiceLocation>successorEntry = hashRing.higherEntry(MD5ServerInfo);
+			if (successorEntry == null) {
+				sl = hashRing.firstEntry().getValue();
+			} else {
+				sl = successorEntry.getValue();
+			}
+		}
+		hashRingLock.unlock();
+		
+		return sl;
+	}
+	
+	/*****************************************************************************
+	 * getPredeccessor
+	 * Get the predecessor of the given server
+	 * 
+	 * @param	serverInfo	Server information
+	 * @return 	predecessor	The predecessor of the input server
+	 * 
+	 * @throws	Exception	if the hashRing has not been constructed
+	 * Note: returns itself if only one element within the system
+	 *****************************************************************************/
+	public ServiceLocation getPredeccessor(ServiceLocation serverInfo) throws Exception {
+		if (serverInfo == null) {
+			System.err.println("[ConsistentHash.java/getSuccessor]ServiceLocation is null!");
+			return null;
+		}
+		
+		hashRingLock.lock();
+		if (hashRing.size() == 0) {
+			hashRingLock.unlock();
+			throw new Exception("[ConsistentHash.java/getHashRange]HashRing has not been constructed!");
+		}
+		
+		String serverHashString = serverInfo.host + ":" + serverInfo.port.toString();
+		BigInteger MD5ServerInfo = MD5.getMD5(serverHashString);
+		ServiceLocation sl = null;
+		
+		if (hashRing.size() == 1) {
+			hashRingLock.unlock();
+			return serverInfo;
+		} else {
+			Entry<BigInteger, ServiceLocation>predecessorEntry = hashRing.lowerEntry(MD5ServerInfo);
+			if (predecessorEntry == null) {
+				sl = hashRing.lastEntry().getValue();
+			} else {
+				sl = predecessorEntry.getValue();
+			}
+		}
+		hashRingLock.unlock();
+		
+		return sl;
+	}
+	
+	/*****************************************************************************
+	 * printHashRing
+	 * 
+	 * print the current Hash Ring
+	 *****************************************************************************/
+	@Deprecated
+	public void printHashRing() {
+		hashRingLock.lock();
+		Collection<?> entrySet = hashRing.entrySet();
+		Iterator<?> it = entrySet.iterator();
+		
+		System.out.println(">>>>>>>>>>Start Printing TreeMap>>>>>>>>>>");
+		while (it.hasNext()) {
+			System.out.println(it.next());
+		}
+		System.out.println(">>>>>>>>>>End Printing TreeMap>>>>>>>>>>");
+		
+		hashRingLock.unlock();
+	}
+	
 	/*
 	 * Testing purposes only
 	 * Can be migrated into JUnit tests later on
@@ -234,7 +342,7 @@ public class ConsistentHash {
 	public static void main(String[] args) {
 		ConsistentHash ch = new ConsistentHash();
 
-		ServiceLocation server0 = new ServiceLocation("server1", "127.0.0.1", 50003);
+		ServiceLocation server0 = new ServiceLocation("server0", "127.0.0.1", 50422);
 		ServiceLocation server1 = new ServiceLocation("server1", "127.0.0.1", 50000);
 		ServiceLocation server2 = new ServiceLocation("server2", "127.0.0.1", 50007);
 		ServiceLocation server3 = new ServiceLocation("server3", "127.0.0.1", 50001);
@@ -242,21 +350,21 @@ public class ConsistentHash {
 		ServiceLocation server5 = new ServiceLocation("server5", "127.0.0.1", 50004);
 		
 		System.out.println("server1 MD5: " + MD5.getMD5("127.0.0.1:50001"));
-		System.out.println("server1 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50000")));
-		System.out.println("server2 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50001")));
-		System.out.println("server3 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50002")));
-		System.out.println("server4 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50003")));
-		System.out.println("server5 MD5: " + String.format("0x%32X", MD5.getMD5("127.0.0.1:50004")));
+		System.out.println("server1 MD5: " + String.format("0x%032X", MD5.getMD5("127.0.0.1:50000")));
+		System.out.println("server2 MD5: " + String.format("0x%032X", MD5.getMD5("127.0.0.1:50001")));
+		System.out.println("server3 MD5: " + String.format("0x%032X", MD5.getMD5("127.0.0.1:50002")));
+		System.out.println("server4 MD5: " + String.format("0x%032X", MD5.getMD5("127.0.0.1:50003")));
+		System.out.println("server5 MD5: " + String.format("0x%032X", MD5.getMD5("127.0.0.1:50004")));
 		
 		System.out.println("key1: " + String.format("0x%32X", MD5.getMD5("key1")));
 		System.out.println("key2: " + String.format("0x%32X", MD5.getMD5("key2")));
 		System.out.println("key3: " + String.format("0x%32X", MD5.getMD5("key3")));
 		
 		ch.addServerNode(server0);
-//		ch.addServerNode(server1);
-//		ch.addServerNode(server2);
-//		ch.addServerNode(server3);
-//		ch.addServerNode(server4);
+		ch.addServerNode(server1);
+		ch.addServerNode(server2);
+		ch.addServerNode(server3);
+		ch.addServerNode(server4);
 		//ch.addServerNode(server5);
 		
 		String[] server0HashRange = null;
@@ -317,5 +425,25 @@ public class ConsistentHash {
 			System.out.println("gg!");
 		}
 		
+		System.out.println("---successor and predecessor----");
+		ch.addServerNode(server0);
+		ch.addServerNode(server1);
+		ch.addServerNode(server2);
+		ch.addServerNode(server3);
+		ch.addServerNode(server4);
+		ch.printHashRing();
+		try {
+			System.out.println("server_0 successor: " + ch.getSuccessor(server0));
+			System.out.println("server_1 successor: " + ch.getSuccessor(server1));
+			System.out.println("server_2 successor: " + ch.getSuccessor(server2));
+			System.out.println("server_3 successor: " + ch.getSuccessor(server3));
+			
+			System.out.println("server_0 predecessor: " + ch.getPredeccessor(server0));
+			System.out.println("server_1 predecessor: " + ch.getPredeccessor(server1));
+			System.out.println("server_2 predecessor: " + ch.getPredeccessor(server2));
+			System.out.println("server_3 predecessor: " + ch.getPredeccessor(server3));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
     }
 }

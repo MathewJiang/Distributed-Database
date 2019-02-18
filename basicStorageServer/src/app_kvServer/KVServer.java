@@ -407,7 +407,6 @@ public class KVServer extends Thread implements IKVServer {
 			migrants.add(key);
 		}
 
-		// Remove and send all copies of migrating keys.
 		logger.info("Sending copies of " + migrants);
 		ConnectionUtil conn = new ConnectionUtil();
 		for (String key : migrants) {
