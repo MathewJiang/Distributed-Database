@@ -780,6 +780,15 @@ public class ECSClient implements IECSClient {
 			}
 			echo("done");
 			break;
+		case "awaitNodes":
+			if(tokens.length == 3) {
+				try {
+					awaitNodes(Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]));
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			break;
 		default:
 			printError("Unknown command");
 			printHelp();
