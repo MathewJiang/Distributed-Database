@@ -115,7 +115,7 @@ public class ECSClient implements IECSClient {
 			//ecs.broadast("UPDATE");
 			// we changed to use unit cast to affected node
 			
-			String affectedServerName = ;
+			String affectedServerName = hashRing.getSuccessor(spot).serviceName;
 			ecs.setCmd(affectedServerName, "LOCK_WRITE");
 			
 			
@@ -130,7 +130,8 @@ public class ECSClient implements IECSClient {
 			ecs.waitAck("launched", 1, 50);
 			ecs.waitAckSetup("migrate");
 			ecs.unlock();
-			ecs.waitAck("migrate", launchedNodes.size(), 50); // internal unlock
+			ecs.waitAck("migrate", 2, 50); // internal unlock
+			ecs.waitAckSetup("sync");
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50); 
 			return newNode;
