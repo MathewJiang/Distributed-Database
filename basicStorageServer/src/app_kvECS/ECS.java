@@ -45,7 +45,8 @@ public class ECS {
 
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
-	spinlock globalLock = new spinlock();
+	spinlock globalLock = new spinlock("globalLock");
+	spinlock ackLock = new spinlock("ackLock");
 	String prevCmd = "null";
 	//String logConfigFileLocation = "./";
 	
@@ -399,11 +400,11 @@ public class ECS {
 	 * trylock does not block and return true if succeed.
 	 */
 	
-	private String lock_create() {
+	private String lock_create(String lockDir) {
 		byte[] emptyByte = null;
 		String path = null;
 		try {
-			path = zk.create("/lock/spinlock/",emptyByte, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+			path = zk.create(lockDir + "/",emptyByte, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
 		} catch (KeeperException | InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -427,6 +428,7 @@ public class ECS {
 		return "not valid";
 	}
 	private boolean watchStringDelete(final String path) {
+		//echo("watching path " + path);
 		final boolean valid[] = {true};
 		Latch = new CountDownLatch(1);
 		Stat check = null;
@@ -548,11 +550,17 @@ public class ECS {
 	}
 	public class spinlock{
 		private String lockPath = "";
+		private String lockDir = "";
+		private int cutIndex = 0;
+		public spinlock(String lockname) {
+			lockDir = "/lock/" + lockname;
+			cutIndex = lockDir.length() + 1;
+		}
 		public void lock() {
-			String n = lock_create(); // full path
+			String n = lock_create(lockDir); // full path
 			echo("n = " + n);
 			while(true) {
-				List<String> raceList = returnDirList("/lock/spinlock");
+				List<String> raceList = returnDirList(lockDir);
 				int array[] = new int[raceList.size()];
 				for(int i=0;i<raceList.size();i++) {
 					//echo(raceList.get(i));
@@ -563,7 +571,7 @@ public class ECS {
 				Arrays.sort(array);
 				
 				int winner = array[0];
-				int ticket = Integer.parseInt(n.substring(16));
+				int ticket = Integer.parseInt(n.substring(cutIndex));
 				if(ticket==winner || ticket == 0) {
 					setData(n, "true");
 					// locked
@@ -575,14 +583,14 @@ public class ECS {
 					String appendZero = ("0000000000" + waitFor);
 					String fillMSBZero = appendZero.substring(appendZero.length() - 10);
 					echo("waitfor " + fillMSBZero + " I am " + n);
-					watchStringDelete("/lock/spinlock/" + fillMSBZero);
+					watchStringDelete(lockDir + "/" + fillMSBZero);
 				}
 			}
 		}
 		
 		public boolean trylock() {
-			String n = lock_create(); // full path
-			List<String> raceList = returnDirList("/lock/spinlock");
+			String n = lock_create(lockDir); // full path
+			List<String> raceList = returnDirList("lockPath");
 			int array[] = new int[raceList.size()];
 			for(int i=0;i<raceList.size();i++) {
 				int entry = Integer.parseInt(raceList.get(i));
@@ -614,7 +622,9 @@ public class ECS {
 	public void init() {
 		try {
 			zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
-			zk.create("/lock/spinlock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+			zk.create("/lock/globalLock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+			zk.create("/lock/ackLock", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
+			
 			zk.create("/nodes", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE,CreateMode.PERSISTENT);
 		} catch (KeeperException | InterruptedException e) {
