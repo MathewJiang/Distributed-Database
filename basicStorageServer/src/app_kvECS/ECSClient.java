@@ -85,11 +85,14 @@ public class ECSClient implements IECSClient {
 
     private String getNewServerName() {
     	List<String> serverList = ecs.returnDirList("/nodes");
+    	serverList.size();
     	String alias = "server_";
     	for(int i = 0; i < serverList.size(); i++) {
-    		if(!serverList.get(i).equals(alias + i)) {
+    		String curr = alias + i;
+    		echo("curr is " + curr);
+    		if(!serverList.get(i).equals(curr)) {
     			// inconsistency
-    			return alias + i;
+    			return curr;
     		}
     	}
     	int serial = launchedNodes.size();
@@ -233,7 +236,7 @@ public class ECSClient implements IECSClient {
         	echo("Launching " + curr.getNodeName());
         	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
         }
-        ecs.waitAck("launched", count, 5);
+        ecs.waitAck("launched", count, 50);
 		return aliased;
     }
     
@@ -315,8 +318,12 @@ public class ECSClient implements IECSClient {
 			ecs.unlock();
 			ecs.waitAck("migrate", 2, 50); // internal unlock
 			ecs.waitAckSetup("sync");
+			
+			// TODO: move HASH for deleted
+			
 			ecs.broadast("SYNC");
-			ecs.waitAck("sync", launchedNodes.size(), 50); 
+			ecs.waitAck("sync", launchedNodes.size(), 50);
+			
 			
 	    	avaliableSlots.add(returnedSlot);
 	    	return true;
