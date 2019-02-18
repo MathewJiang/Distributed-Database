@@ -8,6 +8,8 @@ package app_kvECS;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -771,11 +773,17 @@ public class ECS {
 	public void waitAck(String action, int countDown, int timeOutSeconds) {
 		echo("waitAck " + action + " " + countDown);
 		int result = 0;
+		Instant start = Instant.now();
+		
 		while(result != countDown){
-			result = watchNodeChildren("/ack/" + action, countDown, timeOutSeconds);
+			result = watchNodeChildren("/ack/" + action, countDown, 1);
 			if(result == 0) {
-				echo("Warn: timeout (" + timeOutSeconds + ")");
-				break;
+				Instant end = Instant.now();
+				Duration timeElapsed = Duration.between(start, end);
+				if(timeElapsed.toMillis()/1000 > timeOutSeconds) {
+					echo("Warn: timeout (" + timeOutSeconds + ")");
+					break;
+				}
 			}
 		};
 		echo("clear " + action);

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -87,10 +88,16 @@ public class ECSClient implements IECSClient {
     	List<String> serverList = ecs.returnDirList("/nodes");
     	serverList.size();
     	String alias = "server_";
+    	int[] serverNumbers = new int[serverList.size()];
     	for(int i = 0; i < serverList.size(); i++) {
-    		String curr = alias + i;
-    		echo("curr is " + curr);
-    		if(!serverList.get(i).equals(curr)) {
+    		serverNumbers[i] = Integer.parseInt(serverList.get(i).substring(7));
+    	}
+    	Arrays.sort(serverNumbers);
+    	for(int i = 0; i < serverList.size(); i++) {
+    		
+    		if(serverNumbers[i] != i) {
+    			String curr = alias + i;
+        		echo("curr is " + curr);
     			// inconsistency
     			return curr;
     		}
@@ -320,7 +327,7 @@ public class ECSClient implements IECSClient {
 			ecs.waitAckSetup("sync");
 			
 			// TODO: move HASH for deleted
-			
+			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50);
 			
@@ -412,7 +419,7 @@ public class ECSClient implements IECSClient {
 		try {
 			ecs.connect("127.0.0.1", 39678);
 			if(ecs.configured()) {
-	    		restoreFromECS();
+	    		//restoreFromECS();
 	    	}
 			
 			
