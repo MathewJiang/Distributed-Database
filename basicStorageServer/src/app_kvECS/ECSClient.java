@@ -40,92 +40,90 @@ public class ECSClient implements IECSClient {
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
 	private int ECSport = 39678;
-    private static Logger logger = Logger.getRootLogger();
+	private static Logger logger = Logger.getRootLogger();
 	private static final String PROMPT = "ecs_shell>";
 	private BufferedReader stdin;
 	private boolean stop = false;
 	private String workDir = "";
 	private String config = "";
-	
-	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
+
+	// https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
-	    int len = s.length();
-	    byte[] data = new byte[len / 2];
-	    for (int i = 0; i < len; i += 2) {
-	        data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-	                             + Character.digit(s.charAt(i+1), 16));
-	    }
-	    return data;
+		int len = s.length();
+		byte[] data = new byte[len / 2];
+		for (int i = 0; i < len; i += 2) {
+			data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character
+					.digit(s.charAt(i + 1), 16));
+		}
+		return data;
 	}
-	
-	
+
 	// set start = true for all client server
-    @Override
-    public boolean start() {
-    	ecs.broadast("START");
-    	return true;
-    }
+	@Override
+	public boolean start() {
+		ecs.broadast("START");
+		return true;
+	}
 
-    @Override
-    public boolean stop() {
-    	ecs.broadast("STOP");
-    	return true;
-    }
+	@Override
+	public boolean stop() {
+		ecs.broadast("STOP");
+		return true;
+	}
 
-    @Override
-    public boolean shutdown() {
-    	ecs.broadast("SHUTDOWN");
-    	launchedNodes.clear();
-    	launchedServer.clear();
-    	ecs.setConfigured(false);
-        return true;
-    }
+	@Override
+	public boolean shutdown() {
+		ecs.broadast("SHUTDOWN");
+		launchedNodes.clear();
+		launchedServer.clear();
+		ecs.setConfigured(false);
+		return true;
+	}
 
-    private String getNewServerName() {
-    	int serial = launchedNodes.size();
-    	String name = "server_" + serial;
-    	return name;
-    }
-    @Override
-    public IECSNode addNode(String cacheStrategy, int cacheSize) {
-    	info("addNode(cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
-    	
-    	hashRing.removeAllServerNodes();
-    	String name = getNewServerName();
-    	
-    	// pick not taken slot
-    	ServiceLocation spot = avaliableSlots.get(0);
-    	avaliableSlots.remove(0);
-    	
-    	// hash
-    	InfraMetadata new_MD = ecs.getMD();
-    	List<ServiceLocation> tmp = new_MD.getServerLocations();
-    	tmp.add(spot);
-    	new_MD.setServerLocations(tmp);
-    	hashRing.addNodesFromInfraMD(new_MD);
-    	try {
-			IECSNode newNode = new ECSNode(name, spot.host, spot.port, hashRing.getHashRange(spot));
+	private String getNewServerName() {
+		int serial = launchedNodes.size();
+		String name = "server_" + serial;
+		return name;
+	}
+
+	@Override
+	public IECSNode addNode(String cacheStrategy, int cacheSize) {
+		info("addNode(cacheStrategy=" + cacheStrategy + ",cacheSize="
+				+ cacheSize + ")");
+
+		hashRing.removeAllServerNodes();
+		String name = getNewServerName();
+
+		// pick not taken slot
+		ServiceLocation spot = avaliableSlots.get(0);
+		avaliableSlots.remove(0);
+
+		// hash
+		InfraMetadata new_MD = ecs.getMD();
+		List<ServiceLocation> tmp = new_MD.getServerLocations();
+		tmp.add(spot);
+		new_MD.setServerLocations(tmp);
+		hashRing.addNodesFromInfraMD(new_MD);
+		try {
+			IECSNode newNode = new ECSNode(name, spot.host, spot.port,
+					hashRing.getHashRange(spot));
 			launchedNodes.add(newNode);
 			// launchedServer not handled
 			// incrementally update MD
-			
+
 			ecs.lock();
-			
-			
-			//ecs.broadast("UPDATE");
+
+			// ecs.broadast("UPDATE");
 			// we changed to use unit cast to affected node
-			
+
 			String affectedServerName = hashRing.getSuccessor(spot).serviceName;
 			ecs.setCmd(affectedServerName, "LOCK_WRITE");
-			
-			
-			
-			
-			
+
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
-			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
+			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport,
+					cacheStrategy, cacheSize);
 			ecs.setCmd(newNode.getNodeName(), "LOCK_WRITE");
 			ecs.waitAck("launched", 1, 50);
 			ecs.waitAckSetup("migrate");
@@ -133,23 +131,25 @@ public class ECSClient implements IECSClient {
 			ecs.waitAck("migrate", 2, 50); // internal unlock
 			ecs.waitAckSetup("sync");
 			ecs.broadast("SYNC");
-			ecs.waitAck("sync", launchedNodes.size(), 50); 
+			ecs.waitAck("sync", launchedNodes.size(), 50);
 			return newNode;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-    	return null;
-    }
+		return null;
+	}
 
-    @Override
-    public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
-        info("addNodes(count=" + count + ", cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
-        warn("Not implemented yet");
-        return null;
-    }
-    
-    private void loadECSconfigFromFile() {
+	@Override
+	public Collection<IECSNode> addNodes(int count, String cacheStrategy,
+			int cacheSize) {
+		info("addNodes(count=" + count + ", cacheStrategy=" + cacheStrategy
+				+ ",cacheSize=" + cacheSize + ")");
+		warn("Not implemented yet");
+		return null;
+	}
+
+	private void loadECSconfigFromFile() {
 		try {
 			MD = InfraMetadata.fromConfigFile(ecs_config);
 		} catch (Exception e) {
@@ -158,169 +158,185 @@ public class ECSClient implements IECSClient {
 		}
 	}
 
-    private void launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
-    	Runtime run = Runtime.getRuntime();
-    	Process proc;
-    	info("launch(ip = " + remoteIP + " port = " + ECSport + ")");
-    	if(remoteIP.equals("127.0.0.1") || remoteIP.equals("localhost")) {
-    		try {
-				proc = Runtime.getRuntime().exec(nossh_launch_array(serverName, ECSport, strategy, cache_size));
+	private void launch(String remoteIP, String serverName, int ECSport,
+			String strategy, int cache_size) {
+		Runtime run = Runtime.getRuntime();
+		Process proc;
+		info("launch(ip = " + remoteIP + " port = " + ECSport + ")");
+		if (remoteIP.equals("127.0.0.1") || remoteIP.equals("localhost")) {
+			try {
+				proc = Runtime.getRuntime().exec(
+						nossh_launch_array(serverName, ECSport, strategy,
+								cache_size));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-    	} else {
-    		
-    		try {
-    			proc = run.exec(ssh_launch(remoteIP, serverName, ECSport, strategy, cache_size));
-    		} catch (IOException e) {
-    			e.printStackTrace();
-    		}
-    	}
-    }
-    @Override
-    public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
-    	if(ecs.configured()) {
-    		return ecs.getECSNodeCollection();
-    	}
-    	
-    	if(ecs.inited()) {
-    		ecs.deleteHeadRecursive("/nodes");
-    		ecs.create("/nodes", null, "-p");
-    	}
-    	ecs.waitAckSetup("launched");
-    	loadECSconfigFromFile();
-    	hashRing.removeAllServerNodes();
+		} else {
+
+			try {
+				proc = run.exec(ssh_launch(remoteIP, serverName, ECSport,
+						strategy, cache_size));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public Collection<IECSNode> setupNodes(int count, String cacheStrategy,
+			int cacheSize) {
+		if (ecs.configured()) {
+			return ecs.getECSNodeCollection();
+		}
+
+		if (ecs.inited()) {
+			ecs.deleteHeadRecursive("/nodes");
+			ecs.create("/nodes", null, "-p");
+		}
+		ecs.waitAckSetup("launched");
+		loadECSconfigFromFile();
+		hashRing.removeAllServerNodes();
 		List<ServiceLocation> servers = MD.getServerLocations();
-		Collections.shuffle(servers, new Random(count)); 
+		Collections.shuffle(servers, new Random(count));
 		info("Launching " + count + "/" + servers.size() + " servers on file");
 		// need to construct a finished MD
 		InfraMetadata new_MD = new InfraMetadata();
 		List<ServiceLocation> selectedServers = new ArrayList<ServiceLocation>();
-		for(int i = 0; i < count; i++) {
+		for (int i = 0; i < count; i++) {
 			ServiceLocation curr = servers.get(i);
 			selectedServers.add(curr);
 		}
-		for(int i = count; i < servers.size(); i++) {
+		for (int i = count; i < servers.size(); i++) {
 			avaliableSlots.add(servers.get(i));
 		}
 		new_MD.setServerLocations(selectedServers);
 		hashRing.addNodesFromInfraMD(new_MD);
-		for(int i = 0; i < count; i++) {
+		for (int i = 0; i < count; i++) {
 			ServiceLocation curr = servers.get(i);
 			launchedServer.add(curr);
 			ECSNode item_to_be_added;
 			try {
-				item_to_be_added = new ECSNode(curr.serviceName, curr.host, curr.port, hashRing.getHashRange(curr));
-				launchedNodes.add(item_to_be_added);	
+				item_to_be_added = new ECSNode(curr.serviceName, curr.host,
+						curr.port, hashRing.getHashRange(curr));
+				launchedNodes.add(item_to_be_added);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
-		info("About to launch " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
-        List<IECSNode> aliased = ecs.setLaunchedNodes(launchedNodes);
-        for(int i = 0; i < aliased.size(); i++) {
-        	IECSNode curr = aliased.get(i);
-        	echo("Launching " + curr.getNodeName());
-        	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
-        }
-        ecs.waitAck("launched", count, 5);
+		info("About to launch " + launchedServer.size()
+				+ " servers cacheStrategy " + cacheStrategy + " cacheSize "
+				+ cacheSize);
+		List<IECSNode> aliased = ecs.setLaunchedNodes(launchedNodes);
+		for (int i = 0; i < aliased.size(); i++) {
+			IECSNode curr = aliased.get(i);
+			echo("Launching " + curr.getNodeName());
+			launch(curr.getNodeHost(), curr.getNodeName(), ECSport,
+					cacheStrategy, cacheSize);
+		}
+		ecs.waitAck("launched", count, 5);
 		return aliased;
-    }
-    
+	}
 
-    @Override
-    public boolean awaitNodes(int count, int timeout) throws Exception {
-        // TODO
-        return false;
-    }
+	@Override
+	public boolean awaitNodes(int count, int timeout) throws Exception {
+		// TODO
+		return false;
+	}
 
-    @Override
-    public boolean removeNodes(Collection<String> nodeNames) {
-        // check if name exists
-    	InfraMetadata currMD = ecs.getMD();
-    	List<String> nodeNamesList = (List<String>) nodeNames;
-    	List<ServiceLocation> nodesFromMD = currMD.getServerLocations();
-    	for(int j = 0; j < nodeNames.size(); j++) {
-    		for(int i = 0; i < nodesFromMD.size(); i++) {
-    			if(nodesFromMD.get(i).serviceName.equals(nodeNamesList.get(j))) {
-    				// we found one match
-    				removeNode(nodeNamesList.get(j));
-    			}
-    		}
-    	}
-    	return false;
-    }
-    
-    private ServiceLocation getReturnedSlot(String name) {
-    	return null;
-    }
-    public boolean removeNode(String name) {
-    	info("removeNode(name = " + name + ")");
-    	hashRing.removeAllServerNodes();
-    	
-    	ServiceLocation returnedSlot = getReturnedSlot(name);
-    	avaliableSlots.add(returnedSlot);
-    	return false;
-    }
+	@Override
+	public boolean removeNodes(Collection<String> nodeNames) {
+		// check if name exists
+		InfraMetadata currMD = ecs.getMD();
+		List<String> nodeNamesList = (List<String>) nodeNames;
+		List<ServiceLocation> nodesFromMD = currMD.getServerLocations();
+		for (int j = 0; j < nodeNames.size(); j++) {
+			for (int i = 0; i < nodesFromMD.size(); i++) {
+				if (nodesFromMD.get(i).serviceName.equals(nodeNamesList.get(j))) {
+					// we found one match
+					removeNode(nodeNamesList.get(j));
+				}
+			}
+		}
+		return false;
+	}
 
-    @Override
-    public Map<String, IECSNode> getNodes() {
-        // TODO
-        return null;
-    }
+	private ServiceLocation getReturnedSlot(String name) {
+		return null;
+	}
 
-    @Override
-    public IECSNode getNodeByKey(String Key) {
-        // TODO
-        return null;
-    }
-    
-    public void listNode() {
-    	warn("no implementation");
-    }
-    
-    private String ssh_launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
-    	echo("ssh -n "+ remoteIP +" nohup \"sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'\"");
-    	return "ssh -n "+ remoteIP +" nohup \"sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'\"";
-    }
-    
-    private String nossh_launch(String serverName, int ECSport, String strategy, int cache_size) {
-    	echo("sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
-    	return("sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
-    }
-    
-    private String[] nossh_launch_array(String serverName, int ECSport, String strategy, int cache_size) {
-    	String[] cmd = new String[3];
-    	cmd[0] = "sh";
-    	cmd[1] = "-c";
-    	cmd[2] = "cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &";
-    	echo(cmd[0]);
-    	echo(cmd[1]);
-    	echo(cmd[2]);
-    	return cmd;
-    }
-    
-	private void set_workDir () {
+	public boolean removeNode(String name) {
+		info("removeNode(name = " + name + ")");
+		hashRing.removeAllServerNodes();
+
+		ServiceLocation returnedSlot = getReturnedSlot(name);
+		avaliableSlots.add(returnedSlot);
+		return false;
+	}
+
+	@Override
+	public Map<String, IECSNode> getNodes() {
+		// TODO
+		return null;
+	}
+
+	@Override
+	public IECSNode getNodeByKey(String Key) {
+		// TODO
+		return null;
+	}
+
+	public void listNode() {
+		warn("no implementation");
+	}
+
+	private String ssh_launch(String remoteIP, String serverName, int ECSport,
+			String strategy, int cache_size) {
+		echo("ssh -n " + remoteIP + " nohup \"sh -c \'cd " + workDir + " "
+				+ "&& java -jar ./m2-server.jar " + ECSport + " " + serverName
+				+ " " + cache_size + " " + strategy + " &" + "\'\"");
+		return "ssh -n " + remoteIP + " nohup \"sh -c \'cd " + workDir + " "
+				+ "&& java -jar ./m2-server.jar " + ECSport + " " + serverName
+				+ " " + cache_size + " " + strategy + " &" + "\'\"";
+	}
+
+	private String nossh_launch(String serverName, int ECSport,
+			String strategy, int cache_size) {
+		echo("sh -c \'cd " + workDir + " " + "&& java -jar ./m2-server.jar "
+				+ ECSport + " " + serverName + " " + cache_size + " "
+				+ strategy + " &" + "\'");
+		return ("sh -c \'cd " + workDir + " " + "&& java -jar ./m2-server.jar "
+				+ ECSport + " " + serverName + " " + cache_size + " "
+				+ strategy + " &" + "\'");
+	}
+
+	private String[] nossh_launch_array(String serverName, int ECSport,
+			String strategy, int cache_size) {
+		String[] cmd = new String[3];
+		cmd[0] = "sh";
+		cmd[1] = "-c";
+		cmd[2] = "cd " + workDir + " " + "&& java -jar ./m2-server.jar "
+				+ ECSport + " " + serverName + " " + cache_size + " "
+				+ strategy + " &";
+		echo(cmd[0]);
+		echo(cmd[1]);
+		echo(cmd[2]);
+		return cmd;
+	}
+
+	private void set_workDir() {
 		workDir = System.getProperty("user.dir");
 		info("work directory is: " + workDir);
 	}
 
-    /**
-     * run():
-     * execute the command shell
-     */
+	/**
+	 * run(): execute the command shell
+	 */
 	public void run() {
 		ecs = new ECS();
 		set_workDir();
 		hashRing = new ConsistentHash();
-		
-		
+
 		try {
 			ecs.connect("127.0.0.1", 39678);
 		} catch (IOException e1) {
@@ -332,7 +348,7 @@ public class ECSClient implements IECSClient {
 		}
 		while (!stop) {
 			stdin = new BufferedReader(new InputStreamReader(System.in));
-			System.out.print(PROMPT+":"+currDir + "$ ");
+			System.out.print(PROMPT + ":" + currDir + "$ ");
 
 			try {
 				String cmdLine = stdin.readLine();
@@ -356,11 +372,11 @@ public class ECSClient implements IECSClient {
 		result[2] = sb.toString();
 		return result;
 	}
-	
+
 	private void warn(String line) {
 		System.out.println("[ECSClient.java]Warning: " + line);
 	}
-	
+
 	private void info(String line) {
 		System.out.println("[ECSClient.java]Info: " + line);
 	}
@@ -373,7 +389,7 @@ public class ECSClient implements IECSClient {
 		String[] tokens = cmdLine.split("\\s+");
 
 		switch (tokens[0]) {
-		
+
 		case "status":
 			printStatus();
 			break;
@@ -389,21 +405,22 @@ public class ECSClient implements IECSClient {
 
 		case "addNodes":
 			if (tokens.length == 4) {
-				addNodes(Integer.parseInt(tokens[1]), tokens[3], Integer.parseInt(tokens[2]));
+				addNodes(Integer.parseInt(tokens[1]), tokens[3],
+						Integer.parseInt(tokens[2]));
 			} else {
 				warn("Usage addNodes <numberOfNodes> <cacheSize> <replacementStrategy>");
 			}
 			break;
-			
+
 		case "start":
 			if (tokens.length != 1 && tokens.length != 2) {
 				warn("start does not have any arguments");
 			} else {
-				
+
 				start();
 			}
 			break;
-			
+
 		case "stop":
 			// FIXME: remove the second condition
 			if (tokens.length != 1 && tokens.length != 2) {
@@ -412,23 +429,23 @@ public class ECSClient implements IECSClient {
 				stop();
 			}
 			break;
-			
+
 		case "shutDown":
 			shutdown();
 			break;
-			
+
 		case "addNode":
-			if (tokens.length == 3) {
+			try {
 				addNode(tokens[2], Integer.parseInt(tokens[1]));
-			} else {
+			} catch (Exception e) {
 				warn("Usage addNode <cacheSize> <replacementStrategy>");
 			}
 			break;
-			
+
 		case "removeNodes":
 			if (tokens.length >= 2) {
 				List<String> serverNames = new ArrayList<String>();
-				for(int i = 1; i < tokens.length; i++) {
+				for (int i = 1; i < tokens.length; i++) {
 					serverNames.add(tokens[i]);
 				}
 				removeNodes(serverNames);
@@ -436,9 +453,9 @@ public class ECSClient implements IECSClient {
 				warn("Usage removeNodes <string>[]");
 			}
 			break;
-			
+
 		case "listNode":
-			if (tokens.length !=1) {
+			if (tokens.length != 1) {
 				warn("listNode does not have any argument");
 			} else {
 				listNode();
@@ -448,7 +465,8 @@ public class ECSClient implements IECSClient {
 			break;
 		case "setupNodes":
 			if (tokens.length == 4) {
-				setupNodes(Integer.parseInt(tokens[1]), tokens[2], Integer.parseInt(tokens[3]));
+				setupNodes(Integer.parseInt(tokens[1]), tokens[2],
+						Integer.parseInt(tokens[3]));
 			} else {
 				warn("Usage setupNodes <count> <String Strategy> <cacheSize>");
 			}
@@ -456,7 +474,7 @@ public class ECSClient implements IECSClient {
 		case "ls":
 			if (tokens.length == 1) {
 				ecs.printPath(currDir);
-			} else if(tokens.length == 2) {
+			} else if (tokens.length == 2) {
 				ecs.printPath(currDir + tokens[1]);
 			} else {
 				warn("ls should take 1 or no args");
@@ -465,116 +483,121 @@ public class ECSClient implements IECSClient {
 		case "cd":
 			if (tokens.length == 1) {
 				currDir = "/";
-			} else if(tokens.length == 2) {
-				if(ecs.returnDirSet(currDir).contains(tokens[1])) {
-					if(currDir != "/") {
+			} else if (tokens.length == 2) {
+				if (ecs.returnDirSet(currDir).contains(tokens[1])) {
+					if (currDir != "/") {
 						currDir += "/";
 					}
-					currDir +=tokens[1];
-				} else if(tokens[1].equals(".")) {
+					currDir += tokens[1];
+				} else if (tokens[1].equals(".")) {
 					break;
-				} else if(tokens[1].equals("..")) {
-					if(currDir.equals("/")) {
+				} else if (tokens[1].equals("..")) {
+					if (currDir.equals("/")) {
 						break;
 					}
 					String[] parts = currDir.split("/");
-					if(parts.length > 2) {
-					currDir = "";
-						for(int i = 0; i < parts.length - 1; i++) {
+					if (parts.length > 2) {
+						currDir = "";
+						for (int i = 0; i < parts.length - 1; i++) {
 							currDir += parts[i] + "/";
 						}
-						if(currDir.equals("/")) {
+						if (currDir.equals("/")) {
 							break;
 						}
-						currDir = currDir.substring(0, currDir.length() -1);
+						currDir = currDir.substring(0, currDir.length() - 1);
 					} else {
 						currDir = "/";
 					}
-				} else if(tokens[1].equals("/")) { 
+				} else if (tokens[1].equals("/")) {
 					currDir = "/";
 				} else {
-				
-					echo("ecs_shell cd: " + tokens[1] + " : No such file or directory");
+
+					echo("ecs_shell cd: " + tokens[1]
+							+ " : No such file or directory");
 				}
 			} else {
 				warn("cd should take 1 or no args");
 			}
 			break;
 		case "create":
-			if(tokens.length == 1) {
+			if (tokens.length == 1) {
 				break;
-			} else if(tokens.length >= 3) {
-				for(int i = 2; i < tokens.length;i++) {
+			} else if (tokens.length >= 3) {
+				for (int i = 2; i < tokens.length; i++) {
 					byte[] emptyByte = null;
 					String safeCurrDir = currDir;
-					if(!currDir.endsWith("/")) {
+					if (!currDir.endsWith("/")) {
 						safeCurrDir += "/";
 					}
-					ecs.create(safeCurrDir +tokens[i], emptyByte, tokens[1]);
+					ecs.create(safeCurrDir + tokens[i], emptyByte, tokens[1]);
 				}
 			}
 			break;
-			
+
 		case "rm":
-			if(tokens.length == 1) {
+			if (tokens.length == 1) {
 				break;
-			} else if(tokens.length >= 2) {
-				if(!currDir.endsWith("/") && !tokens[1].equals("-r")) {
-					if(!ecs.returnDirSet(currDir).contains(tokens[1])) {
-						echo("rm: cannot remove \'"+tokens[1]+"\': No such file or directory");
+			} else if (tokens.length >= 2) {
+				if (!currDir.endsWith("/") && !tokens[1].equals("-r")) {
+					if (!ecs.returnDirSet(currDir).contains(tokens[1])) {
+						echo("rm: cannot remove \'" + tokens[1]
+								+ "\': No such file or directory");
 						break;
 					}
 				}
 				String safeCurrDir = currDir;
-				if(!currDir.endsWith("/")) {
+				if (!currDir.endsWith("/")) {
 					safeCurrDir += "/";
 				}
-				if(tokens[1].equals("-r")) {
-					if(!ecs.returnDirSet(currDir).contains(tokens[2])) {
-						echo("rm: cannot remove \'"+tokens[2]+"\': No such file or directory");
+				if (tokens[1].equals("-r")) {
+					if (!ecs.returnDirSet(currDir).contains(tokens[2])) {
+						echo("rm: cannot remove \'" + tokens[2]
+								+ "\': No such file or directory");
 						break;
 					}
-					if(tokens[1].startsWith("/")) {
+					if (tokens[1].startsWith("/")) {
 						ecs.deleteHeadRecursive(tokens[2]);
 					} else {
-						ecs.deleteHeadRecursive(safeCurrDir+tokens[2]);
+						ecs.deleteHeadRecursive(safeCurrDir + tokens[2]);
 					}
 				} else {
-					if(tokens[1].startsWith("/")) {
+					if (tokens[1].startsWith("/")) {
 						ecs.deleteHead(tokens[1]);
 					} else {
-						if(ecs.returnDirSet(currDir + tokens[1]).size() !=0) {
-							echo("rm: cannot remove \'" + tokens[1] + "\': Is a directory");
+						if (ecs.returnDirSet(currDir + tokens[1]).size() != 0) {
+							echo("rm: cannot remove \'" + tokens[1]
+									+ "\': Is a directory");
 							break;
-						}loadECSconfigFromFile();
-						ecs.deleteHead(safeCurrDir+tokens[1]);
+						}
+						loadECSconfigFromFile();
+						ecs.deleteHead(safeCurrDir + tokens[1]);
 					}
 				}
 			}
 			break;
-			
+
 		case "echo":
-			if(tokens.length >= 2) {
-				if(tokens.length == 2) {
+			if (tokens.length >= 2) {
+				if (tokens.length == 2) {
 					echo(tokens[1]);
 				}
-				if(tokens.length == 4) {
-					if(tokens[2].equals(">")) {
+				if (tokens.length == 4) {
+					if (tokens[2].equals(">")) {
 						ecs.setData(currDir + tokens[3], tokens[1]);
 					}
 				}
 			}
 			break;
 		case "cat":
-			if(tokens.length == 2) {
+			if (tokens.length == 2) {
 				String safeCurrDir = currDir;
-				if(!currDir.endsWith("/")) {
+				if (!currDir.endsWith("/")) {
 					safeCurrDir += "/";
 				}
 				echo(ecs.getData(safeCurrDir + tokens[1]));
 			}
 			break;
-		
+
 		case "logLevel":
 			if (tokens.length == 2) {
 				String level = setLevel(tokens[1]);
@@ -596,7 +619,7 @@ public class ECSClient implements IECSClient {
 			break;
 		case "reset":
 			if (tokens.length == 2) {
-				if(tokens[1].equals("-all")) {
+				if (tokens[1].equals("-all")) {
 					ecs.broadast("SHUTDOWN");
 					ecs.reset();
 					ecs.init();
@@ -613,18 +636,19 @@ public class ECSClient implements IECSClient {
 				ecs.lock();
 			}
 			break;
-		case "unlock": 
+		case "unlock":
 			if (tokens.length == 1) {
 				ecs.unlock();
 			}
 			break;
 		case "getcmd":
 			if (tokens.length == 2) {
-				echo(ecs.KVAdminMessageTypeToString(ecs.getCmd(tokens[1]).getKVAdminMessageType()));
+				echo(ecs.KVAdminMessageTypeToString(ecs.getCmd(tokens[1])
+						.getKVAdminMessageType()));
 			}
 			break;
 		case "setcmd":
-			if(tokens.length == 3) {
+			if (tokens.length == 3) {
 				ecs.setCmd(tokens[1], tokens[2]);
 			}
 			break;
@@ -636,7 +660,8 @@ public class ECSClient implements IECSClient {
 		case "waitAck":
 			if (tokens.length == 4) {
 				ecs.waitAckSetup(tokens[1]);
-				ecs.waitAck(tokens[1], Integer.parseInt(tokens[2]), Integer.parseInt(tokens[3]));
+				ecs.waitAck(tokens[1], Integer.parseInt(tokens[2]),
+						Integer.parseInt(tokens[3]));
 			}
 			break;
 		// testing purposes only
@@ -644,7 +669,7 @@ public class ECSClient implements IECSClient {
 			ecs.broadast("UPDATE");
 			break;
 		case "locktest":
-			for(int i = 0; i < 2000; i++) {
+			for (int i = 0; i < 2000; i++) {
 				ecs.lock();
 				ecs.unlock();
 				echo("lock(" + i + ")");
@@ -660,7 +685,7 @@ public class ECSClient implements IECSClient {
 
 	private void printStatus() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	private void printHelp() {
@@ -735,23 +760,23 @@ public class ECSClient implements IECSClient {
 
 	private static void setUpESCClientLogger() throws Exception {
 		Properties props = new Properties();
-		props.load(new FileInputStream("resources/config/client-log4j.properties"));
+		props.load(new FileInputStream(
+				"resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-	
-    public static void main(String[] args) {
-    	// Hack shared ConnectionUtil interrupt between server and client
+
+	public static void main(String[] args) {
+		// Hack shared ConnectionUtil interrupt between server and client
 		// code.
 		KVServer.serverOn = true;
-		/*try {
-			setUpClientLogger();
-		} catch (Exception e) {
-			System.out
-					.println("Unable to read from resources/config/client-log4j.properties");
-			System.out.println("Using default logger from skeleton code.");
-			new LogSetup("logs/client-default.log", Level.ALL);
-		}*/
+		/*
+		 * try { setUpClientLogger(); } catch (Exception e) { System.out
+		 * .println
+		 * ("Unable to read from resources/config/client-log4j.properties");
+		 * System.out.println("Using default logger from skeleton code."); new
+		 * LogSetup("logs/client-default.log", Level.ALL); }
+		 */
 		ECSClient app = new ECSClient();
 		app.run();
-    }
+	}
 }
