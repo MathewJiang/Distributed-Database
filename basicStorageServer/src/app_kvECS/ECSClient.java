@@ -152,7 +152,7 @@ public class ECSClient implements IECSClient {
 			ecs.waitAck("migrate", 2, 50); // internal unlock -> new nodes migrated
 			ecs.waitAckSetup("sync");
 			ecs.broadast("SYNC"); // new server might miss this
-			ecs.setCmd(newNode.getNodeName(), "SYNC");
+			// ecs.setCmd(newNode.getNodeName(), "SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50); 
 			return newNode;
 		} catch (Exception e) {

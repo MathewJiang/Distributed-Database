@@ -708,7 +708,6 @@ public class ECS {
 		KVAdminMessage adminMsg = new KVAdminMessage();
 		adminMsg.setKVAdminMessageType(StringToKVAdminMessageType(getCmdFromZk(serverName)));
 		adminMsg.MD = getMD();
-		setCmd(serverName, "null");
 		return adminMsg;
 	}
 
