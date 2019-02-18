@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,6 +24,7 @@ import org.apache.log4j.PropertyConfigurator;
 import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
+import shared.MD5;
 import shared.messages.CommMessage;
 import app_kvServer.KVServer;
 import ecs.ECSNode;
@@ -127,9 +129,6 @@ public class ECSClient implements IECSClient {
 			ecs.setCmd(affectedServerName, "LOCK_WRITE");
 			
 			
-			
-			
-			
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
@@ -153,7 +152,9 @@ public class ECSClient implements IECSClient {
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
         info("addNodes(count=" + count + ", cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
-        warn("Not implemented yet");
+        for(int i = 0; i < count; i++) {
+        	addNode(cacheStrategy, cacheSize);
+        }
         return null;
     }
     
@@ -239,7 +240,9 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean awaitNodes(int count, int timeout) throws Exception {
-        // TODO
+    	ecs.waitAckSetup("report");
+    	ecs.broadast("REPORT");
+    	ecs.waitAck("report", count, timeout);
         return false;
     }
 
@@ -333,7 +336,24 @@ public class ECSClient implements IECSClient {
 
     @Override
     public IECSNode getNodeByKey(String Key) {
-        // TODO
+    	String MD5Key = MD5.getMD5String(Key);
+    	echo("Key hashed to " + MD5Key);
+    	
+    	// refresh hashRing
+    	hashRing.removeAllServerNodes();
+    	InfraMetadata new_MD = ecs.getMD();
+    	hashRing.addNodesFromInfraMD(new_MD);
+    	
+    	
+        ServiceLocation server = hashRing.getServer(Key);
+        echo("HashRing gives " + server.serviceName);
+        for(int i = 0; i < launchedNodes.size(); i++) {
+        	echo(launchedNodes.get(i).getNodeName());        	
+        	if(launchedNodes.get(i).getNodeName().equals(server.serviceName)) {
+        		echo("Key hashed to server " + launchedNodes.get(i).getNodeName());
+        		return launchedNodes.get(i);
+        	}
+        }
         return null;
     }
     
@@ -384,6 +404,11 @@ public class ECSClient implements IECSClient {
 		
 		try {
 			ecs.connect("127.0.0.1", 39678);
+			if(ecs.configured()) {
+	    		restoreFromECS();
+	    	}
+			
+			
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -404,6 +429,39 @@ public class ECSClient implements IECSClient {
 			}
 		}
 	}
+
+	private void restoreFromECS() {
+		MD = ecs.getMD();
+		launchedServer = MD.getServerLocations();
+		launchedNodes = new ArrayList<IECSNode>();
+		// restore hashRing
+		hashRing.removeAllServerNodes();
+		hashRing.addNodesFromInfraMD(MD);
+		try {
+			InfraMetadata tmpMD = InfraMetadata.fromConfigFile(ecs_config);
+			List<ServiceLocation> allSlots = tmpMD.getServerLocations();
+			avaliableSlots = new ArrayList<ServiceLocation>();
+			for(int i = 0; i < launchedServer.size(); i++) {
+				for(int j = 0; j < allSlots.size(); j++) {
+					ServiceLocation curr = launchedServer.get(i);
+					if(curr.serviceName.equals(allSlots.get(j).serviceName)) {
+						// we have a match so this is not going to available slots
+						IECSNode newNode = new ECSNode(curr.serviceName, curr.host, curr.port, hashRing.getHashRange(curr));
+						launchedNodes.add(newNode);
+					} else {
+						avaliableSlots.add(curr);
+					}
+				}
+			}
+			echo("restore success");
+			return;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		echo("restore failed");
+		
+	}
+
 
 	private String[] parsePutInput(String[] input) {
 		String[] result = new String[3];
@@ -503,6 +561,16 @@ public class ECSClient implements IECSClient {
 				warn("listNode does not have any argument");
 			} else {
 				listNode();
+			}
+			break;
+		case "getNodeByKey":
+			if(tokens.length == 2) {
+				IECSNode result = getNodeByKey(tokens[1]);
+				if(result != null) {
+					echo(tokens[1] + " -> " + result.getNodeName());
+				} else {
+					warn("getNodeByKey returned null");
+				}
 			}
 			break;
 		case "":

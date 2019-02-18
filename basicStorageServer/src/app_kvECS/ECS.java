@@ -665,6 +665,8 @@ public class ECS {
 				return KVAdminMessageType.UNLOCK_WRITE;
 			case "SYNC":
 				return KVAdminMessageType.SYNC;
+			case "REPORT":
+				return KVAdminMessageType.REPORT;
 		}
 		return null;
 	}
@@ -684,6 +686,8 @@ public class ECS {
 			return "UNLOCK_WRITE";
 		} else if(a == KVAdminMessageType.SYNC) {
 			return "SYNC";
+		} else if(a == KVAdminMessageType.REPORT) {
+			return "REPORT";
 		}
 		return "INVALID KVAdminMessageType";
 	}
