@@ -84,6 +84,10 @@ public class ZKConnection implements Runnable {
 						ecs.ack(callingServer.getServerName(), "sync");
 						break;
 
+					case REPORT:
+						ecs.ack(callingServer.getServerName(), "report");
+						break;
+						
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;
