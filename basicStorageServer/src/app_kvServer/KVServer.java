@@ -45,7 +45,8 @@ public class KVServer extends Thread implements IKVServer {
 	private boolean running;
 	private boolean suspended = true;
 	private boolean shuttingDown = false;
-
+	private boolean writeLock = false;
+	
 	public static int totalNumClientConnection = 0;
 	public static boolean serverOn = false;
 	ArrayList<Thread> threadCollection = new ArrayList<>();
@@ -371,6 +372,21 @@ public class KVServer extends Thread implements IKVServer {
 		setClusterMD(ecs.getMD());
 	}
 
+	public void removeMigratedKeys(InfraMetadata newMD) throws Exception {
+		serverLock.lock();
+		Storage.flush();
+
+		setClusterMD(newMD);
+		for (String key : Disk.getAllKeys()) {
+			// Key stays on this server.
+			if (clusterHash.getServer(key).serviceName
+					.equals(serverMD.serviceName)) {
+				continue;
+			}
+			Disk.putKV(key, null);
+		}
+	}
+
 	// Compute new hash ring with given metadata, and migrate all storages
 	// that no longer belongs to this server. Returns only after all
 	// migrations complete. Thread-safe.
@@ -378,21 +394,21 @@ public class KVServer extends Thread implements IKVServer {
 		serverLock.lock();
 		Storage.flush();
 
-		// Re-compute new consistent hash ring and provision all keys to
-		// migrate.
-		setClusterMD(newMD);
+		// Generate a temporary new consistent hash ring and provision all keys
+		// to migrate.
+		ConsistentHash newHash = new ConsistentHash();
+		newHash.addNodesFromInfraMD(newMD);
 		List<String> migrants = new ArrayList<String>();
 		for (String key : Disk.getAllKeys()) {
 			// Key stays on this server.
-			if (clusterHash.getServer(key).serviceName
-					.equals(serverMD.serviceName)) {
+			if (newHash.getServer(key).serviceName.equals(serverMD.serviceName)) {
 				continue;
 			}
 			migrants.add(key);
 		}
 
-		// Remove and send all migrating keys.
-		logger.info("Say goodbye to " + migrants);
+		// Remove and send all copies of migrating keys.
+		logger.info("Sending copies of " + migrants);
 		ConnectionUtil conn = new ConnectionUtil();
 		for (String key : migrants) {
 			// Construct target and server message.
@@ -400,7 +416,7 @@ public class KVServer extends Thread implements IKVServer {
 					.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
 					.build();
 			msg.setFromServer(true);
-			ServiceLocation target = clusterHash.getServer(key);
+			ServiceLocation target = newHash.getServer(key);
 
 			// Send and await ack from target server.
 			Socket socket = new Socket(target.host, target.port);
@@ -413,9 +429,6 @@ public class KVServer extends Thread implements IKVServer {
 						+ "\nResponse: " + serverResponse);
 			}
 			socket.close();
-
-			// Remove local copy.
-			Disk.putKV(key, null);
 		}
 		serverLock.unlock();
 	}
@@ -479,5 +492,13 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void setShuttingDown(boolean shuttingDown) {
 		this.shuttingDown = shuttingDown;
+	}
+
+	public boolean isWriteLock() {
+		return writeLock;
+	}
+
+	public void setWriteLock(boolean writeLock) {
+		this.writeLock = writeLock;
 	}
 }
