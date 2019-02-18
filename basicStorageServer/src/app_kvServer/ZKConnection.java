@@ -63,14 +63,11 @@ public class ZKConnection implements Runnable {
 						// Await ECS to finish updating metadata.
 						ecs.lock();
 						ecs.unlock();
-						try {
-							// 1. Does not replace current metadata.
-							// 2. Only sending copies of migrating keys.
-							callingServer.migrateWithNewMD(ecs.getMD());
-						} catch (Exception e) {
-							logger.error("Error migrating data on server "
-									+ callingServer.getServerName() + ": " + e);
-						}
+
+						// 1. Does not replace current metadata.
+						// 2. Only sending copies of migrating keys.
+						callingServer.migrateWithNewMD(ecs.getMD());
+
 						ecs.ack(callingServer.getServerName(), "migrate");
 						break;
 
@@ -80,13 +77,10 @@ public class ZKConnection implements Runnable {
 						break;
 
 					case SYNC:
-						try {
-							callingServer.removeMigratedKeys(ecs.getMD());
-							callingServer.setWriteLock(false);
-						} catch (Exception e) {
-							logger.error("Error remving migrants on server "
-									+ callingServer.getServerName() + ": " + e);
-						}
+						callingServer.removeMigratedKeys(ecs.getMD());
+						callingServer.setWriteLock(false);
+						callingServer.setSuspended(false);
+
 						ecs.ack(callingServer.getServerName(), "sync");
 						break;
 

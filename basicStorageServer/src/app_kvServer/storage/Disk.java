@@ -82,6 +82,8 @@ public class Disk {
 		while ((line = fh.readLine()) != null) {
 			result += line;
 		}
+		fh.close();
+		fr.close();
 		return result;
 	}
 
