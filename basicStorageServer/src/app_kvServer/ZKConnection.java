@@ -66,8 +66,9 @@ public class ZKConnection implements Runnable {
 
 						// 1. Does not replace current metadata.
 						// 2. Only sending copies of migrating keys.
-						callingServer.migrateWithNewMD(ecs.getMD());
-
+						InfraMetadata newMD = ecs.getMD();
+						callingServer.migrateWithNewMD(newMD);
+						
 						ecs.ack(callingServer.getServerName(), "migrate");
 						break;
 

@@ -807,16 +807,19 @@ public class ECS {
 
 	public void refreshHash(ConsistentHash hashRing) {
 		InfraMetadata new_MD = getMD();
-		List<ServiceLocation> serversInZk = new_MD.getServerLocations();
+//		List<ServiceLocation> serversInZk = new_MD.getServerLocations();
+		
+		
 		String nodeRoot = "/nodes";
 		String alias = "server_";
-		for(int i = 0; i < serversInZk.size(); i++) {
-			ServiceLocation curr = serversInZk.get(i);
-			String nodeDir = nodeRoot + "/" + alias + Integer.toString(i);
-			
+		
+		for (ServiceLocation sl : hashRing.getHashRing().values()) {
+			int lastIndex = sl.serviceName.length()-1;
+			String nodeDir = nodeRoot + "/" + alias + sl.serviceName.charAt(lastIndex);
 			String range[];
+			
 			try {
-				range = hashRing.getHashRange(curr);
+				range = hashRing.getHashRange(sl);
 				echo(range[0] + " ~ "+ range[1]);
 				deleteHead(nodeDir + "/from");
 				deleteHead(nodeDir + "/to");
@@ -826,6 +829,23 @@ public class ECS {
 				e.printStackTrace();
 			}
 		}
+		
+//		for(int i = 0; i < serversInZk.size(); i++) {
+//			ServiceLocation curr = serversInZk.get(i);
+//			String nodeDir = nodeRoot + "/" + alias + Integer.toString(i);
+//			
+//			String range[];
+//			try {
+//				range = hashRing.getHashRange(curr);
+//				echo(range[0] + " ~ "+ range[1]);
+//				deleteHead(nodeDir + "/from");
+//				deleteHead(nodeDir + "/to");
+//				create(nodeDir + "/from", range[0].getBytes(StandardCharsets.UTF_8),  "-p");
+//				create(nodeDir + "/to", range[1].getBytes(StandardCharsets.UTF_8),  "-p");
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			}
+//		}
 	}
 
 }
