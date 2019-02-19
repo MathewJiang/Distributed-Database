@@ -145,14 +145,14 @@ public class ECSClient implements IECSClient {
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
-			ecs.setCmd(newNode.getNodeName(), "LOCK_WRITE");
+			// ecs.setCmd(newNode.getNodeName(), "LOCK_WRITE");
 			ecs.waitAck("launched", 1, 50); // new node launched
 			ecs.waitAckSetup("migrate");
 			ecs.unlock(); // allow 2 nodes to migrate
-			ecs.waitAck("migrate", 2, 50); // internal unlock -> new nodes migrated
+			ecs.waitAck("migrate", 1, 50); // internal unlock -> new nodes migrated
 			ecs.waitAckSetup("sync");
 			ecs.broadast("SYNC"); // new server might miss this
-			ecs.setCmd(newNode.getNodeName(), "SYNC");
+			// ecs.setCmd(newNode.getNodeName(), "SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50); 
 			return newNode;
 		} catch (Exception e) {
@@ -745,6 +745,8 @@ public class ECSClient implements IECSClient {
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
 					ecs.broadast("SHUTDOWN");
+					launchedNodes.clear();
+					launchedServer.clear();
 					ecs.reset();
 					ecs.init();
 				}

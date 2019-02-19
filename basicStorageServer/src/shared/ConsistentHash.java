@@ -36,7 +36,9 @@ public class ConsistentHash {
 			addServerNode(srv);
 		}
 	}
-	
+	public TreeMap<BigInteger, ServiceLocation>  getHashRing() {
+		return hashRing;
+	}
 	/*****************************************************************************
 	 * Get the Server (address) which contains that key
 	 * @param	MD5Key 		Key wants to search for

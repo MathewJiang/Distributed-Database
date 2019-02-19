@@ -662,7 +662,8 @@ public class ECS {
 	}
 	
 	private KVAdminMessageType StringToKVAdminMessageType(String a) {
-		switch(a) {
+		switch(a) {// ecs.setCmd(newNode.getNodeName(), "SYNC");
+
 			case "START":
 				return KVAdminMessageType.START;
 			case "STOP":
@@ -705,16 +706,20 @@ public class ECS {
 	}
 	
 	public KVAdminMessage getCmd(String serverName) {
+		//ackLock.lock();
 		KVAdminMessage adminMsg = new KVAdminMessage();
 		adminMsg.setKVAdminMessageType(StringToKVAdminMessageType(getCmdFromZk(serverName)));
 		adminMsg.MD = getMD();
-		setCmd(serverName, "null");
+		// setCmd(serverName, "null");
+		//ackLock.unlock();
 		return adminMsg;
 	}
 
 	public void setCmd(String serverName, String command) {
+		//ackLock.lock();
 		echo(serverName + ": " + command);
 		setData("/nodes/" + serverName + "/cmd", command);
+		//ackLock.unlock();
 	}
 	
 	private boolean exists (String entry) {
@@ -807,17 +812,16 @@ public class ECS {
 	}
 
 	public void refreshHash(ConsistentHash hashRing) {
-		InfraMetadata new_MD = getMD();
-		List<ServiceLocation> serversInZk = new_MD.getServerLocations();
 		String nodeRoot = "/nodes";
 		String alias = "server_";
-		for(int i = 0; i < serversInZk.size(); i++) {
-			ServiceLocation curr = serversInZk.get(i);
-			String nodeDir = nodeRoot + "/" + alias + Integer.toString(i);
-			
+		
+		for (ServiceLocation sl : hashRing.getHashRing().values()) {
+			int lastIndex = sl.serviceName.length()-1;
+			String nodeDir = nodeRoot + "/" + alias + sl.serviceName.charAt(lastIndex);
 			String range[];
+			
 			try {
-				range = hashRing.getHashRange(curr);
+				range = hashRing.getHashRange(sl);
 				echo(range[0] + " ~ "+ range[1]);
 				deleteHead(nodeDir + "/from");
 				deleteHead(nodeDir + "/to");
