@@ -7,6 +7,8 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 /**
  * Class that holds basic infrastructure metadata of the cluster. Can be parsed
  * from a properties file of the following format:
@@ -101,8 +103,10 @@ public class InfraMetadata {
 	// Deep copy.
 	public InfraMetadata duplicate() {
 		InfraMetadata result = new InfraMetadata();
-		result.ecsLocation = new ServiceLocation(ecsLocation.serviceName,
-				ecsLocation.host, ecsLocation.port);
+		if (ecsLocation != null) {
+			result.ecsLocation = new ServiceLocation(ecsLocation.serviceName,
+					ecsLocation.host, ecsLocation.port);
+		}
 		for (ServiceLocation sl : serverLocations) {
 			result.serverLocations.add(new ServiceLocation(sl.serviceName,
 					sl.host, sl.port));
@@ -111,12 +115,16 @@ public class InfraMetadata {
 	}
 
 	// Brute force removal.
-	public void removeServerLocation(String srvName) {
-		for (ServiceLocation sl : serverLocations) {
-			if (sl.serviceName.equals(srvName)) {
-				serverLocations.remove(sl);
+	public void removeServerLocation(Logger logger, String srvName) {
+		List<ServiceLocation> replace = new ArrayList<ServiceLocation>();
+		for (int i = 0; i < serverLocations.size(); i++) {
+			if (serverLocations.get(i).serviceName.equals(srvName)) {
+				continue;
 			}
+			replace.add(serverLocations.get(i));
 		}
+		serverLocations = replace;
+		logger.info("replaced serverLocation with: " + serverLocations);
 	}
 
 	public List<ServiceLocation> getServerLocations() {

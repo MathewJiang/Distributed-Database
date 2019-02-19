@@ -352,11 +352,11 @@ public class KVServer extends Thread implements IKVServer {
 	public InfraMetadata getClusterMD() {
 		return clusterMD;
 	}
-	
+
 	public ConsistentHash getClusterHash() {
 		return clusterHash;
 	}
-	
+
 	// Not Thread-safe!
 	public void setClusterMD(InfraMetadata newMetadata) {
 		this.clusterMD = newMetadata;
@@ -390,6 +390,9 @@ public class KVServer extends Thread implements IKVServer {
 						.build();
 				msg.setFromServer(true);
 				ServiceLocation target = clusterHash.getServer(key);
+
+				logger.info("Unconditionally migrating key " + key
+						+ " to server " + target.serviceName);
 
 				// Send and await ack from target server.
 				Socket socket = new Socket(target.host, target.port);

@@ -316,10 +316,9 @@ public class ECSClient implements IECSClient {
 		
 		String affectedServerName;
 		try {
-			affectedServerName = hashRing.getPredeccessor(returnedSlot).serviceName;
+			affectedServerName = hashRing.getSuccessor(returnedSlot).serviceName;
 			
 			ecs.waitAckSetup("computedNewMD");
-			
 			ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
 			ecs.waitAck("computedNewMD", 1, 50);
 			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
@@ -330,8 +329,6 @@ public class ECSClient implements IECSClient {
 			ecs.waitAck("migrate", 1, 50); // internal unlock
 			ecs.waitAckSetup("sync");
 			
-			// TODO: move HASH for deleted
-			ecs.setCmd(returnedSlot.serviceName, "SHUTDOWN");
 			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50);
