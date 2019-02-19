@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
 import java.util.Properties;
+import java.util.UUID;
 
 import logger.LogSetup;
 
@@ -17,6 +18,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import shared.messages.CommMessage;
+import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage.StatusType;
 import app_kvServer.KVServer;
 import client.KVCommInterface;
@@ -177,22 +179,22 @@ public class KVClient implements IKVClient {
 
 			break;
 		case "runScript":
-			File file = new File(tokens[1]); 
-			  
+			File file = new File(tokens[1]);
+
 			BufferedReader br;
 			try {
 				br = new BufferedReader(new FileReader(file));
-				String st; 
+				String st;
 				try {
 					while ((st = br.readLine()) != null) {
-						String lines[] = st.split("\\s+"); 
-						if(lines[0].equals("get")) {
+						String lines[] = st.split("\\s+");
+						if (lines[0].equals("get")) {
 							get(lines[1]);
-						} else if(lines[0].equals("put")) {
-							if(lines.length >= 3) {
+						} else if (lines[0].equals("put")) {
+							if (lines.length >= 3) {
 								int i = 2;
 								String value = "";
-								while(i < lines.length) {
+								while (i < lines.length) {
 									value += lines[i];
 									i++;
 								}
@@ -202,62 +204,68 @@ public class KVClient implements IKVClient {
 					}
 				} catch (IOException e) {
 					e.printStackTrace();
-				} 
+				}
 			} catch (FileNotFoundException e1) {
 				e1.printStackTrace();
-			} 
-			  
+			}
+
 			break;
-			
-		//only for testing purposes
-//		case "shutdown":
-//			try {
-//				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
-//				cm.setAdminMessage(new KVAdminMessage());
-//				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.SHUTDOWN);
-//				ConnectionUtil conn = new ConnectionUtil();
-//				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-//				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-//				
-//				System.out.println("Serve should be closed now");
-//			} catch (IOException ioe) {
-//				logger.error("Connection lost!");
-//			}
-//			break;
-//		
-//		//only for testing purposes
-//		case "stop":
-//			//Stop all the servers (should be issued from ECS)
-//			try {
-//				CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null, null);
-//				cm.setAdminMessage(new KVAdminMessage());
-//				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.STOP);
-//				ConnectionUtil conn = new ConnectionUtil();
-//				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-//				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-//				
-//				System.out.println("Serve should be closed now");
-//			} catch (IOException ioe) {
-//				logger.error("Connection lost!");
-//			}
-//			break;
-//			
-//		case "start":
-//			//Start all the servers (should be issued from ECS)
-//			try {
-//				CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null, null);
-//				cm.setAdminMessage(new KVAdminMessage());
-//				cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.START);
-//				ConnectionUtil conn = new ConnectionUtil();
-//				conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
-//				//CommMessage latestMsg = conn.receiveCommMessage(backend.clientSocket.getInputStream());
-//				
-//				System.out.println("Serve should be started now");
-//			} catch (IOException ioe) {
-//				logger.error("Connection lost!");
-//			}
-//			break;
-			
+
+		// only for testing purposes
+		// case "shutdown":
+		// try {
+		// CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null,
+		// null);
+		// cm.setAdminMessage(new KVAdminMessage());
+		// cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.SHUTDOWN);
+		// ConnectionUtil conn = new ConnectionUtil();
+		// conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+		// //CommMessage latestMsg =
+		// conn.receiveCommMessage(backend.clientSocket.getInputStream());
+		//
+		// System.out.println("Serve should be closed now");
+		// } catch (IOException ioe) {
+		// logger.error("Connection lost!");
+		// }
+		// break;
+		//
+		// //only for testing purposes
+		// case "stop":
+		// //Stop all the servers (should be issued from ECS)
+		// try {
+		// CommMessage cm = new CommMessage(StatusType.SERVER_STOPPED, null,
+		// null);
+		// cm.setAdminMessage(new KVAdminMessage());
+		// cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.STOP);
+		// ConnectionUtil conn = new ConnectionUtil();
+		// conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+		// //CommMessage latestMsg =
+		// conn.receiveCommMessage(backend.clientSocket.getInputStream());
+		//
+		// System.out.println("Serve should be closed now");
+		// } catch (IOException ioe) {
+		// logger.error("Connection lost!");
+		// }
+		// break;
+		//
+		// case "start":
+		// //Start all the servers (should be issued from ECS)
+		// try {
+		// CommMessage cm = new CommMessage(StatusType.SERVER_STARTED, null,
+		// null);
+		// cm.setAdminMessage(new KVAdminMessage());
+		// cm.getAdminMessage().setKVAdminMessageType(KVAdminMessageType.START);
+		// ConnectionUtil conn = new ConnectionUtil();
+		// conn.sendCommMessage(backend.clientSocket.getOutputStream(), cm);
+		// //CommMessage latestMsg =
+		// conn.receiveCommMessage(backend.clientSocket.getInputStream());
+		//
+		// System.out.println("Serve should be started now");
+		// } catch (IOException ioe) {
+		// logger.error("Connection lost!");
+		// }
+		// break;
+
 		default:
 			printError("Unknown command");
 			printHelp();
@@ -333,7 +341,7 @@ public class KVClient implements IKVClient {
 				"resources/config/client-log4j.properties"));
 		PropertyConfigurator.configure(props);
 	}
-	
+
 	public void get(String key) {
 		try {
 			CommMessage latestMsg = (CommMessage) backend.get(key);
@@ -353,10 +361,10 @@ public class KVClient implements IKVClient {
 				latestMsg = (CommMessage) backend.get(key);
 			}
 		} catch (Exception e) {
-			printError("Error getting key " + key + ": "
-					+ e.toString());
+			printError("Error getting key " + key + ": " + e.toString());
 		}
 	}
+
 	public void put(String key, String value) {
 		try {
 			CommMessage latestMsg = null;
@@ -380,6 +388,18 @@ public class KVClient implements IKVClient {
 			printError("Put Error: " + e.toString());
 		}
 	}
+
+	private static void testRandomPuts(Integer num) throws Exception {
+		KVStore backend = new KVStore();
+		while (num > 0) {
+			num--;
+			String data = UUID.randomUUID().toString().substring(0, 15);
+			if (((CommMessage) backend.put(data, data)).getStatus() != StatusType.PUT_SUCCESS) {
+				System.out.println("Error PUT");
+			}
+		}
+	}
+
 	/**
 	 * Main entry point for the echo server application.
 	 * 
@@ -392,7 +412,17 @@ public class KVClient implements IKVClient {
 			// code.
 			KVServer.serverOn = true;
 			KVClient app = null;
-			
+
+			if (args.length > 0) {
+				try {
+					testRandomPuts(Integer.parseInt(args[0]));
+				} catch (Exception e) {
+					System.out
+							.println("Usage: java -jar client.jar <number of put requests>");
+				}
+				return;
+			}
+
 			try {
 				app = new KVClient();
 			} catch (Exception e1) {
@@ -400,7 +430,7 @@ public class KVClient implements IKVClient {
 				e1.printStackTrace();
 				return;
 			}
-			
+
 			try {
 				setUpClientLogger();
 			} catch (Exception e) {

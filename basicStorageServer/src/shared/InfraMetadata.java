@@ -72,7 +72,12 @@ public class InfraMetadata {
 		StringBuilder sb = new StringBuilder();
 		sb.append(ecsLocation.toString() + "\n");
 		for (ServiceLocation service : serverLocations)
+		if (ecsLocation != null) {
+			sb.append(ecsLocation.toString() + "\n");
+		}
+		for (ServiceLocation service : serverLocations) {
 			sb.append(service.toString() + "\n");
+		}
 		sb.deleteCharAt(sb.length() - 1);
 		return sb.toString();
 	}

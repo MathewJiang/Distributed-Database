@@ -240,7 +240,6 @@ public class KVServer extends Thread implements IKVServer {
 		newZKConnection.start();
 
 		if (serverSocket != null) {
-			ecs.ack(serverName, "launched");
 			while (isRunning()) {
 				try {
 					Socket client = serverSocket.accept();
