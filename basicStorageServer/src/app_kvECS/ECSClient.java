@@ -307,6 +307,9 @@ public class ECSClient implements IECSClient {
     		launchedNodes.add((IECSNode) returnedSlot); // recover
     		return false;
     	}
+    	ConsistentHash oldHash = new ConsistentHash();
+    	oldHash.addNodesFromInfraMD(new_MD);
+    	
     	hashRing.removeAllServerNodes();
     	tmp.remove(deleteIndex);
     	new_MD.setServerLocations(tmp);
@@ -316,10 +319,7 @@ public class ECSClient implements IECSClient {
 		
 		String affectedServerName;
 		try {
-			affectedServerName = hashRing.getSuccessor(returnedSlot).serviceName;
-			
-			logger.info("------------------------------------------------Receiver: " + affectedServerName);
-			logger.info("------------------------------------------------Sender: " + returnedSlot.serviceName);
+			affectedServerName = oldHash.getSuccessor(returnedSlot).serviceName;
 			
 			ecs.waitAckSetup("computedNewMD");
 			ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");

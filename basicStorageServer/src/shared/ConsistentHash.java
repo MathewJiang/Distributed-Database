@@ -39,6 +39,13 @@ public class ConsistentHash {
 	public TreeMap<BigInteger, ServiceLocation>  getHashRing() {
 		return hashRing;
 	}
+	
+	public void printConsistentHash() {
+		Collection<ServiceLocation> values = hashRing.values();
+		for (ServiceLocation sl : values) {
+			logger.info(sl);
+		}
+	}
 	/*****************************************************************************
 	 * Get the Server (address) which contains that key
 	 * @param	MD5Key 		Key wants to search for
@@ -328,11 +335,11 @@ public class ConsistentHash {
 		Collection<?> entrySet = hashRing.entrySet();
 		Iterator<?> it = entrySet.iterator();
 		
-		System.out.println(">>>>>>>>>>Start Printing TreeMap>>>>>>>>>>");
+		System.out.println(">>>>>>>>>>Start Printing ConsistentHash TreeMap>>>>>>>>>>");
 		while (it.hasNext()) {
 			System.out.println(it.next());
 		}
-		System.out.println(">>>>>>>>>>End Printing TreeMap>>>>>>>>>>");
+		System.out.println(">>>>>>>>>>End Printing ConsistentHash TreeMap>>>>>>>>>>");
 		
 		hashRingLock.unlock();
 	}
@@ -367,7 +374,7 @@ public class ConsistentHash {
 		ch.addServerNode(server2);
 		ch.addServerNode(server3);
 		ch.addServerNode(server4);
-		//ch.addServerNode(server5);
+		ch.addServerNode(server5);
 		
 		String[] server0HashRange = null;
 		String[] server1HashRange = null;
@@ -377,22 +384,48 @@ public class ConsistentHash {
 		String[] server5HashRange = null;
 		try {
 			server0HashRange = ch.getHashRange(server0);
-//			server1HashRange = ch.getHashRange(server1);
-//			server2HashRange = ch.getHashRange(server2);
-//			server3HashRange = ch.getHashRange(server3);
-//			server4HashRange = ch.getHashRange(server4);
-			//server5HashRange = ch.getHashRange(server5);
+			server1HashRange = ch.getHashRange(server1);
+			server2HashRange = ch.getHashRange(server2);
+			server3HashRange = ch.getHashRange(server3);
+			server4HashRange = ch.getHashRange(server4);
+			server5HashRange = ch.getHashRange(server5);
+		} catch (Exception e) {
+			System.out.println("gg!");
+			e.printStackTrace();
+		}
+		
+		BigInteger[] server0HashRangeBigInteger = null;
+		BigInteger[] server1HashRangeBigInteger = null;
+		BigInteger[] server2HashRangeBigInteger = null;
+		BigInteger[] server3HashRangeBigInteger = null;
+		BigInteger[] server4HashRangeBigInteger = null;
+		BigInteger[] server5HashRangeBigInteger = null;
+		try {
+			server0HashRangeBigInteger = ch.getHashRangeInteger(server0);
+			server1HashRangeBigInteger = ch.getHashRangeInteger(server1);
+			server2HashRangeBigInteger = ch.getHashRangeInteger(server2);
+			server3HashRangeBigInteger = ch.getHashRangeInteger(server3);
+			server4HashRangeBigInteger = ch.getHashRangeInteger(server4);
+			server5HashRangeBigInteger = ch.getHashRangeInteger(server5);
 		} catch (Exception e) {
 			System.out.println("gg!");
 			e.printStackTrace();
 		}
 		
 		System.out.println("---server0 range from: " + server0HashRange[0] + "~" + server0HashRange[1] + "---");
-//		System.out.println("---server1 range from: " + server1HashRange[0] + "~" + server1HashRange[1] + "---");
-//		System.out.println("---server2 range from: " + server2HashRange[0] + "~" + server2HashRange[1] + "---");
-//		System.out.println("---server3 range from: " + server3HashRange[0] + "~" + server3HashRange[1] + "---");
-//		System.out.println("---server4 range from: " + server4HashRange[0] + "~" + server4HashRange[1] + "---");
-		//System.out.println("---server5 range from: " + server5HashRange[0] + "~" + server5HashRange[1] + "---");
+		System.out.println("---server1 range from: " + server1HashRange[0] + "~" + server1HashRange[1] + "---");
+		System.out.println("---server2 range from: " + server2HashRange[0] + "~" + server2HashRange[1] + "---");
+		System.out.println("---server3 range from: " + server3HashRange[0] + "~" + server3HashRange[1] + "---");
+		System.out.println("---server4 range from: " + server4HashRange[0] + "~" + server4HashRange[1] + "---");
+		System.out.println("---server5 range from: " + server5HashRange[0] + "~" + server5HashRange[1] + "---");
+		
+		System.out.println("---server0 range from: " + server0HashRangeBigInteger[0] + "~" + server0HashRangeBigInteger[1] + "---");
+		System.out.println("---server1 range from: " + server1HashRangeBigInteger[0] + "~" + server1HashRangeBigInteger[1] + "---");
+		System.out.println("---server2 range from: " + server2HashRangeBigInteger[0] + "~" + server2HashRangeBigInteger[1] + "---");
+		System.out.println("---server3 range from: " + server3HashRangeBigInteger[0] + "~" + server3HashRangeBigInteger[1] + "---");
+		System.out.println("---server4 range from: " + server4HashRangeBigInteger[0] + "~" + server4HashRangeBigInteger[1] + "---");
+		System.out.println("---server5 range from: " + server5HashRangeBigInteger[0] + "~" + server5HashRangeBigInteger[1] + "---");
+
 		
 		System.out.println("---round 1----");
 		System.out.println(ch.getServer("key1").serviceName);
@@ -428,11 +461,12 @@ public class ConsistentHash {
 		}
 		
 		System.out.println("---successor and predecessor----");
+		ch = new ConsistentHash();
 		ch.addServerNode(server0);
 		ch.addServerNode(server1);
-		ch.addServerNode(server2);
-		ch.addServerNode(server3);
-		ch.addServerNode(server4);
+//		ch.addServerNode(server2);
+//		ch.addServerNode(server3);
+//		ch.addServerNode(server4);
 		ch.printHashRing();
 		try {
 			System.out.println("server_0 successor: " + ch.getSuccessor(server0));
