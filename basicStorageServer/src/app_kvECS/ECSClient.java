@@ -317,14 +317,17 @@ public class ECSClient implements IECSClient {
 		String affectedServerName;
 		try {
 			affectedServerName = hashRing.getPredeccessor(returnedSlot).serviceName;
-			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE");
-			ecs.setCmd(affectedServerName, "LOCK_WRITE");
 			
+			ecs.waitAckSetup("computedNewMD");
+			
+			ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
+			ecs.waitAck("computedNewMD", 1, 50);
+			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
 			
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("migrate");
 			ecs.unlock();
-			ecs.waitAck("migrate", 2, 50); // internal unlock
+			ecs.waitAck("migrate", 1, 50); // internal unlock
 			ecs.waitAckSetup("sync");
 			
 			// TODO: move HASH for deleted
@@ -421,7 +424,7 @@ public class ECSClient implements IECSClient {
 		try {
 			ecs.connect("127.0.0.1", 39678);
 			if(ecs.configured()) {
-	    		//restoreFromECS();
+	    		restoreFromECS();
 	    	}
 			
 			
@@ -494,14 +497,17 @@ public class ECSClient implements IECSClient {
 	
 	private void warn(String line) {
 		System.out.println("[ECSClient.java]Warning: " + line);
+		logger.error("[ECSClient.java]: " + line);
 	}
 	
 	private void info(String line) {
-		System.out.println("[ECSClient.java]Info: " + line);
+		//System.out.println("[ECSClient.java]Info: " + line);
+		logger.info("[ECSClient.java]Info: " + line);
 	}
 
 	private void echo(String line) {
-		System.out.println("[ECSClient.java]: " + line);
+		//System.out.println("[ECSClient.java]: " + line);
+		logger.info("[ECSClient.java]: " + line);
 	}
 
 	private void handleCommand(String cmdLine) {
@@ -834,7 +840,7 @@ public class ECSClient implements IECSClient {
 		sb.append(PROMPT).append("disconnect");
 		sb.append("\t\t\t disconnects from the server \n");
 
-		sb.append("logLevel");
+		sb.append("logLevel");;
 		sb.append("\t\t\t changes the logLevel. Available levels: {ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF}\n");
 
 		sb.append("quit ");
@@ -891,7 +897,8 @@ public class ECSClient implements IECSClient {
 
 	private static void setUpESCClientLogger() throws Exception {
 		Properties props = new Properties();
-		props.load(new FileInputStream("resources/config/client-log4j.properties"));
+		props.load(new FileInputStream("resources/config/server-log4j.properties"));
+		props.put("log4j.appender.fileLog.File", "logs/ecs-default-log.out");
 		PropertyConfigurator.configure(props);
 	}
 	
@@ -908,6 +915,13 @@ public class ECSClient implements IECSClient {
 			new LogSetup("logs/client-default.log", Level.ALL);
 		}*/
 		ECSClient app = new ECSClient();
+		try {
+			setUpESCClientLogger();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		app.run();
     }
+    
 }

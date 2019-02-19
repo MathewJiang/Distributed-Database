@@ -25,6 +25,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import logger.LogSetup;
+
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -50,6 +54,7 @@ public class ECS {
 	spinlock globalLock = new spinlock("globalLock");
 	spinlock ackLock = new spinlock("ackLock");
 	String prevCmd = "null";
+	private static Logger logger = Logger.getRootLogger();
 	//String logConfigFileLocation = "./";
 	
 	/*****************************************************************************
@@ -60,7 +65,6 @@ public class ECS {
 	 * @return 			connected zk
 	 *****************************************************************************/
 	public ZooKeeper connect(String host, int port) throws IOException, InterruptedException {
-		org.apache.log4j.Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
 		String connectString = host +":"+port;
 		zk = new ZooKeeper(connectString, 500, new Watcher() {
 			@Override
@@ -130,7 +134,8 @@ public class ECS {
 	}
 	
 	public void echo(String line){
-		System.out.println(line);
+		//System.out.println(line);
+		logger.info(line);
 	}
 	public void printPath(String path) {
 		try {
@@ -680,6 +685,10 @@ public class ECS {
 				return KVAdminMessageType.SYNC;
 			case "REPORT":
 				return KVAdminMessageType.REPORT;
+			case "LOCK_WRITE_REMOVE_RECEVIER":
+				return KVAdminMessageType.LOCK_WRITE_REMOVE_RECEVIER;
+			case "LOCK_WRITE_REMOVE_SENDER":
+				return KVAdminMessageType.LOCK_WRITE_REMOVE_SENDER;
 		}
 		return null;
 	}
@@ -701,6 +710,10 @@ public class ECS {
 			return "SYNC";
 		} else if(a == KVAdminMessageType.REPORT) {
 			return "REPORT";
+		} else if(a == KVAdminMessageType.LOCK_WRITE_REMOVE_RECEVIER) {
+			return "LOCK_WRITE_REMOVE_RECEVIER";
+		} else if(a == KVAdminMessageType.LOCK_WRITE_REMOVE_SENDER) {
+			return "LOCK_WRITE_REMOVE_SENDER";
 		}
 		return "INVALID KVAdminMessageType";
 	}
