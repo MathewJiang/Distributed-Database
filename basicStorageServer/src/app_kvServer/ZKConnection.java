@@ -87,7 +87,13 @@ public class ZKConnection implements Runnable {
 					case REPORT:
 						ecs.ack(callingServer.getServerName(), "report");
 						break;
+					
+					case LOCK_WRITE_REMOVE_RECEVIER:
+						break;
 						
+					case LOCK_WRITE_REMOVE_SENDER:
+						// Note: the callingServer is the node to be removed
+						break;
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;
