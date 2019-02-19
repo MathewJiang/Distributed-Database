@@ -318,6 +318,9 @@ public class ECSClient implements IECSClient {
 		try {
 			affectedServerName = hashRing.getSuccessor(returnedSlot).serviceName;
 			
+			logger.info("------------------------------------------------Receiver: " + affectedServerName);
+			logger.info("------------------------------------------------Sender: " + returnedSlot.serviceName);
+			
 			ecs.waitAckSetup("computedNewMD");
 			ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
 			ecs.waitAck("computedNewMD", 1, 50);
