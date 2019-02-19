@@ -352,7 +352,11 @@ public class KVServer extends Thread implements IKVServer {
 	public InfraMetadata getClusterMD() {
 		return clusterMD;
 	}
-
+	
+	public ConsistentHash getClusterHash() {
+		return clusterHash;
+	}
+	
 	// Not Thread-safe!
 	public void setClusterMD(InfraMetadata newMetadata) {
 		this.clusterMD = newMetadata;
@@ -369,6 +373,47 @@ public class KVServer extends Thread implements IKVServer {
 		// Compute server side consistent hash.
 		ecs.connect("localhost", ECS_PORT);
 		setClusterMD(ecs.getMD());
+	}
+
+	// Unconditionally send and remove all data in the current server
+	// to target server according to new metadata.
+	public void migrateAll(InfraMetadata newMD) {
+		serverLock.lock();
+		try {
+			Storage.flush();
+			setClusterMD(newMD);
+			ConnectionUtil conn = new ConnectionUtil();
+			for (String key : Disk.getAllKeys()) {
+				// Construct target and server message.
+				CommMessage msg = new CommMessageBuilder().setKey(key)
+						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
+						.build();
+				msg.setFromServer(true);
+				ServiceLocation target = clusterHash.getServer(key);
+
+				// Send and await ack from target server.
+				Socket socket = new Socket(target.host, target.port);
+				conn.sendCommMessage(socket.getOutputStream(), msg);
+				CommMessage serverResponse = conn.receiveCommMessage(socket
+						.getInputStream());
+				socket.close();
+
+				// Remove local copy.
+				if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
+					logger.error("Error migrating message " + msg
+							+ " from server " + serverName + " to server "
+							+ target.serviceName + "\nResponse: "
+							+ serverResponse);
+				} else {
+					Disk.putKV(key, null);
+				}
+			}
+		} catch (Exception e) {
+			logger.error("Error remving migrants on server " + getServerName()
+					+ ": " + e);
+		} finally {
+			serverLock.unlock();
+		}
 	}
 
 	public void removeMigratedKeys(InfraMetadata newMD) {

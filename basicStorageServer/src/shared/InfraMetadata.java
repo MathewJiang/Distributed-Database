@@ -33,11 +33,11 @@ public class InfraMetadata {
 
 	private ServiceLocation ecsLocation;
 	private List<ServiceLocation> serverLocations = new ArrayList<ServiceLocation>();
-	
+
 	public void setServerLocations(List<ServiceLocation> serverLocations_) {
 		serverLocations = serverLocations_;
 	}
-	
+
 	public static InfraMetadata fromConfigFile(String filePath)
 			throws Exception {
 		InfraMetadata result = new InfraMetadata();
@@ -71,7 +71,6 @@ public class InfraMetadata {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(ecsLocation.toString() + "\n");
-		for (ServiceLocation service : serverLocations)
 		if (ecsLocation != null) {
 			sb.append(ecsLocation.toString() + "\n");
 		}
@@ -97,6 +96,27 @@ public class InfraMetadata {
 
 	public void setEcsLocation(ServiceLocation ecsLocation) {
 		this.ecsLocation = ecsLocation;
+	}
+
+	// Deep copy.
+	public InfraMetadata duplicate() {
+		InfraMetadata result = new InfraMetadata();
+		result.ecsLocation = new ServiceLocation(ecsLocation.serviceName,
+				ecsLocation.host, ecsLocation.port);
+		for (ServiceLocation sl : serverLocations) {
+			result.serverLocations.add(new ServiceLocation(sl.serviceName,
+					sl.host, sl.port));
+		}
+		return result;
+	}
+
+	// Brute force removal.
+	public void removeServerLocation(String srvName) {
+		for (ServiceLocation sl : serverLocations) {
+			if (sl.serviceName.equals(srvName)) {
+				serverLocations.remove(sl);
+			}
+		}
 	}
 
 	public List<ServiceLocation> getServerLocations() {

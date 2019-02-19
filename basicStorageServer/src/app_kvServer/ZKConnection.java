@@ -6,6 +6,7 @@ import java.io.StringWriter;
 import org.apache.log4j.Logger;
 
 import shared.InfraMetadata;
+import shared.InfraMetadata.ServiceLocation;
 import shared.messages.KVAdminMessage;
 import app_kvECS.ECS;
 
@@ -87,12 +88,47 @@ public class ZKConnection implements Runnable {
 					case REPORT:
 						ecs.ack(callingServer.getServerName(), "report");
 						break;
-					
+
 					case LOCK_WRITE_REMOVE_RECEVIER:
+						try {
+							// Remove the "fading" server from own server
+							// locations MD and use the MD to reset hash ring.
+							callingServer
+									.getClusterMD()
+									.getServerLocations()
+									.remove(callingServer.getClusterHash()
+											.getSuccessor(
+													callingServer
+															.getServerInfo()));
+							callingServer.setClusterMD(callingServer
+									.getClusterMD());
+						} catch (Exception e) {
+							logger.error("Error reseting metadata: " + e);
+						}
+
+						// New metadata has been computed without the fading
+						// server. Messages from that server will now be
+						// accepted. Acknowledging ECS to issue migration.
+						ecs.ack(callingServer.getServerName(), "computedNewMD");
 						break;
-						
+
+					// Removing this server from cluster.
 					case LOCK_WRITE_REMOVE_SENDER:
-						// Note: the callingServer is the node to be removed
+						// Compute new metadata without the server itself.
+						InfraMetadata newMD = callingServer.getClusterMD()
+								.duplicate();
+						newMD.removeServerLocation(callingServer
+								.getServerName());
+
+						// Send and remove all keys in the current server.
+						callingServer.migrateAll(newMD);
+
+						// Ack ECS after migration completes and commits
+						// suicide.
+						ecs.ack(callingServer.getServerName(), "migrate");
+						callingServer.setShuttingDown(true);
+						callingServer.close();
+						isOpen = false;
 						break;
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
