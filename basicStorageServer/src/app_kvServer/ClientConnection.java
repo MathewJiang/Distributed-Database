@@ -26,15 +26,10 @@ public class ClientConnection implements Runnable {
 
 	private static Logger logger = Logger.getRootLogger();
 
-	private boolean isOpen;
-
 	private Socket clientSocket;
 	private InputStream input;
 	private OutputStream output;
 	private KVServer callingServer;
-	private boolean clientConnectionDown = false;
-	private boolean isMigrating = false;
-
 	/**
 	 * Constructs a new CientConnection object for a given TCP socket.
 	 * 
@@ -44,7 +39,6 @@ public class ClientConnection implements Runnable {
 	public ClientConnection(Socket clientSocket, KVServer callingServer) {
 		this.clientSocket = clientSocket;
 		this.callingServer = callingServer;
-		this.isOpen = true;
 	}
 
 	private boolean shouldInformServerStopped(CommMessage msg) {
@@ -150,7 +144,6 @@ public class ClientConnection implements Runnable {
 				logger.error("[ClientConnection]/run(): Error! Received message experiences error during deserilization!");
 			} catch (IOException ioe) {
 				logger.error("Error! Connection lost!");
-				isOpen = false;
 			}
 
 		} catch (IOException ioe) {
