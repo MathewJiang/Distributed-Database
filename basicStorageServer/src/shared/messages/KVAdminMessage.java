@@ -22,8 +22,16 @@ public class KVAdminMessage {
     	UPDATE_COMPLETE,/* tell the other server that the update has been completed */
     	LOCK_WRITE,		/* Lock the server for write operations */
     	UNLOCK_WRITE,	/* Unlock the server for write operations*/
-    	REPORT,
-    	SYNC
+    	REPORT,			/* Send ack to ECS */
+    	SYNC,			/* Make sure every other servers are in the same state */
+    	
+    	LOCK_WRITE_REMOVE_RECEVIER,	/* During nodeRemove, receiver should know
+    	 							   that its successor is
+    	 							   the node to be removed*/
+    	LOCK_WRITE_REMOVE_SENDER    /* During nodeRemove, sender should know that
+    	 							   its predecessor is
+    	 							   the node that inherit all its keys
+    	 							   (note: itself is the node to be removed) */
     }
     
     public InfraMetadata MD;
