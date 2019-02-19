@@ -25,8 +25,8 @@ public class ZKConnection implements Runnable {
 		ECS ecs = callingServer.getECS();
 		String serverName = callingServer.getServerName();
 
+		ecs.ack(serverName, "launched");
 		while (isOpen) {
-			logger.info("[ZKConnection.java]Before getting cmd from ECS");
 			KVAdminMessage cm = ecs.getCmd(serverName);
 			logger.info("[ZKConnection.java]AdminMessage: " + cm);
 
