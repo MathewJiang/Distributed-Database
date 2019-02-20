@@ -626,6 +626,7 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void backupKVDB() {
 		if (Disk.key_count() == 0) {
+			removeKVDB();
 			return;
 		}
 		if (!Disk.rename_db(RESTORE_DB_NAME)) {
