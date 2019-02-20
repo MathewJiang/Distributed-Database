@@ -502,10 +502,13 @@ public class KVServer extends Thread implements IKVServer {
 	}
 	
 	// This server is a pure restore process.
-	private static void restoreProcess() {
+	private static void restoreProcess() throws Exception {
 		KVServer temp = new KVServer();
+		resetServerLogger("restore-process");
 		temp.ecs = new ECS();
+		temp.ecs.connect("localhost", 39678);
 		Disk.setDbName(RESTORE_DB_NAME);
+		Disk.init();
 		
 		InfraMetadata md = temp.ecs.getMD();
 		try {
@@ -535,6 +538,8 @@ public class KVServer extends Thread implements IKVServer {
 						+ " to server "
 							+ target.serviceName + "\nResponse: "
 							+ serverResponse);
+				} else {
+					Disk.putKV(key, null);
 				}
 				socket.close();
 			}

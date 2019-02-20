@@ -830,6 +830,7 @@ public class ECS {
 		try {
 			if (zk.exists("/ack/" + issue, true) == null) {
 				create("/ack/" + issue, null, "-p");
+				while(zk.exists("/ack/" + issue, true) == null) {}
 				return;
 			}
 		} catch (KeeperException | InterruptedException e) {

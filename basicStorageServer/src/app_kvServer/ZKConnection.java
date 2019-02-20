@@ -68,16 +68,18 @@ public class ZKConnection implements Runnable {
 						if (shutDownMD.locationOfService(callingServer
 								.getServerName()) != null) {
 							// Prepare server for receiving backup messages.
-							try {
-								Storage.flush();
-							} catch (IOException e) {
-								logger.error("Error flushing data to disk on backup leader");
-							}
 							ecs.waitAckSetup("backupCompleted");
 							callingServer.setClusterMD(shutDownMD);
 							
 							ecs.ack(callingServer.getServerName(), "terminate");
 							ecs.waitAck("backupCompleted", 1, 50);
+							
+							// Flush everything on this leader node.
+							try {
+								Storage.flush();
+							} catch (IOException e) {
+								logger.error("Error flushing data to disk on backup leader");
+							}
 
 							// At this point the kvdb for this server has become
 							// the central repository for backup. Rename kvdb
