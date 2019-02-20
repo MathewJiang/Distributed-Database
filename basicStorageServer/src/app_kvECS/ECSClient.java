@@ -61,6 +61,9 @@ public class ECSClient implements IECSClient {
 	    return data;
 	}
 	
+	public ECS getECS(){
+		return ecs;
+	}
 	
 	// set start = true for all client server
     @Override
@@ -462,6 +465,28 @@ public class ECSClient implements IECSClient {
 				stop = true;
 				printError("CLI does not respond - Application terminated ");
 			}
+		}
+	}
+	
+	public void initECS() {
+		ecs = new ECS();
+		set_workDir();
+		hashRing = new ConsistentHash();
+		
+		
+		try {
+			ecs.connect("127.0.0.1", 39678);
+			if(ecs.configured()) {
+	    		restoreFromECS();
+	    	}
+			
+			
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 	}
 

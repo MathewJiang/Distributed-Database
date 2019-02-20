@@ -10,12 +10,14 @@ import static org.junit.Assert.*;
 
 import java.math.BigInteger;
 
+import junit.framework.TestCase;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import shared.MD5;
 
-public class MD5Test {
+public class MD5Test extends TestCase {
 
 	@Test
 	public void testString() {
