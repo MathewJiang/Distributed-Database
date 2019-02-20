@@ -697,6 +697,7 @@ public class ECS {
 			if (curr.equals("zookeeper")) {
 				continue;
 			}
+			
 			// rm -r everything
 			deleteHeadRecursive("/" + curr);
 		}
@@ -908,7 +909,16 @@ public class ECS {
 			}
 		}
 	}
-
+	
+	public boolean existsLeader() {
+		try {
+			return zk.exists("/leader", true) != null;
+		} catch (KeeperException | InterruptedException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
 	public void setLeader(String leader, String ip) {
 		logger.info("Setting leader: " + leader + ", " + ip);
 		try {

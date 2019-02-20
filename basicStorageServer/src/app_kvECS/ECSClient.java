@@ -101,7 +101,11 @@ public class ECSClient implements IECSClient {
     	launchedNodes.clear();
     	launchedServer.clear();
     	ecs.setConfigured(false);
-    	ecs.reset();
+    	//ecs.reset();
+    	
+    	ecs.deleteHeadRecursive("/nodes");
+    	ecs.deleteHeadRecursive("/lock");
+    	ecs.deleteHeadRecursive("/ack");
     	ecs.init();
         return true;
     }
@@ -230,6 +234,9 @@ public class ECSClient implements IECSClient {
     		ecs.deleteHeadRecursive("/nodes");
     		ecs.create("/nodes", null, "-p");
     	}
+    	
+    	
+    	
     	ecs.waitAckSetup("launched");
     	loadECSconfigFromFile();
     	hashRing.removeAllServerNodes();
@@ -267,6 +274,13 @@ public class ECSClient implements IECSClient {
         	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
         }
         ecs.waitAck("launched", count, 50);
+        
+        if(ecs.existsLeader()){
+    		echo("leader exists, trying to restore the saved data");
+    	} else {
+    		echo("fresh startup");
+    	}
+        
 		return aliased;
     }
     
