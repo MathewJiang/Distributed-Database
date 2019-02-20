@@ -22,7 +22,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 
-import shared.InfraMetadata.ServiceLocation;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 
 public class ConsistentHash {
 	private static Logger logger = Logger.getRootLogger();

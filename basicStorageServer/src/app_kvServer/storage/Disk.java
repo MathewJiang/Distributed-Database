@@ -30,6 +30,22 @@ public class Disk {
 		}
 		return true;
 	}
+	
+	public static boolean rename_db(String new_db_name) {
+		db_dir = path + DB_NAME;
+		File db = new File(db_dir);
+		return db.renameTo(new File(path + new_db_name));
+	}
+	
+	public static boolean remove_db() {
+		db_dir = path + DB_NAME;
+		File db = new File(db_dir);
+		if (db.listFiles().length > 0) {
+			return false;
+		}
+		db.delete();
+		return true;
+	}
 
 	public static void test_and_set_db() {
 		// mkdir at local dir if not being created

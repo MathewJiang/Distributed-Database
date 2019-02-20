@@ -20,17 +20,19 @@ import org.apache.log4j.PropertyConfigurator;
 
 import shared.ConnectionUtil;
 import shared.ConsistentHash;
-import shared.InfraMetadata;
-import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage.StatusType;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 import app_kvECS.ECS;
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
 	private static Logger logger = Logger.getRootLogger();
+	
+	private static final String RESTORE_DB_NAME = "/kvdb/restore-kvdb";
 
 	private ECS ecs = null;
 	private InfraMetadata clusterMD = null;
@@ -234,7 +236,7 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-
+		
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
@@ -356,7 +358,7 @@ public class KVServer extends Thread implements IKVServer {
 	public ConsistentHash getClusterHash() {
 		return clusterHash;
 	}
-
+	
 	// Not Thread-safe!
 	public void setClusterMD(InfraMetadata newMetadata) {
 		this.clusterMD = newMetadata;
@@ -393,22 +395,26 @@ public class KVServer extends Thread implements IKVServer {
 
 				logger.info("Unconditionally migrating key " + key
 						+ " to server " + target.serviceName);
-
-				// Send and await ack from target server.
-				Socket socket = new Socket(target.host, target.port);
-				conn.sendCommMessage(socket.getOutputStream(), msg);
-				CommMessage serverResponse = conn.receiveCommMessage(socket
-						.getInputStream());
-				socket.close();
-
-				// Remove local copy.
-				if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
-					logger.error("Error migrating message " + msg
-							+ " from server " + serverName + " to server "
-							+ target.serviceName + "\nResponse: "
-							+ serverResponse);
-				} else {
-					Disk.putKV(key, null);
+				
+				while (true) {
+					// Send and await ack from target server.
+					Socket socket = new Socket(target.host, target.port);
+					conn.sendCommMessage(socket.getOutputStream(), msg);
+					CommMessage serverResponse = conn.receiveCommMessage(socket
+							.getInputStream());
+					socket.close();
+	
+					// Remove local copy.
+					if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
+						Thread.sleep(100);
+						logger.error("Error migrating message " + msg
+								+ " from server " + serverName + " to server "
+								+ target.serviceName + "\nResponse: "
+								+ serverResponse);
+					} else {
+						Disk.putKV(key, null);
+						break;
+					}
 				}
 			}
 		} catch (Exception e) {
@@ -564,5 +570,17 @@ public class KVServer extends Thread implements IKVServer {
 		serverLock.lock();
 		this.writeLock = writeLock;
 		serverLock.unlock();
+	}
+
+	public void backupKVDB() {
+		if (!Disk.rename_db(RESTORE_DB_NAME)) {
+			logger.info("Error renaming kvdb to restore kvdb");
+		}
+	}
+
+	public void removeKVDB() {
+		if (!Disk.remove_db()) {
+			logger.info("Error removing kvdb directory - not empty");
+		}
 	}
 }

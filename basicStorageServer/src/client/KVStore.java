@@ -8,12 +8,12 @@ import org.apache.log4j.Logger;
 
 import shared.ConnectionUtil;
 import shared.ConsistentHash;
-import shared.InfraMetadata;
-import shared.InfraMetadata.ServiceLocation;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 import app_kvECS.ECS;
 
 public class KVStore extends Thread implements KVCommInterface {
