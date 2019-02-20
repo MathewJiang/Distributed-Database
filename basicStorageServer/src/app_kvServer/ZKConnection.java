@@ -29,7 +29,8 @@ public class ZKConnection implements Runnable {
 		ecs.ack(serverName, "launched");
 		while (isOpen) {
 			KVAdminMessage cm = ecs.getCmd(serverName);
-			logger.info("[ZKConnection.java]AdminMessage: " + cm);
+			logger.info("[ZKConnection.java]AdminMessage: "
+					+ cm.getKVAdminMessageType());
 
 			if (cm != null) {
 				/*
@@ -97,7 +98,7 @@ public class ZKConnection implements Runnable {
 									.getClusterMD()
 									.getServerLocations()
 									.remove(callingServer.getClusterHash()
-											.getSuccessor(
+											.getPredeccessor(
 													callingServer
 															.getServerInfo()));
 							callingServer.setClusterMD(callingServer
@@ -117,12 +118,15 @@ public class ZKConnection implements Runnable {
 						// Compute new metadata without the server itself.
 						InfraMetadata newMD = callingServer.getClusterMD()
 								.duplicate();
-						newMD.removeServerLocation(callingServer
-								.getServerName());
+						newMD.removeServerLocation(logger,
+								callingServer.getServerName());
 
 						// Send and remove all keys in the current server.
 						callingServer.migrateAll(newMD);
-
+						
+						ecs.lock();
+						ecs.unlock();
+						
 						// Ack ECS after migration completes and commits
 						// suicide.
 						ecs.ack(callingServer.getServerName(), "migrate");
@@ -130,6 +134,7 @@ public class ZKConnection implements Runnable {
 						callingServer.close();
 						isOpen = false;
 						break;
+
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;

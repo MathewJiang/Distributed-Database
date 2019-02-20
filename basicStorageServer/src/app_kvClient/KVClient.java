@@ -18,7 +18,6 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import shared.messages.CommMessage;
-import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage.StatusType;
 import app_kvServer.KVServer;
 import client.KVCommInterface;
@@ -394,7 +393,8 @@ public class KVClient implements IKVClient {
 		while (num > 0) {
 			num--;
 			String data = UUID.randomUUID().toString().substring(0, 15);
-			if (((CommMessage) backend.put(data, data)).getStatus() != StatusType.PUT_SUCCESS) {
+			if (((CommMessage) backend.put(data + num, data + num))
+					.getStatus() != StatusType.PUT_SUCCESS) {
 				System.out.println("Error PUT");
 			}
 		}
