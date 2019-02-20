@@ -9,7 +9,7 @@
  ***************************************************************/
 package shared.messages;
 
-import shared.InfraMetadata;
+import shared.metadata.InfraMetadata;
 
 public class KVAdminMessage {
     public enum KVAdminMessageType {

@@ -1,6 +1,6 @@
 package shared.messages;
 
-import shared.InfraMetadata;
+import shared.metadata.InfraMetadata;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

@@ -23,10 +23,10 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
 import shared.ConsistentHash;
-import shared.InfraMetadata;
-import shared.InfraMetadata.ServiceLocation;
 import shared.MD5;
 import shared.messages.CommMessage;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 import app_kvServer.KVServer;
 import ecs.ECSNode;
 import ecs.IECSNode;
@@ -94,7 +94,9 @@ public class ECSClient implements IECSClient {
 		ecs.waitAckSetup("terminate");
     	ecs.broadast("SHUTDOWN");
     	ecs.waitAck("terminate", launchedNodes.size(), 50);
-    	ecs.ack("ECSclient", "restoreCompleted");
+    	ecs.ack("ECSclient", "backupCompleted");
+		ecs.waitAckSetup("restoreCompleted");
+    	ecs.waitAck("restoreCompleted", 1, 50);
     	launchedNodes.clear();
     	launchedServer.clear();
     	ecs.setConfigured(false);

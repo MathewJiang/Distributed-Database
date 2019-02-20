@@ -13,8 +13,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import shared.ConsistentHash;
-import shared.InfraMetadata;
-import shared.InfraMetadata.ServiceLocation;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 
 public class ConsistentHashTest extends TestCase {
 	ConsistentHash ch;
