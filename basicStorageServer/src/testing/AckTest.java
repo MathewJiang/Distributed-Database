@@ -38,7 +38,7 @@ public class AckTest extends TestCase {
 					} catch (IOException | InterruptedException e) {
 						e.printStackTrace();
 					}
-					System.out.print(name+"\n");
+					// System.out.print(name+"\n");
 					ecs.ack(name, "testack");
 				}
 			});

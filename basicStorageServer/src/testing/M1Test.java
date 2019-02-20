@@ -94,10 +94,138 @@ public class M1Test extends TestCase {
 		}
 	}
 	
+	@Test(timeout=100)
+	public void testRetry() {
+		try {
+			md = new InfraMetadata();
+			
+			ServiceLocation ecsSl = new ServiceLocation("ecs", "127.0.0.1", 39678);
+			ArrayList<ServiceLocation> sls = new ArrayList<ServiceLocation>();
+			sls.add(new ServiceLocation("server_0", "127.0.0.1", 5000));
+			sls.add(new ServiceLocation("server_1", "127.0.0.1", 5001));
+			
+			md.setServerLocations(sls);
+			md.setEcsLocation(ecsSl);
+			
+			client = new KVStore();
+			client.resetClusterHash(md);
+			
+			server = new KVServer(5000, 3, "FIFO");
+			server.setClusterMD(md);
+			server.setServerInfo(new ServiceLocation("server_0", "127.0.0.1", 5000));
+			server.start();
+			
+			Thread.sleep(10);
+			server.setSuspended(false);
+			
+			server = new KVServer(5001, 3, "LRU");
+			server.setClusterMD(md);
+			server.setServerInfo(new ServiceLocation("server_1", "127.0.0.1", 5001));
+			server.start();
+			
+			Thread.sleep(10);
+			server.setSuspended(false);
+			
+			
+			assertTrue(client.put("key1", "value1").getStatus().equals(StatusType.PUT_SUCCESS));
+			assertTrue(client.get("key1").getStatus().equals(StatusType.GET_SUCCESS));
+		} catch (IOException e){
+			fail("[testM1]IOException");
+		} catch (InterruptedException e) {
+		 	fail("[testM1]InterrupedException");
+		} catch (Exception e) {
+			fail("[testM1]Exception");
+		}
+	}
+	
+	
+	
+	@Test(timeout=100)
+	public void testEmptyKey() {
+		try {
+			client = new KVStore();
+			client.resetClusterHash(md);
+			
+			server = new KVServer(5000, 3, "FIFO");
+			server.setClusterMD(md);
+			server.setServerInfo(new ServiceLocation("server_0", "127.0.0.1", 5000));
+			server.start();
+			
+			Thread.sleep(10);
+			server.setSuspended(false);
+			
+			assertTrue(client.put("", "value with an empty key").getStatus().equals(StatusType.PUT_ERROR));
+		
+		} catch (IOException e){
+			fail("[testM1]IOException");
+		} catch (InterruptedException e) {
+			fail("[testM1]InterrupedException");
+		} catch (Exception e) {
+			fail("[testM1]Exception");
+		}
+	}
+	
+	@Test(timeout=100)
+	public void testKeyWithSpace() {
+		try {
+			client = new KVStore();
+			client.resetClusterHash(md);
+			
+			server = new KVServer(5000, 3, "FIFO");
+			server.setClusterMD(md);
+			server.setServerInfo(new ServiceLocation("server_0", "127.0.0.1", 5000));
+			server.start();
+			
+			Thread.sleep(10);
+			server.setSuspended(false);
+			
+			assertTrue(client.put("key with space", 
+					"value with spaced key").getStatus().equals(StatusType.PUT_ERROR));
+		
+		} catch (IOException e){
+			fail("[testM1]IOException");
+		} catch (InterruptedException e) {
+			fail("[testM1]InterrupedException");
+		} catch (Exception e) {
+			fail("[testM1]Exception");
+		}
+	}
+	
+	@Test(timeout=100)
+	public void testKeyLenOverflow() {
+		try {
+			client = new KVStore();
+			client.resetClusterHash(md);
+			
+			server = new KVServer(5000, 3, "FIFO");
+			server.setClusterMD(md);
+			server.setServerInfo(new ServiceLocation("server_0", "127.0.0.1", 5000));
+			server.start();
+			
+			Thread.sleep(10);
+			server.setSuspended(false);
+			
+			assertTrue(client.put("123456789012345678901234567890", 
+					"value with key length overflow").getStatus().equals(StatusType.PUT_ERROR));
+		
+		} catch (IOException e){
+			fail("[testM1]IOException");
+		} catch (InterruptedException e) {
+			fail("[testM1]InterrupedException");
+		} catch (Exception e) {
+			fail("[testM1]Exception");
+		}
+	}
+	
+	
 	@After
 	public void cleanup() {
-		ecsClient.shutdown();
+		ecsClient.getECS().broadast("SHUTDOWN");
 		ecsClient.getECS().reset();
+		ecsClient.getECS().deleteHeadRecursive("/nodes");
+		// ecsClient.getECS().deleteHeadRecursive("/configureStatus");
+		// ecsClient.shutdown();
+		// ecsClient.initECS();
 	}
 
 }
