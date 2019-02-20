@@ -31,6 +31,12 @@ public class InfraMetadata {
 		public String toString() {
 			return serviceName + ":" + host + ":" + port;
 		}
+		
+		public boolean equals(ServiceLocation sl) {
+			return ((serviceName.equals(sl.serviceName))
+					&& (host.equals(sl.host))
+					&& (port.equals(sl.port)));
+		}
 	}
 
 	private ServiceLocation ecsLocation;

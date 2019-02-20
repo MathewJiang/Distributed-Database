@@ -6,6 +6,9 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.TreeMap;
 
+import junit.framework.TestCase;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -13,7 +16,7 @@ import shared.ConsistentHash;
 import shared.InfraMetadata;
 import shared.InfraMetadata.ServiceLocation;
 
-public class ConsistentHashTest {
+public class ConsistentHashTest extends TestCase {
 	ConsistentHash ch;
 	
 	ServiceLocation ecs;
@@ -28,12 +31,12 @@ public class ConsistentHashTest {
 	@Before
 	public void setUp() throws Exception {
 		ecs = new ServiceLocation("ecs", "127.0.0.1", 39678);
-		server0 = new ServiceLocation("server0", "127.0.0.1", 50422);
-		server1 = new ServiceLocation("server1", "127.0.0.1", 50000);
-		server2 = new ServiceLocation("server2", "127.0.0.1", 50007);
-		server3 = new ServiceLocation("server3", "127.0.0.1", 50001);
-		server4 = new ServiceLocation("server4", "127.0.0.1", 50006);
-		server5 = new ServiceLocation("server5", "127.0.0.1", 50004);
+		server0 = new ServiceLocation("server_0", "127.0.0.1", 50422);
+		server1 = new ServiceLocation("server_1", "127.0.0.1", 50000);
+		server2 = new ServiceLocation("server_2", "127.0.0.1", 50007);
+		server3 = new ServiceLocation("server_3", "127.0.0.1", 50001);
+		server4 = new ServiceLocation("server_4", "127.0.0.1", 50006);
+		server5 = new ServiceLocation("server_5", "127.0.0.1", 50004);
 	}
 
 	@Test
@@ -160,7 +163,11 @@ public class ConsistentHashTest {
 		ch.addServerNode(server5);
 		
 		try {
-			ServiceLocation sl = ch.getSuccessor(server0);
+			ServiceLocation sl0Successor = ch.getSuccessor(server0);
+			assertTrue(sl0Successor.equals(server2));
+			
+			ServiceLocation sl1Successor = ch.getSuccessor(server1);
+			assertTrue(sl1Successor.equals(server4));
 		} catch (Exception e) {
 			e.printStackTrace();
 			fail("[0]getSuccessor failed!");
@@ -177,7 +184,59 @@ public class ConsistentHashTest {
 		ch.addServerNode(server3);
 		ch.addServerNode(server4);
 		ch.addServerNode(server5);
+		
+		try {
+			ServiceLocation sl0Predecessor = ch.getPredeccessor(server0);
+			assertTrue(sl0Predecessor.equals(server3));
+			
+			ServiceLocation sl1Predecessor = ch.getPredeccessor(server1);
+			assertTrue(sl1Predecessor.equals(server2));
+		} catch (Exception e) {
+			e.printStackTrace();
+			fail("[0]getPredecessor failed!");
+		}
 	}
 	
+	@Test
+	public void testGetServer() {
+		ch = new ConsistentHash();
+		
+		ch.addServerNode(server0);
+		ch.addServerNode(server1);
+		ch.addServerNode(server2);
+		ch.addServerNode(server3);
+		ch.addServerNode(server4);
+		ch.addServerNode(server5);
+		
+		assertTrue(ch.getServer("key1").equals(server5));
+		assertTrue(ch.getServer("key2").equals(server4));
+		assertTrue(ch.getServer("key3").equals(server4));
+		
+		ch.removeServerNode(server2);
+		ch.removeServerNode(server5);
+		
+		assertTrue(ch.getServer("key1").equals(server3));
+		assertTrue(ch.getServer("key2").equals(server4));
+		assertTrue(ch.getServer("key3").equals(server4));
+		
+	}
+	
+	@Test
+	public void testGetServerSingle() {
+		ch = new ConsistentHash();
+		
+		ch.addServerNode(server0);
+		
+		assertTrue(ch.getServer("key1").equals(server0));
+		assertTrue(ch.getServer("key2").equals(server0));
+		assertTrue(ch.getServer("key3").equals(server0));
+	}
+	
+	@After
+	public void cleanup() {
+		if (ch != null) {
+			ch.getHashRing().clear();
+		}
+	}
 	
 }
