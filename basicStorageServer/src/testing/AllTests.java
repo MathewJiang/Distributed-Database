@@ -35,9 +35,9 @@ public class AllTests {
 		
 		// M2 tests
 		clientSuite.addTestSuite(ECSTest.class);
-		//clientSuite.addTestSuite(MD5Test.class);
-		//clientSuite.addTestSuite(ConsistentHashTest.class);
-		
+		clientSuite.addTestSuite(MD5Test.class);
+		clientSuite.addTestSuite(ConsistentHashTest.class);
+		clientSuite.addTestSuite(M1Test.class);
 		return clientSuite;
 	}
 
