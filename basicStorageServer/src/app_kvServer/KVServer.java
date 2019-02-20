@@ -625,6 +625,9 @@ public class KVServer extends Thread implements IKVServer {
 	}
 
 	public void backupKVDB() {
+		if (Disk.key_count() == 0) {
+			return;
+		}
 		if (!Disk.rename_db(RESTORE_DB_NAME)) {
 			logger.info("Error renaming kvdb to restore kvdb");
 		}
