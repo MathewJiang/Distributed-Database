@@ -500,7 +500,52 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
+	
+	// This server is a pure restore process.
+	private static void restoreProcess() {
+		KVServer temp = new KVServer();
+		temp.ecs = new ECS();
+		Disk.setDbName(RESTORE_DB_NAME);
+		
+		InfraMetadata md = temp.ecs.getMD();
+		try {
+			// Generate a temporary new consistent hash ring and 
+			// provision all keys to migrate.
+			ConsistentHash hash = new ConsistentHash();
+			hash.addNodesFromInfraMD(md);
+			List<String> data = Disk.getAllKeys();
 
+			logger.info("Sending copies of " + data);
+			ConnectionUtil conn = new ConnectionUtil();
+			for (String key : data) {
+				// Construct target and server message.
+				CommMessage msg = new CommMessageBuilder().setKey(key)
+						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
+						.build();
+				msg.setFromServer(true);
+				ServiceLocation target = hash.getServer(key);
+
+				// Send and await ack from target server.
+				Socket socket = new Socket(target.host, target.port);
+				conn.sendCommMessage(socket.getOutputStream(), msg);
+				CommMessage serverResponse = conn.receiveCommMessage(socket
+						.getInputStream());
+				if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
+					logger.error("Error migrating message " + msg
+						+ " to server "
+							+ target.serviceName + "\nResponse: "
+							+ serverResponse);
+				}
+				socket.close();
+			}
+		} catch (Exception e) {
+			logger.error("Error restoring data");
+		} finally {
+			temp.removeKVDB();
+			temp.ecs.ack("restore_service", "backupRestored");
+		}
+	}
+	
 	public static KVServer initServerFromECS(String[] args) throws Exception {
 		// Coordinate and initialize server w.r.t ECS metadata.
 		// Initialize clusterMD and compute clusterHash.
@@ -541,6 +586,13 @@ public class KVServer extends Thread implements IKVServer {
 						.println("Usage: Server <port>! || Server <ECS_port> <serverName> <cacheSize> <cacheStrategy>");
 				return;
 			}
+			
+			// This server is a one-time restore service.
+			if (Integer.parseInt(args[0]) == 0) {
+				restoreProcess();
+				return;
+			}
+			
 			KVServer server = initServerFromECS(args);
 			resetServerLogger(server.getServerName());
 			logger.info("Service: " + server.serverMD.serviceName

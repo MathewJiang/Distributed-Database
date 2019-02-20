@@ -33,7 +33,7 @@ public class ZKConnection implements Runnable {
 
 			if (cm != null) {
 				/*
-				 * FIXME: need acknowledgement from each server only after that
+				 * FIXME: need acknowledgment from each server only after that
 				 * could the new command be issued
 				 */
 
@@ -170,7 +170,7 @@ public class ZKConnection implements Runnable {
 						callingServer.close();
 						isOpen = false;
 						break;
-
+					
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;
