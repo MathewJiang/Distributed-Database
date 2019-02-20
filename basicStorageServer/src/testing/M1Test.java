@@ -5,7 +5,11 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import junit.framework.TestCase;
+
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import shared.messages.CommMessage;
@@ -90,5 +94,10 @@ public class M1Test extends TestCase {
 		}
 	}
 	
+	@After
+	public void cleanup() {
+		ecsClient.shutdown();
+		ecsClient.getECS().reset();
+	}
 
 }

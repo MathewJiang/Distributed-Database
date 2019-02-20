@@ -34,6 +34,8 @@ public class AllTests {
 																//has its own setup procedure
 		
 		// M2 tests
+		clientSuite.addTestSuite(AckTest.class);
+		clientSuite.addTestSuite(LockTest.class);
 		clientSuite.addTestSuite(ECSTest.class);
 		clientSuite.addTestSuite(MD5Test.class);
 		clientSuite.addTestSuite(ConsistentHashTest.class);

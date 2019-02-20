@@ -6,12 +6,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.TestCase;
+
 import org.junit.Test;
 
 import app_kvECS.ECS;
 import app_kvECS.ECSClient;
 
-public class LockTest {
+public class LockTest extends TestCase {
 
 	private void testLoop(ECS ecs) {
 		for(int i = 0; i < 2000; i++) {
@@ -28,14 +30,11 @@ public class LockTest {
 			ecs.init();
 			testLoop(ecs);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			fail("failed to connect ECS");
 			
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			fail("failed to connect ECS");
 		}
-		//
 	}
 	@Test(timeout=5000000)
 	public void testMultiThreadLockUnlock() {

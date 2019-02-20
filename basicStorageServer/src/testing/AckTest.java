@@ -6,12 +6,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.TestCase;
+
 import org.junit.Test;
 
 import app_kvECS.ECS;
 import app_kvECS.ECSClient;
 
-public class AckTest {
+public class AckTest extends TestCase {
 
 	@Test(timeout=5000000)
 	public void testMultiThreadAckWaitAck() {
@@ -50,7 +52,7 @@ public class AckTest {
 			try {
 				threadList.get(i).join();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				fail("[AckTest]Thread join failed");
 				e.printStackTrace();
 			}
 		}
