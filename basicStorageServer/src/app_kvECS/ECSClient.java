@@ -434,11 +434,24 @@ public class ECSClient implements IECSClient {
     }
     
     private String[] ssh_launch_array(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
-    	String[] cmd = new String[3];
+    	String[] cmd = new String[9];
     	cmd[0] = "ssh";
     	cmd[1] = "-n";
-    	cmd[2] = remoteIP +" nohup \"sh -c \'cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'\"";
+    	cmd[2] = "-o";
+    	cmd[3] = "\"StrictHostKeyChecking no\"";
+    	cmd[4] = remoteIP;
+    	cmd[5] = "nohup";
+    	cmd[6] = "sh";
+    	cmd[7] = "-c";
+    	cmd[8] = "cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &";
+    	echo(cmd[0]);
+    	echo(cmd[1]);
+    	echo(cmd[2]);
+    	echo(cmd[3]);
+    	echo(cmd[4]);
+    	echo(cmd[5]);
+    	echo(cmd[6]);
     	return cmd;
     }
     private String[] nossh_launch_array(String serverName, int ECSport, String strategy, int cache_size) {
