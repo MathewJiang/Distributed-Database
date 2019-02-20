@@ -14,7 +14,7 @@ import app_kvECS.ECSClient;
 public class AckTest {
 
 	@Test(timeout=5000000)
-	public void testMultiThreadLockUnlock() {
+	public void testMultiThreadAckWaitAck() {
 		ECSClient ecsClientInit = new ECSClient();
 		ecsClientInit.initECS();
 		ecsClientInit.getECS().reset();
