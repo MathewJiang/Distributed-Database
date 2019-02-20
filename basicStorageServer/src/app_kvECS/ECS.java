@@ -90,7 +90,7 @@ public class ECS {
 			}
 
 		} catch (KeeperException e) {
-			e.printStackTrace();
+			echo("concurrent trying to make spinlock");
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -283,10 +283,9 @@ public class ECS {
 			}
 
 		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			echo("concurrent trying to make configureStatus");
+			return true;
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return false;
