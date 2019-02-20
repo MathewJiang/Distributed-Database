@@ -49,6 +49,7 @@ public class ECSClient implements IECSClient {
 	private boolean stop = false;
 	private String workDir = "";
 	private String config = "";
+	private String ecsLocation = "127.0.0.1";
 	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
@@ -211,7 +212,7 @@ public class ECSClient implements IECSClient {
     	} else {
     		
     		try {
-    			proc = run.exec(ssh_launch(remoteIP, serverName, ECSport, strategy, cache_size));
+    			proc = run.exec(ssh_launch_array(remoteIP, serverName, ECSport, strategy, cache_size));
     		} catch (IOException e) {
     			e.printStackTrace();
     		}
@@ -413,6 +414,14 @@ public class ECSClient implements IECSClient {
     			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
     }
     
+    private String[] ssh_launch_array(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
+    	String[] cmd = new String[3];
+    	cmd[0] = "ssh";
+    	cmd[1] = "-n";
+    	cmd[2] = remoteIP +" nohup \"sh -c \'cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'\"";
+    	return cmd;
+    }
     private String[] nossh_launch_array(String serverName, int ECSport, String strategy, int cache_size) {
     	String[] cmd = new String[3];
     	cmd[0] = "sh";
@@ -441,7 +450,7 @@ public class ECSClient implements IECSClient {
 		
 		
 		try {
-			ecs.connect("127.0.0.1", 39678);
+			ecs.connect(ecsLocation, 39678);
 			if(ecs.configured()) {
 	    		restoreFromECS();
 	    	}
@@ -475,7 +484,7 @@ public class ECSClient implements IECSClient {
 		
 		
 		try {
-			ecs.connect("127.0.0.1", 39678);
+			ecs.connect(ecsLocation, 39678);
 			if(ecs.configured()) {
 	    		restoreFromECS();
 	    	}
@@ -555,7 +564,11 @@ public class ECSClient implements IECSClient {
 		String[] tokens = cmdLine.split("\\s+");
 
 		switch (tokens[0]) {
-		
+		case "ecsOverride":
+			if(tokens.length == 1) { 
+				ecsLocation = tokens[0];
+			}
+			break;
 		case "status":
 			printStatus();
 			break;
@@ -794,6 +807,7 @@ public class ECSClient implements IECSClient {
 					launchedServer.clear();
 					ecs.reset();
 					ecs.init();
+					ecsLocation = "127.0.0.1";
 				}
 			}
 			break;
