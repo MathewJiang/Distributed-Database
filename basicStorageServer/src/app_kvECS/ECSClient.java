@@ -445,7 +445,7 @@ public class ECSClient implements IECSClient {
 		try {
 			ecs.connect("127.0.0.1", 39678);
 			if(ecs.configured()) {
-	    		// restoreFromECS();
+	    		restoreFromECS();
 	    	}
 			
 			
