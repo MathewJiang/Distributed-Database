@@ -846,11 +846,12 @@ public class ECS {
 		}
 	}
 
-	public void waitAck(String action, int countDown, int timeOutSeconds) {
+	public boolean waitAck(String action, int countDown, int timeOutSeconds) {
 		echo("waitAck " + action + " " + countDown);
 		int result = 0;
 		Instant start = Instant.now();
-
+		boolean isValid = true;
+		
 		while (result != countDown) {
 			result = watchNodeChildren("/ack/" + action, countDown, 1);
 			if (result == 0) {
@@ -858,6 +859,7 @@ public class ECS {
 				Duration timeElapsed = Duration.between(start, end);
 				if (timeElapsed.toMillis() / 1000 > timeOutSeconds) {
 					echo("Warn: timeout (" + timeOutSeconds + ")");
+					isValid = false;
 					break;
 				}
 			}
@@ -866,7 +868,7 @@ public class ECS {
 		echo("clear " + action);
 		// clear the wait
 		deleteHeadRecursive("/ack/" + action);
-		return;
+		return isValid;
 	}
 
 	public void waitAckSetup(String action) {

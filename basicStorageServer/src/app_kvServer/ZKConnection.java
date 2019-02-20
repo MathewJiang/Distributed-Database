@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
@@ -8,6 +9,7 @@ import shared.messages.KVAdminMessage;
 import shared.metadata.InfraMetadata;
 import shared.metadata.ServiceLocation;
 import app_kvECS.ECS;
+import app_kvServer.storage.Storage;
 
 public class ZKConnection implements Runnable {
 	private static Logger logger = Logger.getRootLogger();
@@ -33,7 +35,7 @@ public class ZKConnection implements Runnable {
 
 			if (cm != null) {
 				/*
-				 * FIXME: need acknowledgement from each server only after that
+				 * FIXME: need acknowledgment from each server only after that
 				 * could the new command be issued
 				 */
 
@@ -66,9 +68,14 @@ public class ZKConnection implements Runnable {
 						if (shutDownMD.locationOfService(callingServer
 								.getServerName()) != null) {
 							// Prepare server for receiving backup messages.
+							try {
+								Storage.flush();
+							} catch (IOException e) {
+								logger.error("Error flushing data to disk on backup leader");
+							}
 							ecs.waitAckSetup("backupCompleted");
 							callingServer.setClusterMD(shutDownMD);
-
+							
 							ecs.ack(callingServer.getServerName(), "terminate");
 							ecs.waitAck("backupCompleted", 1, 50);
 
@@ -170,7 +177,7 @@ public class ZKConnection implements Runnable {
 						callingServer.close();
 						isOpen = false;
 						break;
-
+					
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;

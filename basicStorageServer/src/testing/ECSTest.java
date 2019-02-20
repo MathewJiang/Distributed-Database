@@ -8,7 +8,7 @@ import org.junit.Test;
 
 import ecs.ECSNode;
 
-import shared.InfraMetadata;
+import shared.metadata.InfraMetadata;
 
 import app_kvECS.ECSClient;
 

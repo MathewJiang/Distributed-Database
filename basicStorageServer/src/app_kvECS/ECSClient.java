@@ -293,8 +293,7 @@ public class ECSClient implements IECSClient {
     public boolean awaitNodes(int count, int timeout) throws Exception {
     	ecs.waitAckSetup("report");
     	ecs.broadast("REPORT");
-    	ecs.waitAck("report", count, timeout);
-        return false;
+    	return ecs.waitAck("report", count, timeout);
     }
 
     @Override
