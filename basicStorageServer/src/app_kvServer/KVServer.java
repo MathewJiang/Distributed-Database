@@ -104,6 +104,10 @@ public class KVServer extends Thread implements IKVServer {
 	public ServiceLocation getServerInfo() {
 		return serverMD;
 	}
+	
+	public void setServerInfo(ServiceLocation sl) {
+		serverMD = sl;
+	}
 
 	public ECS getECS() {
 		return ecs;
