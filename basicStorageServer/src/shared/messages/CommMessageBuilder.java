@@ -1,7 +1,7 @@
 package shared.messages;
 
-import shared.InfraMetadata;
 import shared.messages.KVMessage.StatusType;
+import shared.metadata.InfraMetadata;
 
 public class CommMessageBuilder {
 	private CommMessage msg = new CommMessage();

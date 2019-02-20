@@ -1,13 +1,12 @@
 package app_kvServer;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
-import shared.InfraMetadata;
-import shared.InfraMetadata.ServiceLocation;
 import shared.messages.KVAdminMessage;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 import app_kvECS.ECS;
 
 public class ZKConnection implements Runnable {
@@ -42,7 +41,6 @@ public class ZKConnection implements Runnable {
 					switch (cm.getKVAdminMessageType()) {
 					case START:
 						logger.info("[ZKConnection.java/run()]START!");
-						// TODO
 						callingServer.setSuspended(false);
 						break;
 
@@ -53,6 +51,43 @@ public class ZKConnection implements Runnable {
 
 					case SHUTDOWN:
 						logger.info("[ZKConnection.java/run()]SHUTDOWN!");
+
+						// Should only contain one backup agent server.
+						InfraMetadata shutDownMD = new InfraMetadata();
+						String leader = ecs.getLeader();
+						
+						shutDownMD.getServerLocations().add(callingServer
+								.getClusterMD().locationOfService(leader));
+
+						callingServer.setSuspended(true);
+
+						// Metadata still contains this server -> responsible
+						// for backing up.
+						if (shutDownMD.locationOfService(callingServer
+								.getServerName()) != null) {
+							// Prepare server for receiving backup messages.
+							ecs.waitAckSetup("backupCompleted");
+							callingServer.setClusterMD(shutDownMD);
+
+							ecs.ack(callingServer.getServerName(), "terminate");
+							ecs.waitAck("backupCompleted", 1, 50);
+
+							// At this point the kvdb for this server has become
+							// the central repository for backup. Rename kvdb
+							// directory for future restore service to pick up.
+							callingServer.backupKVDB();
+							ecs.ack(callingServer.getServerName(),
+									"restoreCompleted");
+						} else {
+							// This server was not chosen to be the backup
+							// agent. Send all of its storage to the restore
+							// server.
+							callingServer.migrateAll(shutDownMD);
+							ecs.ack(callingServer.getServerName(), "terminate");
+
+							// Remove kvdb directory.
+							callingServer.removeKVDB();
+						}
 						callingServer.setShuttingDown(true);
 						callingServer.close();
 						isOpen = false;
@@ -123,14 +158,15 @@ public class ZKConnection implements Runnable {
 
 						// Send and remove all keys in the current server.
 						callingServer.migrateAll(newMD);
-						
+
 						ecs.lock();
 						ecs.unlock();
-						
+
 						// Ack ECS after migration completes and commits
 						// suicide.
 						ecs.ack(callingServer.getServerName(), "migrate");
 						callingServer.setShuttingDown(true);
+						callingServer.removeKVDB();
 						callingServer.close();
 						isOpen = false;
 						break;
