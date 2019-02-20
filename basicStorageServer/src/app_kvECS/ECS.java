@@ -313,7 +313,6 @@ public class ECS {
 		MD.setEcsLocation(ecsLocation);
 		return MD;
 	}
-	
 	public void printMD() {
 		InfraMetadata MD = getMD();
 		List<ServiceLocation> serverLocations = MD.getServerLocations();
@@ -844,6 +843,30 @@ public class ECS {
 				e.printStackTrace();
 			}
 		}
+	}
+	public void setLeader(String leader, String ip) {
+		try {
+			if(zk.exists("/leader",true) == null) {
+				create("/leader", null, "-p");
+			}
+			if(zk.exists("/leader/servername",true) == null) {
+				create("/leader/servername", null, "-p");
+			}
+			if(zk.exists("/leader/ip",true) == null) {
+				create("/leader/ip", null, "-p");
+			}
+			
+		} catch (KeeperException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		setData("/leader/servername", leader);
+		setData("/leader/ip", ip);
+	}
+	public String getLeader() {
+		return getData("/leader/servername");
 	}
 
 }
