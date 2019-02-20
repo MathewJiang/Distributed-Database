@@ -400,6 +400,38 @@ public class KVClient implements IKVClient {
 		}
 	}
 
+	public static void runScript(String fileName) throws Exception {
+		File file = new File(fileName);
+		KVStore backend = new KVStore();
+
+		BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader(file));
+			String st;
+			try {
+				while ((st = br.readLine()) != null) {
+					String lines[] = st.split("\\s+");
+					if (lines[0].equals("get")) {
+						backend.get(lines[1]);
+					} else if (lines[0].equals("put")) {
+						if (lines.length >= 3) {
+							int i = 2;
+							String value = "";
+							while (i < lines.length) {
+								value += lines[i];
+								i++;
+							}
+							backend.put(lines[1], value);
+						}
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+	}
 	/**
 	 * Main entry point for the echo server application.
 	 * 
@@ -412,15 +444,32 @@ public class KVClient implements IKVClient {
 			// code.
 			KVServer.serverOn = true;
 			KVClient app = null;
-
+			boolean isInteger = true;
+			
 			if (args.length > 0) {
 				try {
-					testRandomPuts(Integer.parseInt(args[0]));
-				} catch (Exception e) {
-					System.out
-							.println("Usage: java -jar client.jar <number of put requests>");
+					Integer.parseInt(args[0]);
+				} catch (NumberFormatException e) {
+					isInteger = false;
 				}
-				return;
+				
+				if (!isInteger) {
+					try {
+						runScript(args[0]);
+					} catch (Exception e) {
+						System.out.println("[KVClient]runScrip failed!");
+						e.printStackTrace();
+					}
+					return;
+				} else {
+					try {
+						testRandomPuts(Integer.parseInt(args[0]));
+					} catch (Exception e) {
+						System.out
+								.println("Usage: java -jar client.jar <number of put requests>");
+					}
+					return;
+				}
 			}
 
 			try {
