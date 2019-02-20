@@ -27,6 +27,8 @@ public class M1Test extends TestCase {
 	public void setUp() throws Exception {
 		ecsClient = new ECSClient();
 		ecsClient.initECS();
+		ecsClient.getECS().reset();
+		ecsClient.setupNodes(1, "None", 0);
 		
 		md = new InfraMetadata();
 		
@@ -38,7 +40,7 @@ public class M1Test extends TestCase {
 		md.setEcsLocation(ecsSl);
 	}
 
-	@Test
+	@Test(timeout=100)
 	public void testClient() {
 		try {
 			client = new KVStore();
@@ -63,7 +65,7 @@ public class M1Test extends TestCase {
 		}
 	}
 	
-	@Test
+	@Test(timeout=100)
 	public void testServer() {
 		try {
 			client = new KVStore();
