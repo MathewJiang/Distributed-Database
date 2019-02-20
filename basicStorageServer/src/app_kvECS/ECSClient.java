@@ -279,7 +279,7 @@ public class ECSClient implements IECSClient {
     		echo("leader exists, trying to restore the saved data");
     		ecs.waitAckSetup("backupRestored");
     		launch("127.0.0.1", "restore_server", 0, "LRU", 200);
-    		ecs.waitAck("backupRestored", 1, 50);
+    		ecs.waitAck("backupRestored", 1, 300);
     		
     	} else {
     		echo("fresh startup");
