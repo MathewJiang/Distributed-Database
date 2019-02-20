@@ -27,6 +27,9 @@ public class KVClient implements IKVClient {
 
 	private static Logger logger = Logger.getRootLogger();
 	private static final String PROMPT = "m1-client> ";
+	private static final int RETRY_LIMIT = 10; // Controls how many times client
+												// should retry if receives
+												// SERVER_NOT_RESPONSIBLE.
 	private BufferedReader stdin;
 	private KVStore backend = null;
 	private boolean stop = false;
@@ -341,6 +344,12 @@ public class KVClient implements IKVClient {
 		PropertyConfigurator.configure(props);
 	}
 
+	public boolean shoudRetry(CommMessage msg) {
+		return msg != null
+				&& msg.getStatus().equals(StatusType.SERVER_NOT_RESPONSIBLE)
+				&& msg.getInfraMetadata() != null;
+	}
+
 	public void get(String key) {
 		try {
 			CommMessage latestMsg = (CommMessage) backend.get(key);
@@ -348,13 +357,10 @@ public class KVClient implements IKVClient {
 			// getting a metaData file from the server
 			// need to do a retry on the corresponding server
 			int i = 0;
-			while (latestMsg != null
-					&& latestMsg.getStatus().equals(
-							StatusType.SERVER_NOT_RESPONSIBLE)
-					&& latestMsg.getInfraMetadata() != null) {
-				// FIXME: should we just retry once???
-				System.out.println("[debug]Round " + i);
+			while (shoudRetry(latestMsg) && i < RETRY_LIMIT) {
 				i++;
+				logger.info("Client received message: " + latestMsg);
+				logger.info("Client retrying with new metadata in response");
 
 				backend.resetClusterHash(latestMsg.getInfraMetadata());
 				latestMsg = (CommMessage) backend.get(key);
@@ -372,13 +378,10 @@ public class KVClient implements IKVClient {
 			// getting a metaData file from the server
 			// need to do a retry on the corresponding server
 			int i = 0;
-			while (latestMsg != null
-					&& latestMsg.getStatus().equals(
-							StatusType.SERVER_NOT_RESPONSIBLE)
-					&& latestMsg.getInfraMetadata() != null) {
-				// FIXME: should we just retry once???
-				System.out.println("[debug]Round " + i);
+			while (shoudRetry(latestMsg) && i < RETRY_LIMIT) {
 				i++;
+				logger.info("Client received message: " + latestMsg);
+				logger.info("Client retrying with new metadata in response");
 
 				backend.resetClusterHash(latestMsg.getInfraMetadata());
 				latestMsg = (CommMessage) backend.put(key, value);
@@ -393,8 +396,7 @@ public class KVClient implements IKVClient {
 		while (num > 0) {
 			num--;
 			String data = UUID.randomUUID().toString().substring(0, 15);
-			if (((CommMessage) backend.put(data + num, data + num))
-					.getStatus() != StatusType.PUT_SUCCESS) {
+			if (((CommMessage) backend.put(data + num, data + num)).getStatus() != StatusType.PUT_SUCCESS) {
 				System.out.println("Error PUT");
 			}
 		}
@@ -432,6 +434,7 @@ public class KVClient implements IKVClient {
 			e1.printStackTrace();
 		}
 	}
+
 	/**
 	 * Main entry point for the echo server application.
 	 * 
@@ -445,14 +448,14 @@ public class KVClient implements IKVClient {
 			KVServer.serverOn = true;
 			KVClient app = null;
 			boolean isInteger = true;
-			
+
 			if (args.length > 0) {
 				try {
 					Integer.parseInt(args[0]);
 				} catch (NumberFormatException e) {
 					isInteger = false;
 				}
-				
+
 				if (!isInteger) {
 					try {
 						runScript(args[0]);
