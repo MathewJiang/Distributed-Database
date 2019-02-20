@@ -77,10 +77,26 @@ public class ECSClient implements IECSClient {
 
     @Override
     public boolean shutdown() {
+       	// pick a node
+    	List<ServiceLocation> servers = ecs.getMD().getServerLocations();
+    	if(servers.size() == 0) {
+    		warn("trying to shutdown but there is no server");
+    		return true;
+    	}
+		Collections.shuffle(servers, new Random(servers.size()));
+		echo("Shutdown " + servers.size() + " servers");
+		// pick the first as leader
+		ServiceLocation leader = servers.get(0);
+		ecs.setLeader(leader.serviceName, leader.host);
+		ecs.waitAckSetup("terminate");
     	ecs.broadast("SHUTDOWN");
+    	ecs.waitAck("terminate", launchedNodes.size(), 50);
+    	ecs.ack("ECSclient", "restoreCompleted");
     	launchedNodes.clear();
     	launchedServer.clear();
     	ecs.setConfigured(false);
+    	ecs.reset();
+    	ecs.init();
         return true;
     }
 
