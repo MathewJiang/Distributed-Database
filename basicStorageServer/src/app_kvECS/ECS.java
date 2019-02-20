@@ -688,6 +688,8 @@ public class ECS {
 				return KVAdminMessageType.LOCK_WRITE_REMOVE_RECEVIER;
 			case "LOCK_WRITE_REMOVE_SENDER":
 				return KVAdminMessageType.LOCK_WRITE_REMOVE_SENDER;
+			case "RESTORE":
+				return KVAdminMessageType.RESTORE;
 		}
 		return null;
 	}
@@ -713,6 +715,8 @@ public class ECS {
 			return "LOCK_WRITE_REMOVE_RECEVIER";
 		} else if(a == KVAdminMessageType.LOCK_WRITE_REMOVE_SENDER) {
 			return "LOCK_WRITE_REMOVE_SENDER";
+		} else if(a == KVAdminMessageType.RESTORE) {
+			return "RESTORE";
 		}
 		return "INVALID KVAdminMessageType";
 	}

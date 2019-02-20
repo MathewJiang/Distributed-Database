@@ -28,10 +28,11 @@ public class KVAdminMessage {
     	LOCK_WRITE_REMOVE_RECEVIER,	/* During nodeRemove, receiver should know
     	 							   that its successor is
     	 							   the node to be removed*/
-    	LOCK_WRITE_REMOVE_SENDER    /* During nodeRemove, sender should know that
+    	LOCK_WRITE_REMOVE_SENDER,    /* During nodeRemove, sender should know that
     	 							   its predecessor is
     	 							   the node that inherit all its keys
     	 							   (note: itself is the node to be removed) */
+    	RESTORE         /* dedicated server read from last archive*/
     }
     
     public InfraMetadata MD;

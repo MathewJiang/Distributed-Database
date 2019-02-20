@@ -831,7 +831,8 @@ public class ECSClient implements IECSClient {
 			break;
 		default:
 			printError("Unknown command");
-			printHelp();
+			 printHelp();
+			
 			return;
 		}
 	}
@@ -841,8 +842,11 @@ public class ECSClient implements IECSClient {
 		
 	}
 
+	@SuppressWarnings("unused")
 	private void printHelp() {
-		StringBuilder sb = new StringBuilder();
+		
+		
+		/*StringBuilder sb = new StringBuilder();
 		sb.append(PROMPT).append("M2 CLIENT HELP (Usage):\n");
 		sb.append(PROMPT);
 		sb.append("::::::::::::::::::::::::::::::::");
@@ -862,7 +866,25 @@ public class ECSClient implements IECSClient {
 		sb.append("quit ");
 		sb.append("\t\t\t\t exits the program");
 		sb.append("\n************************************************************************************\n");
-		System.out.println(sb.toString());
+		*/
+		System.out.println("ack\naddNode <cache size> <policy>" +
+				"\naddNodes <num nodes> <cacheSize> <policy>\nawaitNodes" +
+				" <count> <timeout>\ncat <file> : read data out\ncd <dir>" +
+				"\ncreate -p/-s <znode name[]>\necho <content> > <znode> :" +
+				" write data to znode\nexit : exit the shell\ngetNodeByKey " +
+				"<key> : return which server it goes\ngetcmd <serverName> :" +
+				" get cmd for server by name\nlock : lock globalLock\nlocktest :" +
+				" testcmd, will run 2000 lock and unlock ops\nlogLevel : adjust log " +
+				"level\nls : list dir\nmigrate : ask every server to update\nprintHash " +
+				": print the hash map stored\nprintMD : print the metadata stored\nquit :" +
+				"exit the shell\nremoveNodes <string[] of servers>\nreset -all: " +
+				"reset everything\nrm <znode>, remove znode, if this znode has" +
+				" children use -r\nsetcmd <serverName> <command>\nsetupNodes <num nodes>" +
+				" <policy> <cache size>\nshutDown no argument: shutdown all servers\nstart " +
+				"-- no argument: start all servers\nstop -- no argument:" +
+				" stop all servers\nunlock -- no argument: " +
+				"unlock globalLock\nwaitAck -- <event> <num ack required> <timeout>:" +
+				" setup an event for others to ack\n\n");
 	}
 
 	private void printPossibleLogLevels() {
