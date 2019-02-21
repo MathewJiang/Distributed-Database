@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -189,9 +191,16 @@ public class ECSClient implements IECSClient {
     @Override
     public Collection<IECSNode> addNodes(int count, String cacheStrategy, int cacheSize) {
         info("addNodes(count=" + count + ", cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
+        Instant start = Instant.now();
         for(int i = 0; i < count; i++) {
         	addNode(cacheStrategy, cacheSize);
+        	Instant end = Instant.now();
+    		Duration timeElapsed = Duration.between(start, end);
+        	float seconds = timeElapsed.toMillis() / 1000;
+    		echo("addNoding " + i + " takes " + seconds);
         }
+        
+		
         return null;
     }
     
