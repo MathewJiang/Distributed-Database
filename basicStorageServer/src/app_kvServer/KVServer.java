@@ -33,6 +33,7 @@ public class KVServer extends Thread implements IKVServer {
 	private static Logger logger = Logger.getRootLogger();
 	
 	private static final String RESTORE_DB_NAME = "/kvdb/restore-kvdb";
+	private static final String TEST_DB_NAME = "/kvdb/test-kvdb";
 
 	private ECS ecs = null;
 	private InfraMetadata clusterMD = null;
@@ -73,6 +74,18 @@ public class KVServer extends Thread implements IKVServer {
 	public KVServer() {
 		this.cacheSize = -1;
 		this.strategy = CacheStrategy.None;
+	}
+	
+	
+	// Only for unit tests.
+	public void initTestOnly() throws IOException, InterruptedException {
+		ecs = new ECS();
+		ecs.connect("localhost", 39678);
+		serverName = "test-only";
+		serverMD = new ServiceLocation(serverName, "test-host", 0);
+		Disk.setDbName(TEST_DB_NAME);
+		Disk.init();
+		isTestEnv = true;
 	}
 
 	/**
@@ -399,8 +412,14 @@ public class KVServer extends Thread implements IKVServer {
 
 				logger.info("Unconditionally migrating key " + key
 						+ " to server " + target.serviceName);
+
+				if (onKeyMigrationTestOnly()) {
+					Disk.putKV(key, null);
+					continue;
+				}
 				
 				while (true) {
+					
 					// Send and await ack from target server.
 					Socket socket = new Socket(target.host, target.port);
 					conn.sendCommMessage(socket.getOutputStream(), msg);
@@ -428,27 +447,17 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
-
-	public void removeMigratedKeys(InfraMetadata newMD) {
-		serverLock.lock();
-		try {
-			Storage.flush();
-
-			setClusterMD(newMD);
-			for (String key : Disk.getAllKeys()) {
-				// Key stays on this server.
-				if (clusterHash.getServer(key).serviceName
-						.equals(serverMD.serviceName)) {
-					continue;
-				}
-				Disk.putKV(key, null);
-			}
-		} catch (IOException e) {
-			logger.error("Error remving migrants on server " + getServerName()
-					+ ": " + e);
-		} finally {
-			serverLock.unlock();
-		}
+	
+	// Test Only Methods & Variables.
+	public static boolean isTestEnv = false;
+	public static int testMigrateCount = 0;
+	public void resetMigrateResourcesTestOnly() {
+		testMigrateCount = 0;
+		removeKVDB();
+	}
+	private boolean onKeyMigrationTestOnly() {
+		testMigrateCount++;
+		return isTestEnv;
 	}
 
 	// Compute new hash ring with given metadata, and migrate all storages
@@ -477,6 +486,11 @@ public class KVServer extends Thread implements IKVServer {
 			logger.info("Sending copies of " + migrants);
 			ConnectionUtil conn = new ConnectionUtil();
 			for (String key : migrants) {
+				
+				if (onKeyMigrationTestOnly()) {
+					continue;
+				}
+				
 				// Construct target and server message.
 				CommMessage msg = new CommMessageBuilder().setKey(key)
 						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
@@ -504,7 +518,30 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
-	
+
+	public void removeMigratedKeys(InfraMetadata newMD) {
+		serverLock.lock();
+		try {
+			Storage.flush();
+
+			setClusterMD(newMD);
+			for (String key : Disk.getAllKeys()) {
+				// Key stays on this server.
+				if (clusterHash.getServer(key).serviceName
+						.equals(serverMD.serviceName)) {
+					continue;
+				}
+				Disk.putKV(key, null);
+			}
+		} catch (IOException e) {
+			logger.error("Error remving migrants on server " + getServerName()
+					+ ": " + e);
+		} finally {
+			serverLock.unlock();
+		}
+	}
+
+
 	// This server is a pure restore process.
 	private static void restoreProcess() throws Exception {
 		KVServer temp = new KVServer();
