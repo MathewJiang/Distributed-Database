@@ -2,6 +2,7 @@ package client;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
@@ -23,30 +24,31 @@ public class KVStore extends Thread implements KVCommInterface {
 	// Resolved and resets on every request.
 	private Socket srvSocket;
 	private ServiceLocation target;
+	private static final int KVCLIENT_TIMEOUT = 2000; // in milliseconds.
 
 	private ECS ecs;
 	private final int PORT_ECS = 39678;
 
 	private InfraMetadata metaData;
 	private ConsistentHash clientHash;
-	
+
 	public KVStore() throws IOException, InterruptedException {
 		// Retrieve metadata from ecs.
 		ecs = new ECS();
-		
+
 		// USE THIS
 		ecs.connect("localhost", PORT_ECS);
 		metaData = ecs.getMD();
-		
+
 		// Load metadata into a hash ring.
 		clientHash = new ConsistentHash();
 		clientHash.addNodesFromInfraMD(metaData);
 	}
-	
+
 	public KVStore(ConsistentHash hash) {
 		clientHash = hash;
 	}
-	
+
 	public boolean isRunning() {
 		return running;
 	}
@@ -76,6 +78,7 @@ public class KVStore extends Thread implements KVCommInterface {
 		setRunning(true);
 		logger.info("Connecting to target server " + target);
 		srvSocket = new Socket(target.host, target.port);
+		srvSocket.setSoTimeout(KVCLIENT_TIMEOUT);
 	}
 
 	// Disconnect from host and reset target location to null.
@@ -108,6 +111,12 @@ public class KVStore extends Thread implements KVCommInterface {
 					.getInputStream());
 			System.out.println("Response: " + latestMsg);
 			return latestMsg;
+		} catch (SocketTimeoutException toe) {
+			logger.error("Client request time out! Fetching new metadata from ECS...");
+			return new CommMessageBuilder()
+					.setStatus(StatusType.SERVER_NOT_RESPONSIBLE)
+					.setKey("dummy").setValue("dummy")
+					.setInfraMetadata(ecs.getMD()).build();
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
 		} finally {
@@ -133,6 +142,12 @@ public class KVStore extends Thread implements KVCommInterface {
 					.getInputStream());
 			System.out.println("Response: " + latestMsg);
 			return latestMsg;
+		} catch (SocketTimeoutException toe) {
+			logger.error("Client request time out! Fetching new metadata from ECS...");
+			return new CommMessageBuilder()
+					.setStatus(StatusType.SERVER_NOT_RESPONSIBLE)
+					.setKey("dummy").setValue("dummy")
+					.setInfraMetadata(ecs.getMD()).build();
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
 		} finally {
