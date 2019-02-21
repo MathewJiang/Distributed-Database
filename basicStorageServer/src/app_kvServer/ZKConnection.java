@@ -42,13 +42,16 @@ public class ZKConnection implements Runnable {
 				if (cm.getKVAdminMessageType() != null) {
 					switch (cm.getKVAdminMessageType()) {
 					case START:
+						
 						logger.info("[ZKConnection.java/run()]START!");
 						callingServer.setSuspended(false);
+						ecs.ack(serverName, "start");
 						break;
 
 					case STOP:
 						logger.info("[ZKConnection.java/run()]STOP!");
 						callingServer.setSuspended(true);
+						ecs.ack(serverName, "stop");
 						break;
 
 					case SHUTDOWN:

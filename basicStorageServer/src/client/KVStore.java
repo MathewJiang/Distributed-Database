@@ -24,7 +24,7 @@ public class KVStore extends Thread implements KVCommInterface {
 	// Resolved and resets on every request.
 	private Socket srvSocket;
 	private ServiceLocation target;
-	private static final int KVCLIENT_TIMEOUT = 2000; // in milliseconds.
+	private static final int KVCLIENT_TIMEOUT = 10000; // in milliseconds.
 
 	private ECS ecs;
 	private final int PORT_ECS = 39678;

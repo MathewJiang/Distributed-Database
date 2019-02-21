@@ -71,13 +71,17 @@ public class ECSClient implements IECSClient {
 	// set start = true for all client server
     @Override
     public boolean start() {
+    	ecs.waitAckSetup("start");
     	ecs.broadast("START");
+    	ecs.waitAck("start", ecs.getMD().getServerLocations().size(), 300);
     	return true;
     }
 
     @Override
     public boolean stop() {
+    	ecs.waitAckSetup("stop");
     	ecs.broadast("STOP");
+    	ecs.waitAck("stop", ecs.getMD().getServerLocations().size(), 300);
     	return true;
     }
 
@@ -311,11 +315,17 @@ public class ECSClient implements IECSClient {
     	InfraMetadata currMD = ecs.getMD();
     	List<String> nodeNamesList = (List<String>) nodeNames;
     	List<ServiceLocation> nodesFromMD = currMD.getServerLocations();
+    	
+    	Instant start = Instant.now();
     	for(int j = 0; j < nodeNames.size(); j++) {
     		for(int i = 0; i < nodesFromMD.size(); i++) {
     			if(nodesFromMD.get(i).serviceName.equals(nodeNamesList.get(j))) {
     				// we found one match
     				removeNode(nodeNamesList.get(j));
+    				Instant end = Instant.now();
+    	    		Duration timeElapsed = Duration.between(start, end);
+    	        	float seconds = timeElapsed.toMillis() / 1000;
+    	    		echo("removeNoding " + j + " takes " + seconds);
     			}
     		}
     	}
