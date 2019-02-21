@@ -72,7 +72,7 @@ public class ZKConnection implements Runnable {
 							callingServer.setClusterMD(shutDownMD);
 							
 							ecs.ack(callingServer.getServerName(), "terminate");
-							ecs.waitAck("backupCompleted", 1, 120);
+							ecs.waitAck("backupCompleted", 1, 300);
 							
 							// Flush everything on this leader node.
 							try {
