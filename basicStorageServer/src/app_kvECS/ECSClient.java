@@ -1,9 +1,12 @@
 package app_kvECS;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.time.Instant;
@@ -44,7 +47,7 @@ public class ECSClient implements IECSClient {
 	private ConsistentHash hashRing;
 	private String currDir = "/";
 	private Set<String> SetDir = new HashSet<String>();
-	private int ECSport = 39678;
+	private String ECSip = "";
     private static Logger logger = Logger.getRootLogger();
 	private static final String PROMPT = "ecs_shell>";
 	private BufferedReader stdin;
@@ -176,7 +179,7 @@ public class ECSClient implements IECSClient {
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
-			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSport, cacheStrategy, cacheSize);
+			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSip, cacheStrategy, cacheSize);
 			ecs.waitAck("launched", 1, 50); // new node launched
 			ecs.waitAckSetup("migrate");
 			ecs.unlock(); // allow effected node to migrate
@@ -211,30 +214,55 @@ public class ECSClient implements IECSClient {
     private void loadECSconfigFromFile() {
 		try {
 			MD = InfraMetadata.fromConfigFile(ecs_config);
+			ECSip = MD.getEcsLocation().host;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-    private void launch(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
+    private void launch(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
     	Runtime run = Runtime.getRuntime();
     	Process proc;
-    	info("launch(ip = " + remoteIP + " port = " + ECSport + ")");
+    	info("launch(ip = " + remoteIP + " port = " + ECSip + ")");
     	if(remoteIP.equals("127.0.0.1") || remoteIP.equals("localhost")) {
     		try {
-				proc = Runtime.getRuntime().exec(nossh_launch_array(serverName, ECSport, strategy, cache_size));
+				proc = Runtime.getRuntime().exec(nossh_launch_array(serverName, ECSip, strategy, cache_size));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
     	} else {
     		
-    		try {
-    			proc = run.exec(ssh_launch_array(remoteIP, serverName, ECSport, strategy, cache_size));
+    		/*try {
+    			proc = Runtime.getRuntime().exec(ssh_launch_array(remoteIP, serverName, ECSport, strategy, cache_size));
     		} catch (IOException e) {
     			e.printStackTrace();
+    		}*/
+    		String cmd = ssh_launch_array(remoteIP, serverName, ECSip, strategy, cache_size);
+    		File search = new File("./cmd.tmp");
+    		if (search.exists()) {
+    		} else {
+    			try {
+					search.createNewFile();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
     		}
+
+    		PrintWriter key_file;
+			try {
+				key_file = new PrintWriter("./cmd.tmp");
+				key_file.println(cmd);
+				key_file.close();
+				String[] cmdScript = new String[]{"/bin/bash", "./cmd.tmp"}; 
+				Process procScript = Runtime.getRuntime().exec(cmdScript);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
     	}
     }
     @Override
@@ -284,14 +312,14 @@ public class ECSClient implements IECSClient {
         for(int i = 0; i < aliased.size(); i++) {
         	IECSNode curr = aliased.get(i);
         	echo("Launching " + curr.getNodeName());
-        	launch(curr.getNodeHost(), curr.getNodeName(), ECSport, cacheStrategy, cacheSize);
+        	launch(curr.getNodeHost(), curr.getNodeName(), ECSip, cacheStrategy, cacheSize);
         }
         ecs.waitAck("launched", count, 50);
         
         if(ecs.existsLeader()){
     		echo("leader exists, trying to restore the saved data");
     		ecs.waitAckSetup("backupRestored");
-    		launch("127.0.0.1", "restore_server", 0, "LRU", 200);
+    		launch("127.0.0.1", "restore_server", "0", "LRU", 200);
     		ecs.waitAck("backupRestored", 1, 300);
     		
     	} else {
@@ -452,33 +480,30 @@ public class ECSClient implements IECSClient {
     			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
     }
     
-    private String[] ssh_launch_array(String remoteIP, String serverName, int ECSport, String strategy, int cache_size) {
-    	String[] cmd = new String[9];
+    private String ssh_launch_array(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
+    	String[] cmd = new String[6];
     	cmd[0] = "ssh";
     	cmd[1] = "-n";
     	cmd[2] = "-o";
-    	cmd[3] = "\"StrictHostKeyChecking no\"";
+    	cmd[3] = "\"StrictHostKeyChecking no\" ";
     	cmd[4] = remoteIP;
-    	cmd[5] = "nohup";
-    	cmd[6] = "sh";
-    	cmd[7] = "-c";
-    	cmd[8] = "cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &";
-    	echo(cmd[0]);
-    	echo(cmd[1]);
-    	echo(cmd[2]);
-    	echo(cmd[3]);
-    	echo(cmd[4]);
-    	echo(cmd[5]);
-    	echo(cmd[6]);
-    	return cmd;
+    	cmd[5] = " nohup " + "\"sh" + " -c" + " cd / && cd "+ workDir 
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSip + " "+  serverName +" "  + cache_size +" " + strategy + "\" &";
+    	String debug_ssh = "";
+    	int i = 0;
+    	while(i != 6) {
+    		debug_ssh += cmd[i] + " ";
+    		i++;
+    	}
+    	echo(debug_ssh);
+    	return debug_ssh;
     }
-    private String[] nossh_launch_array(String serverName, int ECSport, String strategy, int cache_size) {
+    private String[] nossh_launch_array(String serverName, String ECSip, String strategy, int cache_size) {
     	String[] cmd = new String[3];
     	cmd[0] = "sh";
     	cmd[1] = "-c";
     	cmd[2] = "cd "+ workDir 
-    			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &";
+    			+ " " + "&& java -jar ./m2-server.jar " + ECSip + " "+  serverName +" "  + cache_size +" " + strategy + " &";
     	echo(cmd[0]);
     	echo(cmd[1]);
     	echo(cmd[2]);
