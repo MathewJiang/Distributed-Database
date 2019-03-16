@@ -31,10 +31,11 @@ import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
 	private static Logger logger = Logger.getRootLogger();
-	
+
 	private static final String RESTORE_DB_NAME = "/kvdb/restore-kvdb";
 	private static final String TEST_DB_NAME = "/kvdb/test-kvdb";
 
+	private static final Integer ECS_PORT = 39678;
 	private ECS ecs = null;
 	private InfraMetadata clusterMD = null;
 	private ConsistentHash clusterHash = null;
@@ -75,8 +76,7 @@ public class KVServer extends Thread implements IKVServer {
 		this.cacheSize = -1;
 		this.strategy = CacheStrategy.None;
 	}
-	
-	
+
 	// Only for unit tests.
 	public void initTestOnly() throws IOException, InterruptedException {
 		ecs = new ECS();
@@ -117,7 +117,7 @@ public class KVServer extends Thread implements IKVServer {
 	public ServiceLocation getServerInfo() {
 		return serverMD;
 	}
-	
+
 	public void setServerInfo(ServiceLocation sl) {
 		serverMD = sl;
 	}
@@ -253,7 +253,7 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-		
+
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
@@ -375,7 +375,7 @@ public class KVServer extends Thread implements IKVServer {
 	public ConsistentHash getClusterHash() {
 		return clusterHash;
 	}
-	
+
 	// Not Thread-safe!
 	public void setClusterMD(InfraMetadata newMetadata) {
 		this.clusterMD = newMetadata;
@@ -383,14 +383,14 @@ public class KVServer extends Thread implements IKVServer {
 		clusterHash.addNodesFromInfraMD(newMetadata);
 	}
 
-	public void retrieveClusterFromECS(Integer ECS_PORT) throws IOException,
+	public void retrieveClusterFromECS(String ecsIP) throws IOException,
 			InterruptedException {
 		if (ecs == null) {
 			ecs = new ECS();
 		}
 
 		// Compute server side consistent hash.
-		ecs.connect("localhost", ECS_PORT);
+		ecs.connect(ecsIP, ECS_PORT);
 		setClusterMD(ecs.getMD());
 	}
 
@@ -417,16 +417,16 @@ public class KVServer extends Thread implements IKVServer {
 					Disk.putKV(key, null);
 					continue;
 				}
-				
+
 				while (true) {
-					
+
 					// Send and await ack from target server.
 					Socket socket = new Socket(target.host, target.port);
 					conn.sendCommMessage(socket.getOutputStream(), msg);
 					CommMessage serverResponse = conn.receiveCommMessage(socket
 							.getInputStream());
 					socket.close();
-	
+
 					// Remove local copy.
 					if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
 						Thread.sleep(100);
@@ -447,14 +447,16 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
-	
+
 	// Test Only Methods & Variables.
 	public static boolean isTestEnv = false;
 	public static int testMigrateCount = 0;
+
 	public void resetMigrateResourcesTestOnly() {
 		testMigrateCount = 0;
 		removeKVDB();
 	}
+
 	private boolean onKeyMigrationTestOnly() {
 		testMigrateCount++;
 		return isTestEnv;
@@ -486,11 +488,11 @@ public class KVServer extends Thread implements IKVServer {
 			logger.info("Sending copies of " + migrants);
 			ConnectionUtil conn = new ConnectionUtil();
 			for (String key : migrants) {
-				
+
 				if (onKeyMigrationTestOnly()) {
 					continue;
 				}
-				
+
 				// Construct target and server message.
 				CommMessage msg = new CommMessageBuilder().setKey(key)
 						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
@@ -541,19 +543,18 @@ public class KVServer extends Thread implements IKVServer {
 		}
 	}
 
-
 	// This server is a pure restore process.
-	private static void restoreProcess() throws Exception {
+	private static void restoreProcess(String ecsIP) throws Exception {
 		KVServer temp = new KVServer();
 		resetServerLogger("restore-process");
 		temp.ecs = new ECS();
-		temp.ecs.connect("localhost", 39678);
+		temp.ecs.connect(ecsIP, ECS_PORT);
 		Disk.setDbName(RESTORE_DB_NAME);
 		Disk.init();
-		
+
 		InfraMetadata md = temp.ecs.getMD();
 		try {
-			// Generate a temporary new consistent hash ring and 
+			// Generate a temporary new consistent hash ring and
 			// provision all keys to migrate.
 			ConsistentHash hash = new ConsistentHash();
 			hash.addNodesFromInfraMD(md);
@@ -576,9 +577,8 @@ public class KVServer extends Thread implements IKVServer {
 						.getInputStream());
 				if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
 					logger.error("Error migrating message " + msg
-						+ " to server "
-							+ target.serviceName + "\nResponse: "
-							+ serverResponse);
+							+ " to server " + target.serviceName
+							+ "\nResponse: " + serverResponse);
 				} else {
 					Disk.putKV(key, null);
 				}
@@ -591,12 +591,12 @@ public class KVServer extends Thread implements IKVServer {
 			temp.ecs.ack("restore_service", "backupRestored");
 		}
 	}
-	
+
 	public static KVServer initServerFromECS(String[] args) throws Exception {
 		// Coordinate and initialize server w.r.t ECS metadata.
 		// Initialize clusterMD and compute clusterHash.
 		KVServer server = new KVServer();
-		server.retrieveClusterFromECS(Integer.parseInt(args[0]));
+		server.retrieveClusterFromECS(args[0]);
 
 		// Calculate server instance specific metadata.
 		server.serverMD = server.clusterMD.locationOfService(args[1]);
@@ -613,7 +613,11 @@ public class KVServer extends Thread implements IKVServer {
 	 * Main entry point for the echo server application.
 	 * 
 	 * @param args
-	 *            contains the port number at args[0].
+	 *            0: ECS IP address for normal server start ups or '0' + ECS IP
+	 *            address for restore process.
+	 *            1: server name.
+	 *            2: server cache size.
+	 *            3: server cache strategy (LFU, LRU, FIFO or None).
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
@@ -634,8 +638,8 @@ public class KVServer extends Thread implements IKVServer {
 			}
 			
 			// This server is a one-time restore service.
-			if (Integer.parseInt(args[0]) == 0) {
-				restoreProcess();
+			if (args[0].charAt(0) == '0') {
+				restoreProcess(args[0].substring(1));
 				return;
 			}
 			
