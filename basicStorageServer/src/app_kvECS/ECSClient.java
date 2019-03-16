@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -54,7 +55,7 @@ public class ECSClient implements IECSClient {
 	private boolean stop = false;
 	private String workDir = "";
 	private String config = "";
-	private String ecsLocation = "127.0.0.1";
+	private String ecsLocation = "";
 	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
@@ -240,7 +241,13 @@ public class ECSClient implements IECSClient {
     			e.printStackTrace();
     		}*/
     		String cmd = ssh_launch_array(remoteIP, serverName, ECSip, strategy, cache_size);
-    		File search = new File("./cmd.tmp");
+    		/*try {
+				Thread.sleep(2);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}*/
+    		String cmdFile = "./cmd_" + serverName;
+    		File search = new File(cmdFile);
     		if (search.exists()) {
     		} else {
     			try {
@@ -252,11 +259,35 @@ public class ECSClient implements IECSClient {
 
     		PrintWriter key_file;
 			try {
-				key_file = new PrintWriter("./cmd.tmp");
+				key_file = new PrintWriter(cmdFile);
 				key_file.println(cmd);
+				key_file.flush();
 				key_file.close();
-				String[] cmdScript = new String[]{"/bin/bash", "./cmd.tmp"}; 
+				String[] cmdScript = new String[]{"/bin/bash", cmdFile}; 
+				while(true) {
+					FileReader fr = new FileReader(cmdFile);
+					BufferedReader fh = new BufferedReader(fr);
+					String result = "";
+					String line;
+					while ((line = fh.readLine()) != null) {
+						result += line;
+					}
+					fh.close();
+					fr.close();
+					echo("read result: " + result);
+					echo("cmd is: " + cmd);
+					if(result.equals(cmd)) {
+						break;
+					}
+				}
 				Process procScript = Runtime.getRuntime().exec(cmdScript);
+				try {
+					procScript.waitFor();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -279,7 +310,7 @@ public class ECSClient implements IECSClient {
     	
     	
     	ecs.waitAckSetup("launched");
-    	// loadECSconfigFromFile();
+    	loadECSconfigFromFile();
     	hashRing.removeAllServerNodes();
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 
@@ -883,7 +914,7 @@ public class ECSClient implements IECSClient {
 					launchedServer.clear();
 					ecs.reset();
 					ecs.init();
-					ecsLocation = "127.0.0.1";
+					ecsLocation = ECSip;
 				}
 			}
 			break;
