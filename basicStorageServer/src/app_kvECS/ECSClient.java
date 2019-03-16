@@ -279,7 +279,7 @@ public class ECSClient implements IECSClient {
     	
     	
     	ecs.waitAckSetup("launched");
-    	loadECSconfigFromFile();
+    	// loadECSconfigFromFile();
     	hashRing.removeAllServerNodes();
 		List<ServiceLocation> servers = MD.getServerLocations();
 		Collections.shuffle(servers, new Random(count)); 
@@ -319,7 +319,7 @@ public class ECSClient implements IECSClient {
         if(ecs.existsLeader()){
     		echo("leader exists, trying to restore the saved data");
     		ecs.waitAckSetup("backupRestored");
-    		launch("127.0.0.1", "restore_server", "0", "LRU", 200);
+    		launch("127.0.0.1", "restore_server", "0"+ECSip, "LRU", 200);
     		ecs.waitAck("backupRestored", 1, 300);
     		
     	} else {
@@ -523,8 +523,8 @@ public class ECSClient implements IECSClient {
 		ecs = new ECS();
 		set_workDir();
 		hashRing = new ConsistentHash();
-		
-		
+	    loadECSconfigFromFile();
+	    ecsLocation = ECSip;
 		try {
 			ecs.connect(ecsLocation, 39678);
 			if(ecs.configured()) {
