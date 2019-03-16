@@ -26,6 +26,7 @@ public class AllTests {
 	
 	public static Test suite() {
 		TestSuite clientSuite = new TestSuite("Basic Storage ServerTest-Suite");
+		// M1 test cases (deprecated after infrastructure change)
 //		clientSuite.addTestSuite(ConnectionTest.class);
 //		clientSuite.addTestSuite(InteractionTest.class);
 //		clientSuite.addTestSuite(BadKeyTest.class);
@@ -38,6 +39,7 @@ public class AllTests {
 		clientSuite.addTestSuite(LockTest.class);
 		clientSuite.addTestSuite(ECSTest.class);
 		clientSuite.addTestSuite(MD5Test.class);
+		clientSuite.addTestSuite(MigrationTest.class);
 		clientSuite.addTestSuite(ConsistentHashTest.class);
 		clientSuite.addTestSuite(M1Test.class);
 		return clientSuite;
