@@ -96,7 +96,7 @@ public class ECS {
 		}
 
 		connectionLatch.await();
-		echo("Connected");
+		echo("Connected to " + host + ":" + port);
 		return zk;
 	}
 
