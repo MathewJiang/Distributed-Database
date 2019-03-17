@@ -114,10 +114,10 @@ public class ClientConnection implements Runnable {
 								
 								
 								// only send replica if current server is the coordinator
-								if (callingServer.hasKey(key)) {
-									performReplication(latestMsg, 
-											callingServer.getClusterMD(), callingServer.getServerInfo());
-								}
+								// if (callingServer.hasKey(key)) {
+								//	performReplication(latestMsg, 
+								//			callingServer.getClusterMD(), callingServer.getServerInfo());
+								// }
 							} catch (IOException e) {
 								responseMsg.setStatus(StatusType.PUT_ERROR);
 							} finally {
