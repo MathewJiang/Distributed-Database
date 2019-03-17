@@ -8,9 +8,12 @@ import java.net.Socket;
 import org.apache.log4j.Logger;
 
 import shared.ConnectionUtil;
+import shared.ConsistentHash;
 import shared.messages.CommMessage;
 import shared.messages.CommMessageBuilder;
 import shared.messages.KVMessage.StatusType;
+import shared.metadata.InfraMetadata;
+import shared.metadata.ServiceLocation;
 import app_kvServer.storage.Disk;
 import app_kvServer.storage.Storage;
 
@@ -73,6 +76,7 @@ public class ClientConnection implements Runnable {
 					// been stopped as a way to ignoring the request.
 					CommMessage responseMsg = new CommMessageBuilder()
 							.setStatus(StatusType.SERVER_STOPPED).build();
+					responseMsg.setFromServer(true);
 					conn.sendCommMessage(output, responseMsg);
 				} else if (shouldInformServerWriteLock(latestMsg)) {
 					// Server is write-locked. The message is a put request from
@@ -80,6 +84,7 @@ public class ClientConnection implements Runnable {
 					// server put request, still accepts the operation.
 					CommMessage responseMsg = new CommMessageBuilder()
 							.setStatus(StatusType.SERVER_WRITE_LOCK).build();
+					responseMsg.setFromServer(true);
 					conn.sendCommMessage(output, responseMsg);
 				} else {
 					StatusType op = latestMsg.getStatus();
@@ -90,7 +95,9 @@ public class ClientConnection implements Runnable {
 
 					// If request key is not in server range. Issue an
 					// update message to requesting client.
-					if (!callingServer.hasKey(key)) {
+					
+					if (!callingServer.hasKey(key) && !callingServer.hasReplicaKey(key)) {
+						logger.error("[run/ClientConnection.java]KEY NOT IN RANGE");
 						responseMsg.setInfraMetadata(callingServer
 								.getClusterMD());
 						responseMsg
@@ -104,6 +111,13 @@ public class ClientConnection implements Runnable {
 								responseMsg.setKey(key);
 								responseMsg.setValue(value);
 								responseMsg.setStatus(status);
+								
+								
+								// only send replica if current server is the coordinator
+								if (callingServer.hasKey(key)) {
+									performReplication(latestMsg, 
+											callingServer.getClusterMD(), callingServer.getServerInfo());
+								}
 							} catch (IOException e) {
 								responseMsg.setStatus(StatusType.PUT_ERROR);
 							} finally {
@@ -132,7 +146,7 @@ public class ClientConnection implements Runnable {
 							throw new IOException();
 						}
 					}
-
+					responseMsg.setFromServer(true);
 					conn.sendCommMessage(output, responseMsg);
 				}
 
@@ -200,6 +214,71 @@ public class ClientConnection implements Runnable {
 			logger.warn("[ClientConnection]handleGET: DB not initalized during Server startup");
 		}
 		return Storage.getKV(key);
+	}
+	
+	
+	/***********************************************************************
+	 * performReplication
+	 * do the replication mechanism
+	 * after data has been modified by user 
+	 * 
+	 * @param	conn	connectionUtil
+	 * @param	output	outputStream
+	 * 
+	 ***********************************************************************/
+	private void performReplication(CommMessage latestMsg,
+			InfraMetadata clusterMD, ServiceLocation serverInfo) {
+		ConnectionUtil conn1 = new ConnectionUtil();
+		ConnectionUtil conn2 = new ConnectionUtil();
+		
+		ConsistentHash ch = new ConsistentHash();
+		ch.addNodesFromInfraMD(clusterMD);
+		CommMessage replicaMessage = new CommMessageBuilder().setStatus(latestMsg.getStatus())
+				.setKey(latestMsg.getKey()).setValue(latestMsg.getValue()).build();
+		replicaMessage.setFromServer(true);
+		replicaMessage.setIsReplicaMessage(true);
+				
+		
+		try {
+			// find immediate successor and send the message
+			ServiceLocation successorFirst = ch.getSuccessor(serverInfo);
+			logger.info("[replication/ClientConnection.java] successorFirstResponse: " + successorFirst.serviceName);
+			
+			Socket socketFirst = new Socket(successorFirst.host, successorFirst.port);
+			conn1.sendCommMessage(socketFirst.getOutputStream(), replicaMessage);
+			CommMessage successorFirstResponse = conn1.receiveCommMessage(socketFirst
+					.getInputStream());
+			
+			if (successorFirstResponse.getStatus() != StatusType.PUT_SUCCESS) {
+				logger.error("[replication/ClientConnection.java]" +
+						"Error migrating message " + replicaMessage
+						+ " from server " + serverInfo.serviceName + " to server "
+						+ successorFirst.serviceName + "\nResponse: "
+						+ successorFirstResponse);
+			}
+			socketFirst.close();
+			
+			
+			// find successor of the immediate successor
+			ServiceLocation successorSecond = ch.getSuccessor(successorFirst);
+			logger.info("[replication/ClientConnection.java] successorSecondResponse: " + successorSecond.serviceName);
+			Socket socketSecond = new Socket(successorSecond.host, successorSecond.port);
+			conn2.sendCommMessage(socketSecond.getOutputStream(), replicaMessage);
+			
+			CommMessage successorSecondResponse = conn2.receiveCommMessage(socketSecond
+					.getInputStream());
+			if (successorSecondResponse.getStatus() != StatusType.PUT_SUCCESS) {
+				logger.error("[replication/ClientConnection.java]" +
+						"Error migrating message " + replicaMessage
+						+ " from server " + serverInfo.serviceName + " to server "
+						+ successorSecond.serviceName + "\nResponse: "
+						+ successorSecondResponse);
+			}
+			socketSecond.close();
+			
+		} catch (Exception e) {
+			logger.info(e.toString());
+		}		
 	}
 
 }
