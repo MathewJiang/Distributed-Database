@@ -367,6 +367,25 @@ public class KVServer extends Thread implements IKVServer {
 		return clusterHash.getServer(key).serviceName
 				.equals(serverMD.serviceName);
 	}
+	
+	public boolean hasReplicaKey(String key) {
+		ServiceLocation keyCoordinator = clusterHash.getServer(key);
+		
+		try { 
+			ServiceLocation successorFirst = clusterHash.getSuccessor(keyCoordinator);
+			ServiceLocation successorSecond = clusterHash.getSuccessor(successorFirst);
+			
+			if (successorFirst.serviceName.equals(this.getServerName())
+					|| successorSecond.serviceName.equals(this.getServerName())) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			logger.error(e.toString());
+			return false;
+		}
+	}
 
 	public InfraMetadata getClusterMD() {
 		return clusterMD;
@@ -591,6 +610,9 @@ public class KVServer extends Thread implements IKVServer {
 			temp.ecs.ack("restore_service", "backupRestored");
 		}
 	}
+	
+
+
 
 	public static KVServer initServerFromECS(String[] args) throws Exception {
 		// Coordinate and initialize server w.r.t ECS metadata.

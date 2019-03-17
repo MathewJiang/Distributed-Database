@@ -11,6 +11,7 @@ public class CommMessage implements KVMessage {
 	// Status and data of this CommMessage.
 	private StatusType status;
 	private Boolean fromServer = false; // Unless explicitly set to true.
+	private boolean isReplicaMessage = false;	// FIXME: might or might not been needed
 	private InfraMetadata infraMetadata;
 	
 	private String key;
@@ -109,5 +110,13 @@ public class CommMessage implements KVMessage {
 
 	public void setFromServer(Boolean fromServer) {
 		this.fromServer = fromServer;
+	}
+	
+	public boolean getIsReplicaMessage() {
+		return this.isReplicaMessage;
+	}
+	
+	public void setIsReplicaMessage(boolean isReplicaMessage) {
+		this.isReplicaMessage = isReplicaMessage;
 	}
 }
