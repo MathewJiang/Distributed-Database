@@ -69,6 +69,10 @@ public class KVStore extends Thread implements KVCommInterface {
 		logger.info("Resolved key " + key + " -> server " + target);
 	}
 
+	public void setConnectTarget(String addr, Integer port) {
+		target = new ServiceLocation("user-targeted-server", addr, port);
+	}
+	
 	// Connect to target host (initialized by calling resolveKVServer).
 	@Override
 	public void connect() throws UnknownHostException, IOException {
@@ -87,10 +91,52 @@ public class KVStore extends Thread implements KVCommInterface {
 		try {
 			srvSocket.close();
 			target = null;
+			setRunning(false);
 		} catch (IOException e) {
 			logger.error("Error closing server socket");
 			e.printStackTrace();
 		}
+	}
+
+	// Put without automatically routing server connections.
+	public KVMessage putDirect(String key, String value) throws Exception {
+		try {
+			CommMessage cm = new CommMessageBuilder()
+					.setStatus(KVMessage.StatusType.PUT).setKey(key)
+					.setValue(value).build();
+			ConnectionUtil conn = new ConnectionUtil();
+			conn.sendCommMessage(srvSocket.getOutputStream(), cm);
+
+			CommMessage latestMsg = conn.receiveCommMessage(srvSocket
+					.getInputStream());
+			System.out.println("Response: " + latestMsg);
+			return latestMsg;
+		} catch (IOException ioe) {
+			logger.error("Connection lost!");
+		} finally {
+			disconnect();
+		}
+		return null;
+	}
+
+	// Try directly getting the key without auto-routing server.
+	public KVMessage getDirect(String key) throws Exception {
+		try {
+			CommMessage cm = new CommMessage(StatusType.GET, key.toString(),
+					null);
+			ConnectionUtil conn = new ConnectionUtil();
+			conn.sendCommMessage(srvSocket.getOutputStream(), cm);
+
+			CommMessage latestMsg = conn.receiveCommMessage(srvSocket
+					.getInputStream());
+			System.out.println("Response: " + latestMsg);
+			return latestMsg;
+		} catch (IOException ioe) {
+			logger.error("Connection lost!");
+		} finally {
+			disconnect();
+		}
+		return null;
 	}
 
 	@Override
