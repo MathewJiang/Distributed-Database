@@ -115,11 +115,11 @@ public class KVClient implements IKVClient {
 				return;
 			}
 			if (backend.isRunning()) {
-				printError("Please disconnect first");
+				printError("Please disconnect from current session first");
 				return;
 			}
-			backend.setConnectTarget(tokens[1], Integer.parseInt(tokens[2]));
 			try {
+				backend.setConnectTarget(tokens[1], Integer.parseInt(tokens[2]));
 				backend.connect();
 			} catch (IOException e2) {
 				printError("Error executing connect command: " + tokens + "\n"
