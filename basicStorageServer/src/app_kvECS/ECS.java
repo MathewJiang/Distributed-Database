@@ -682,6 +682,8 @@ public class ECS {
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			zk.create("/register", ("false").getBytes(StandardCharsets.UTF_8),
+					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} catch (KeeperException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -949,5 +951,79 @@ public class ECS {
 		logger.info("Got leader: " + s);
 		return s;
 	}
+	public void register(String myName) { // must register before ack server started
+		try {
+			if (zk.exists("/register", true) == null) {
+				create("/register", null, "-p");
+			}
+			create("/register/" + myName, null, "-s");
+		} catch (KeeperException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return;
+	}
+	private String diffNodes(List<String> liveNodeList, List<String> presistent_records) {
+		presistent_records.removeAll(liveNodeList);
+		if(presistent_records.size() != 1) {
+			// echo("server down count is " + presistent_records.size() );
+		} else {
+			// this is legit
+			return presistent_records.get(0);
+		}
+		if(presistent_records.size() == 0) {
+			return "";
+		} else {
+			return "more than 1 server!";
+		}
+	}
+	public void monitor_registry() {
+		echo("monitor_registry started");
+		List<String> liveNodeList = null;
+		ECSClient ECSClientInterface = new ECSClient();
+		final CountDownLatch monitorLatch = new CountDownLatch(1);
+		while (true) {
+			 try {
+				liveNodeList = zk.getChildren("/register", new Watcher() {
+				public void process(WatchedEvent e) {
+					monitorLatch.countDown();
+					}
+				});
+			} catch (KeeperException | InterruptedException e) {
+				e.printStackTrace();
+			}
+			try {
+				monitorLatch.await(5, TimeUnit.SECONDS);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+			
+			try {
+				if (zk.exists("/nodes", true) == null) {
+					echo("detects reset -all");
+					break;
+				}
+			} catch (KeeperException | InterruptedException e) {
+				e.printStackTrace();
+			}
+			String crushed_server = diffNodes(liveNodeList, returnDirList("/nodes"));
+			if(crushed_server.equals("more than 1 server!")) {
+				echo("failed to detect crushed_server");
+			}
+			if(crushed_server.equals("")) {
+			} else {
+				// leader election
+				//ackLock.lock();
+				// recheck, make sure it is ok
+				// do something here
+				echo("detected " + crushed_server + " crushed");
+				// ECSClientInterface.removeNode(crushed_server);
+				// ackLock.unlock();
+				break;
+			}
+		}
+	}
+	
 
 }
