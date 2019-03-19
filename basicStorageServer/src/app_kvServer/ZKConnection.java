@@ -9,6 +9,7 @@ import shared.messages.KVAdminMessage;
 import shared.metadata.InfraMetadata;
 import shared.metadata.ServiceLocation;
 import app_kvECS.ECS;
+import app_kvServer.storage.ReplicaStore;
 import app_kvServer.storage.Storage;
 
 public class ZKConnection implements Runnable {
@@ -73,7 +74,6 @@ public class ZKConnection implements Runnable {
 							// Prepare server for receiving backup messages.
 							ecs.waitAckSetup("backupCompleted");
 							callingServer.setClusterMD(shutDownMD);
-							
 							ecs.ack(callingServer.getServerName(), "terminate");
 							ecs.waitAck("backupCompleted", 1, 300);
 							
@@ -100,6 +100,7 @@ public class ZKConnection implements Runnable {
 							// Remove kvdb directory.
 							callingServer.removeKVDBAll();
 						}
+						callingServer.removeReplicaStore();
 						callingServer.setShuttingDown(true);
 						callingServer.close();
 						isOpen = false;

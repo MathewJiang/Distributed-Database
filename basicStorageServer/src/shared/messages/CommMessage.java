@@ -12,6 +12,7 @@ public class CommMessage implements KVMessage {
 	private StatusType status;
 	private Boolean fromServer = false; // Unless explicitly set to true.
 	private boolean isReplicaMessage = false;	// FIXME: might or might not been needed
+	public boolean isMigrationMessage = false;	// Unconditionally accept message during migration
 	private InfraMetadata infraMetadata;
 	
 	private String key;

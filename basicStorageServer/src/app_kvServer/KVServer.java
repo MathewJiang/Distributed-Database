@@ -452,6 +452,7 @@ public class KVServer extends Thread implements IKVServer {
 				CommMessage msg = new CommMessageBuilder().setKey(key)
 						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
 						.build();
+				msg.isMigrationMessage = true;
 				msg.setFromServer(true);
 				ServiceLocation target = clusterHash.getServer(key);
 
@@ -545,6 +546,7 @@ public class KVServer extends Thread implements IKVServer {
 						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
 						.build();
 				msg.setFromServer(true);
+				msg.isMigrationMessage = true;
 				ServiceLocation target = newHash.getServer(key);
 
 				// Send and await ack from target server.
@@ -600,6 +602,7 @@ public class KVServer extends Thread implements IKVServer {
 		Disk.init();
 
 		InfraMetadata md = temp.ecs.getMD();
+		
 		try {
 			// Generate a temporary new consistent hash ring and
 			// provision all keys to migrate.
@@ -740,6 +743,12 @@ public class KVServer extends Thread implements IKVServer {
 	public void removeKVDB() {
 		if (!Disk.remove_db()) {
 			logger.warn("Error removing kvdb directory - not empty");
+		}
+	}
+	
+	public void removeReplicaStore(){
+		if(!ReplicaStore.removeAllFiles()) {
+			logger.warn("Error removing all files");
 		}
 	}
 	

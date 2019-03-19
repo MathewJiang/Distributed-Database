@@ -15,7 +15,7 @@ public class ReplicaStore {
 	static String path = "";
 	static String db_dir = "";
 	static String DB_NAME = "kvdb";
-	
+
 	public static void setDbName(String str) {
 		DB_NAME = str;
 	}
@@ -30,13 +30,13 @@ public class ReplicaStore {
 		}
 		return true;
 	}
-	
+
 	public static boolean rename_db(String new_db_name) {
 		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
 		return db.renameTo(new File(path + new_db_name));
 	}
-	
+
 	public static boolean remove_db() {
 		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
@@ -45,6 +45,31 @@ public class ReplicaStore {
 		}
 		db.delete();
 		return true;
+	}
+
+	/******************************************************
+	 * 2019/03/19: Added by Zheping - Removing all files within a directory -
+	 * Intended for removing replica
+	 * 
+	 ******************************************************/
+	public static boolean removeAllFiles() {
+		db_dir = path + DB_NAME;
+		File db = new File(db_dir);
+		File[] files = db.listFiles();
+		boolean deleteSafe = true;
+
+		if (files.length > 0) {
+			for (File f : files) {
+				if (!f.delete()) {
+					deleteSafe = false;
+				}
+			}
+			db.delete();
+			return deleteSafe;
+		} else {
+			db.delete();
+			return true;
+		}
 	}
 
 	public static void test_and_set_db() {
@@ -63,7 +88,7 @@ public class ReplicaStore {
 		}
 		// this point, we have a db dir initialized
 	}
-	
+
 	public static List<String> getAllKeys() {
 		File dir = new File(db_dir);
 		if (!dir.isDirectory()) {

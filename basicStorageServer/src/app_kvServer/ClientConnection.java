@@ -236,6 +236,11 @@ public class ClientConnection implements Runnable {
 	 ***********************************************************************/
 	private void performReplication(CommMessage latestMsg,
 			InfraMetadata clusterMD, ServiceLocation serverInfo) {
+		
+		if(latestMsg.isMigrationMessage) {
+			return;
+		}
+		
 		ConnectionUtil conn = new ConnectionUtil();
 
 		ConsistentHash ch = new ConsistentHash();
