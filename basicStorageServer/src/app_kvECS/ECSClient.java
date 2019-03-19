@@ -56,6 +56,9 @@ public class ECSClient implements IECSClient {
 	private String workDir = "";
 	private String config = "";
 	private String ecsLocation = "";
+	private String ssh_location = "./ssh.cmd";
+	private String ssh_content = "";
+	private Thread monitorThread = null;
 	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
@@ -116,6 +119,7 @@ public class ECSClient implements IECSClient {
     	ecs.deleteHeadRecursive("/nodes");
     	ecs.deleteHeadRecursive("/lock");
     	ecs.deleteHeadRecursive("/ack");
+    	ecs.deleteHead("/register");
     	ecs.init();
         return true;
     }
@@ -180,7 +184,9 @@ public class ECSClient implements IECSClient {
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
+			clear_script();
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSip, cacheStrategy, cacheSize);
+			run_script();
 			ecs.waitAck("launched", 1, 50); // new node launched
 			ecs.waitAckSetup("migrate");
 			ecs.unlock(); // allow effected node to migrate
@@ -222,6 +228,49 @@ public class ECSClient implements IECSClient {
 		}
 	}
 
+    private void clear_script() {
+    	ssh_content = "";
+    }
+    private void run_script() {
+    	String cmdFile = ssh_location;
+		File search = new File(cmdFile);
+		if (search.exists()) {
+		} else {
+			try {
+				search.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		PrintWriter key_file;
+		try {
+			key_file = new PrintWriter(cmdFile);
+			key_file.print(ssh_content);
+			key_file.flush();
+			key_file.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+    	String[] cmdScript = new String[]{"/bin/bash", cmdFile}; 
+		echo("Running " + cmdFile);
+		Process procScript;
+		try {
+			procScript = Runtime.getRuntime().exec(cmdScript);
+			try {
+				procScript.waitFor();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+    }
     private void launch(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
     	Runtime run = Runtime.getRuntime();
     	Process proc;
@@ -246,54 +295,7 @@ public class ECSClient implements IECSClient {
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}*/
-    		String cmdFile = "./cmd_" + serverName;
-    		File search = new File(cmdFile);
-    		if (search.exists()) {
-    		} else {
-    			try {
-					search.createNewFile();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-    		}
-
-    		PrintWriter key_file;
-			try {
-				key_file = new PrintWriter(cmdFile);
-				key_file.println(cmd);
-				key_file.flush();
-				key_file.close();
-				String[] cmdScript = new String[]{"/bin/bash", cmdFile}; 
-				while(true) {
-					FileReader fr = new FileReader(cmdFile);
-					BufferedReader fh = new BufferedReader(fr);
-					String result = "";
-					String line;
-					while ((line = fh.readLine()) != null) {
-						result += line;
-					}
-					fh.close();
-					fr.close();
-					echo("read result: " + result);
-					echo("cmd is: " + cmd);
-					if(result.equals(cmd)) {
-						break;
-					}
-				}
-				Process procScript = Runtime.getRuntime().exec(cmdScript);
-				try {
-					procScript.waitFor();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+    		ssh_content += cmd + "\nsleep 3 \n";
     	}
     }
     @Override
@@ -340,11 +342,13 @@ public class ECSClient implements IECSClient {
 		}
 		info("About to launch " + launchedServer.size() + " servers cacheStrategy " + cacheStrategy + " cacheSize " + cacheSize);
         List<IECSNode> aliased = ecs.setLaunchedNodes(launchedNodes);
+        clear_script();
         for(int i = 0; i < aliased.size(); i++) {
         	IECSNode curr = aliased.get(i);
         	echo("Launching " + curr.getNodeName());
         	launch(curr.getNodeHost(), curr.getNodeName(), ECSip, cacheStrategy, cacheSize);
         }
+        run_script();
         ecs.waitAck("launched", count, 50);
         
         if(ecs.existsLeader()){
@@ -561,6 +565,7 @@ public class ECSClient implements IECSClient {
 			if(ecs.configured()) {
 	    		restoreFromECS();
 	    	}
+			
 			
 			
 		} catch (IOException e1) {
@@ -909,7 +914,10 @@ public class ECSClient implements IECSClient {
 		case "reset":
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
+					// cannot ack due to recorvery logic
+					// ecs.waitAckSetup("terminate");
 					ecs.broadast("SHUTDOWN");
+					//ecs.waitAck("terminate", launchedNodes.size(), 50);
 					launchedNodes.clear();
 					launchedServer.clear();
 					ecs.reset();
@@ -975,9 +983,36 @@ public class ECSClient implements IECSClient {
 				}
 			}
 			break;
+		case "register":
+			if(tokens.length == 2) {
+				echo("Registering: " + tokens[1]);
+				ecs.register(tokens[1]);
+				echo("Registered: " + tokens[1]);
+			}
+			break;
+		case "monitor":
+			if(tokens.length == 2) {
+				if(tokens[1].equals("start")) {
+					monitorThread = new Thread(){
+						public void run(){
+							ecs.monitor_registry();
+						}
+					  };
+					monitorThread.start();
+				}
+				if(tokens[1].equals("stop")) {
+					monitorThread.stop();
+				}
+			}
+			break;
+			case "monitor_no_thread":
+				if(ecs != null) {
+					ecs.monitor_registry();
+				}
+			    break;
 		default:
 			printError("Unknown command");
-			 printHelp();
+			printHelp();
 			
 			return;
 		}

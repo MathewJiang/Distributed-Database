@@ -435,6 +435,7 @@ public class KVServer extends Thread implements IKVServer {
 
 		// Compute server side consistent hash.
 		ecs.connect(ecsIP, ECS_PORT);
+		
 		setClusterMD(ecs.getMD());
 	}
 
@@ -654,6 +655,7 @@ public class KVServer extends Thread implements IKVServer {
 
 		server.cacheSize = Integer.parseInt(args[2]);
 		server.strategy = parseCacheStrategy(args[3]);
+		
 
 		return server;
 	}
@@ -697,7 +699,9 @@ public class KVServer extends Thread implements IKVServer {
 			logger.info("Service: " + server.serverMD.serviceName
 					+ " will listen on " + server.serverMD.host + ":"
 					+ server.serverMD.port);
-
+			
+		    // ADD registry
+			server.ecs.register(server.serverName);
 			// Start server.
 			server.start();
 		} catch (IOException e) {
