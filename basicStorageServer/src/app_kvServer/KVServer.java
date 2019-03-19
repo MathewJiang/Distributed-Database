@@ -27,6 +27,7 @@ import shared.metadata.InfraMetadata;
 import shared.metadata.ServiceLocation;
 import app_kvECS.ECS;
 import app_kvServer.storage.Disk;
+import app_kvServer.storage.ReplicaStore;
 import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
@@ -233,6 +234,7 @@ public class KVServer extends Thread implements IKVServer {
 		serverLock.lock();
 		Storage.clearCache();
 		Storage.clearStorage();
+		ReplicaStore.clearStorage();
 		serverLock.unlock();
 	}
 
@@ -253,7 +255,11 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-
+		
+		// Replication only directory handler.
+		ReplicaStore.setDbName("/kvdb/" + this.serverMD.serviceName + "-replica");
+		ReplicaStore.init();
+		
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
