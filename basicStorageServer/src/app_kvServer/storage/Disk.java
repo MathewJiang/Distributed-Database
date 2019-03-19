@@ -46,7 +46,34 @@ public class Disk {
 		db.delete();
 		return true;
 	}
-
+	
+	/******************************************************
+	 * 2019/03/19: 
+	 * Added by Zheping
+	 * - Removing all files within a directory
+	 * - Intended for removing replica
+	 *  
+	 ******************************************************/
+	public static boolean removeAllFiles(){
+		db_dir = path + DB_NAME;
+		File db = new File(db_dir);
+		File[] files = db.listFiles();
+		boolean deleteSafe = true;
+		
+		if (files.length > 0) {
+			for (File f : files) {
+				if(!f.delete()) {
+					deleteSafe = false;
+				}
+			}
+			db.delete();
+			return deleteSafe;
+		} else {
+			db.delete();
+			return true;
+		}
+	}
+	
 	public static void test_and_set_db() {
 		// mkdir at local dir if not being created
 		db_dir = path + DB_NAME;

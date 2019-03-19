@@ -243,7 +243,6 @@ public class ClientConnection implements Runnable {
 			// find immediate successor and send the message
 			ServiceLocation successorFirst = ch.getSuccessor(serverInfo);
 			logger.info("[replication/ClientConnection.java] successorFirstResponse: " + successorFirst.serviceName);
-			
 			Socket socketFirst = new Socket(successorFirst.host, successorFirst.port);
 			conn1.sendCommMessage(socketFirst.getOutputStream(), replicaMessage);
 			CommMessage successorFirstResponse = conn1.receiveCommMessage(socketFirst

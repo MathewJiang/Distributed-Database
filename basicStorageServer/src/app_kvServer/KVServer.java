@@ -386,6 +386,25 @@ public class KVServer extends Thread implements IKVServer {
 			return false;
 		}
 	}
+	
+	public boolean hasReplicaKey(ConsistentHash ch, String key) {
+		ServiceLocation keyCoordinator = ch.getServer(key);
+		
+		try { 
+			ServiceLocation successorFirst = ch.getSuccessor(keyCoordinator);
+			ServiceLocation successorSecond = ch.getSuccessor(successorFirst);
+			
+			if (successorFirst.serviceName.equals(this.getServerName())
+					|| successorSecond.serviceName.equals(this.getServerName())) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (Exception e) {
+			logger.error(e.toString());
+			return false;
+		}
+	}
 
 	public InfraMetadata getClusterMD() {
 		return clusterMD;
@@ -422,6 +441,12 @@ public class KVServer extends Thread implements IKVServer {
 			setClusterMD(newMD);
 			ConnectionUtil conn = new ConnectionUtil();
 			for (String key : Disk.getAllKeys()) {
+				
+				// ignore replicated keys
+				if(clusterHash.getServer(key).serviceName != this.serverName) {
+					continue;
+				}
+				
 				// Construct target and server message.
 				CommMessage msg = new CommMessageBuilder().setKey(key)
 						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
@@ -461,7 +486,7 @@ public class KVServer extends Thread implements IKVServer {
 			}
 		} catch (Exception e) {
 			logger.error("Error remving migrants on server " + getServerName()
-					+ ": " + e);
+					+ ": " + e.toString());
 		} finally {
 			serverLock.unlock();
 		}
@@ -495,6 +520,8 @@ public class KVServer extends Thread implements IKVServer {
 			ConsistentHash newHash = new ConsistentHash();
 			newHash.addNodesFromInfraMD(newMD);
 			List<String> migrants = new ArrayList<String>();
+			
+			
 			for (String key : Disk.getAllKeys()) {
 				// Key stays on this server.
 				if (newHash.getServer(key).serviceName
@@ -539,6 +566,70 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
+	
+	
+	// Copy of migrateWithNewMD
+	// 
+	// replication version;
+	// should invoke either migrateWithNewMD or migrateWithNewMDReplica
+	public void migrateWithNewMDReplica(InfraMetadata newMD) {
+		serverLock.lock();
+		try {
+			Storage.flush();
+
+			// Generate a temporary new consistent hash ring and provision all
+			// keys
+			// to migrate.
+			ConsistentHash newHash = new ConsistentHash();
+			newHash.addNodesFromInfraMD(newMD);
+			List<String> migrants = new ArrayList<String>();
+			List<String> replicaKeys = new ArrayList<String>();
+			
+			for (String key : Disk.getAllKeys()) {
+				// Key stays on this server.
+				if (newHash.getServer(key).serviceName
+						.equals(serverMD.serviceName) || this.hasReplicaKey(newHash, key)) {
+					continue;
+				}
+				migrants.add(key);
+			}
+
+			logger.info("Sending copies of " + migrants);
+			ConnectionUtil conn = new ConnectionUtil();
+			for (String key : migrants) {
+
+				if (onKeyMigrationTestOnly()) {
+					continue;
+				}
+
+				// Construct target and server message.
+				CommMessage msg = new CommMessageBuilder().setKey(key)
+						.setValue(Disk.getKV(key)).setStatus(StatusType.PUT)
+						.build();
+				msg.setFromServer(true);
+				ServiceLocation target = newHash.getServer(key);
+
+				// Send and await ack from target server.
+				Socket socket = new Socket(target.host, target.port);
+				conn.sendCommMessage(socket.getOutputStream(), msg);
+				CommMessage serverResponse = conn.receiveCommMessage(socket
+						.getInputStream());
+				if (serverResponse.getStatus() != StatusType.PUT_SUCCESS) {
+					logger.error("Error migrating message " + msg
+							+ " from server " + serverName + " to server "
+							+ target.serviceName + "\nResponse: "
+							+ serverResponse);
+				}
+				socket.close();
+			}
+		} catch (Exception e) {
+			logger.error("Error migrating data on server " + getServerName()
+					+ ": " + e);
+		} finally {
+			serverLock.unlock();
+		}
+	}
+	
 
 	public void removeMigratedKeys(InfraMetadata newMD) {
 		serverLock.lock();
@@ -556,7 +647,7 @@ public class KVServer extends Thread implements IKVServer {
 			}
 		} catch (IOException e) {
 			logger.error("Error remving migrants on server " + getServerName()
-					+ ": " + e);
+					+ ": " + e.toString());
 		} finally {
 			serverLock.unlock();
 		}
@@ -708,7 +799,14 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void removeKVDB() {
 		if (!Disk.remove_db()) {
-			logger.info("Error removing kvdb directory - not empty");
+			logger.warn("Error removing kvdb directory - not empty");
 		}
 	}
+	
+	public void removeKVDBAll(){
+		if(!Disk.removeAllFiles()) {
+			logger.warn("Error removing all files");
+		}
+	}
+	
 }
