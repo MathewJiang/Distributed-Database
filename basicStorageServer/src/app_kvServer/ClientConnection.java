@@ -15,6 +15,7 @@ import shared.messages.KVMessage.StatusType;
 import shared.metadata.InfraMetadata;
 import shared.metadata.ServiceLocation;
 import app_kvServer.storage.Disk;
+import app_kvServer.storage.ReplicaStore;
 import app_kvServer.storage.Storage;
 
 import com.google.gson.JsonSyntaxException;
@@ -33,6 +34,7 @@ public class ClientConnection implements Runnable {
 	private InputStream input;
 	private OutputStream output;
 	private KVServer callingServer;
+
 	/**
 	 * Constructs a new CientConnection object for a given TCP socket.
 	 * 
@@ -95,8 +97,9 @@ public class ClientConnection implements Runnable {
 
 					// If request key is not in server range. Issue an
 					// update message to requesting client.
-					
-					if (!callingServer.hasKey(key) && !callingServer.hasReplicaKey(key)) {
+
+					if (!callingServer.hasKey(key)
+							&& !callingServer.hasReplicaKey(key)) {
 						logger.error("[run/ClientConnection.java]KEY NOT IN RANGE");
 						responseMsg.setInfraMetadata(callingServer
 								.getClusterMD());
@@ -107,17 +110,22 @@ public class ClientConnection implements Runnable {
 						case PUT:
 							try {
 								KVServer.serverLock.lock();
-								StatusType status = handlePUT(key, value);
+
+								StatusType status = null;
+								if (latestMsg.getIsReplicaMessage()) {
+									// Server only responsible for keeping replica.
+									status = ReplicaStore.putKV(key, value);
+								} else {
+									// This server is the coordinator of latestMsg.
+									status = handlePUT(key, value);
+									performReplication(latestMsg,
+											callingServer.getClusterMD(),
+											callingServer.getServerInfo());
+								}
+
 								responseMsg.setKey(key);
 								responseMsg.setValue(value);
 								responseMsg.setStatus(status);
-								
-								
-								// only send replica if current server is the coordinator
-								if (callingServer.hasKey(key)) {
-									performReplication(latestMsg, 
-											callingServer.getClusterMD(), callingServer.getServerInfo());
-								}
 							} catch (IOException e) {
 								responseMsg.setStatus(StatusType.PUT_ERROR);
 							} finally {
@@ -215,69 +223,71 @@ public class ClientConnection implements Runnable {
 		}
 		return Storage.getKV(key);
 	}
-	
-	
+
 	/***********************************************************************
-	 * performReplication
-	 * do the replication mechanism
-	 * after data has been modified by user 
+	 * performReplication do the replication mechanism after data has been
+	 * modified by user
 	 * 
-	 * @param	conn	connectionUtil
-	 * @param	output	outputStream
+	 * @param conn
+	 *            connectionUtil
+	 * @param output
+	 *            outputStream
 	 * 
 	 ***********************************************************************/
 	private void performReplication(CommMessage latestMsg,
 			InfraMetadata clusterMD, ServiceLocation serverInfo) {
-		ConnectionUtil conn1 = new ConnectionUtil();
-		ConnectionUtil conn2 = new ConnectionUtil();
-		
+		ConnectionUtil conn = new ConnectionUtil();
+
 		ConsistentHash ch = new ConsistentHash();
 		ch.addNodesFromInfraMD(clusterMD);
-		CommMessage replicaMessage = new CommMessageBuilder().setStatus(latestMsg.getStatus())
-				.setKey(latestMsg.getKey()).setValue(latestMsg.getValue()).build();
+		CommMessage replicaMessage = new CommMessageBuilder()
+				.setStatus(latestMsg.getStatus()).setKey(latestMsg.getKey())
+				.setValue(latestMsg.getValue()).build();
 		replicaMessage.setFromServer(true);
 		replicaMessage.setIsReplicaMessage(true);
-				
-		
+
 		try {
 			// find immediate successor and send the message
 			ServiceLocation successorFirst = ch.getSuccessor(serverInfo);
-			logger.info("[replication/ClientConnection.java] successorFirstResponse: " + successorFirst.serviceName);
-			Socket socketFirst = new Socket(successorFirst.host, successorFirst.port);
-			conn1.sendCommMessage(socketFirst.getOutputStream(), replicaMessage);
-			CommMessage successorFirstResponse = conn1.receiveCommMessage(socketFirst
-					.getInputStream());
-			
+			logger.info("[replication/ClientConnection.java] successorFirstResponse: "
+					+ successorFirst.serviceName);
+			Socket socketFirst = new Socket(successorFirst.host,
+					successorFirst.port);
+			conn.sendCommMessage(socketFirst.getOutputStream(), replicaMessage);
+			CommMessage successorFirstResponse = conn
+					.receiveCommMessage(socketFirst.getInputStream());
+
 			if (successorFirstResponse.getStatus() != StatusType.PUT_SUCCESS) {
-				logger.error("[replication/ClientConnection.java]" +
-						"Error migrating message " + replicaMessage
-						+ " from server " + serverInfo.serviceName + " to server "
-						+ successorFirst.serviceName + "\nResponse: "
-						+ successorFirstResponse);
+				logger.error("[replication/ClientConnection.java]"
+						+ "Error migrating message " + replicaMessage
+						+ " from server " + serverInfo.serviceName
+						+ " to server " + successorFirst.serviceName
+						+ "\nResponse: " + successorFirstResponse);
 			}
 			socketFirst.close();
-			
-			
+
 			// find successor of the immediate successor
 			ServiceLocation successorSecond = ch.getSuccessor(successorFirst);
-			logger.info("[replication/ClientConnection.java] successorSecondResponse: " + successorSecond.serviceName);
-			Socket socketSecond = new Socket(successorSecond.host, successorSecond.port);
-			conn2.sendCommMessage(socketSecond.getOutputStream(), replicaMessage);
-			
-			CommMessage successorSecondResponse = conn2.receiveCommMessage(socketSecond
-					.getInputStream());
+			logger.info("[replication/ClientConnection.java] successorSecondResponse: "
+					+ successorSecond.serviceName);
+			Socket socketSecond = new Socket(successorSecond.host,
+					successorSecond.port);
+			conn.sendCommMessage(socketSecond.getOutputStream(), replicaMessage);
+
+			CommMessage successorSecondResponse = conn
+					.receiveCommMessage(socketSecond.getInputStream());
 			if (successorSecondResponse.getStatus() != StatusType.PUT_SUCCESS) {
-				logger.error("[replication/ClientConnection.java]" +
-						"Error migrating message " + replicaMessage
-						+ " from server " + serverInfo.serviceName + " to server "
-						+ successorSecond.serviceName + "\nResponse: "
-						+ successorSecondResponse);
+				logger.error("[replication/ClientConnection.java]"
+						+ "Error migrating message " + replicaMessage
+						+ " from server " + serverInfo.serviceName
+						+ " to server " + successorSecond.serviceName
+						+ "\nResponse: " + successorSecondResponse);
 			}
 			socketSecond.close();
-			
+
 		} catch (Exception e) {
 			logger.info(e.toString());
-		}		
+		}
 	}
 
 }
