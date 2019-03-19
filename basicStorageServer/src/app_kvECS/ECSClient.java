@@ -58,6 +58,7 @@ public class ECSClient implements IECSClient {
 	private String ecsLocation = "";
 	private String ssh_location = "./ssh.cmd";
 	private String ssh_content = "";
+	private Thread monitorThread = null;
 	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
@@ -118,6 +119,7 @@ public class ECSClient implements IECSClient {
     	ecs.deleteHeadRecursive("/nodes");
     	ecs.deleteHeadRecursive("/lock");
     	ecs.deleteHeadRecursive("/ack");
+    	ecs.deleteHead("/register");
     	ecs.init();
         return true;
     }
@@ -249,9 +251,6 @@ public class ECSClient implements IECSClient {
 			key_file.close();
 			
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     	String[] cmdScript = new String[]{"/bin/bash", cmdFile}; 
@@ -915,7 +914,10 @@ public class ECSClient implements IECSClient {
 		case "reset":
 			if (tokens.length == 2) {
 				if(tokens[1].equals("-all")) {
+					// cannot ack due to recorvery logic
+					// ecs.waitAckSetup("terminate");
 					ecs.broadast("SHUTDOWN");
+					//ecs.waitAck("terminate", launchedNodes.size(), 50);
 					launchedNodes.clear();
 					launchedServer.clear();
 					ecs.reset();
@@ -981,9 +983,36 @@ public class ECSClient implements IECSClient {
 				}
 			}
 			break;
+		case "register":
+			if(tokens.length == 2) {
+				echo("Registering: " + tokens[1]);
+				ecs.register(tokens[1]);
+				echo("Registered: " + tokens[1]);
+			}
+			break;
+		case "monitor":
+			if(tokens.length == 2) {
+				if(tokens[1].equals("start")) {
+					monitorThread = new Thread(){
+						public void run(){
+							ecs.monitor_registry();
+						}
+					  };
+					monitorThread.start();
+				}
+				if(tokens[1].equals("stop")) {
+					monitorThread.stop();
+				}
+			}
+			break;
+			case "monitor_no_thread":
+				if(ecs != null) {
+					ecs.monitor_registry();
+				}
+			    break;
 		default:
 			printError("Unknown command");
-			 printHelp();
+			printHelp();
 			
 			return;
 		}

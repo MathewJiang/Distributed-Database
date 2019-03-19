@@ -39,15 +39,12 @@ public class KVStore extends Thread implements KVCommInterface {
 		// USE THIS
 		//ecs.connect("localhost", PORT_ECS);
 		
-		
-		
 		String ecs_config = "./resources/config/ecs.config";
 		InfraMetadata MDFromFile;
 		try {
 			MDFromFile = InfraMetadata.fromConfigFile(ecs_config);
 			String ECSip = MDFromFile.getEcsLocation().host;
 			ecs.connect(ECSip, PORT_ECS);
-
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
