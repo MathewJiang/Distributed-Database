@@ -98,7 +98,7 @@ public class ZKConnection implements Runnable {
 							ecs.ack(callingServer.getServerName(), "terminate");
 
 							// Remove kvdb directory.
-							callingServer.removeKVDB();
+							callingServer.removeKVDBAll();
 						}
 						callingServer.setShuttingDown(true);
 						callingServer.close();

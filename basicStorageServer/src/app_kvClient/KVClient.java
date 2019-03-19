@@ -108,6 +108,30 @@ public class KVClient implements IKVClient {
 			printHelp();
 			break;
 
+		case "connect":
+			if (tokens.length != 3) {
+				printError("Incorrect num of arguments; "
+						+ "Must be passing in as: connect <address> <port>");
+				return;
+			}
+			if (backend.isRunning()) {
+				printError("Please disconnect from current session first");
+				return;
+			}
+			try {
+				backend.setConnectTarget(tokens[1], Integer.parseInt(tokens[2]));
+				backend.connect();
+			} catch (IOException e2) {
+				printError("Error executing connect command: " + tokens + "\n"
+						+ e2);
+			}
+			System.out.println("Connection established!");
+			break;
+
+		case "disconnect":
+			backend.disconnect();
+			System.out.println("Connect session ended");
+
 		case "put":
 			if (tokens.length < 2) {
 				printError("Incorrect num of arguments; "
