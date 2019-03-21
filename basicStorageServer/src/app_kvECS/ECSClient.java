@@ -170,6 +170,7 @@ public class ECSClient implements IECSClient {
 			launchedNodes.add(newNode);
 			// launchedServer not handled
 			// incrementally update MD
+	
 			
 			ecs.lock();
 			
@@ -177,8 +178,8 @@ public class ECSClient implements IECSClient {
 			//ecs.broadast("UPDATE");
 			// we changed to use unit cast to affected node
 			
-			// MOD for M3 String affectedServerName = hashRing.getSuccessor(spot).serviceName;
-			// MOD for M3 ecs.setCmd(affectedServerName, "LOCK_WRITE");
+			String affectedServerName = hashRing.getSuccessor(spot).serviceName;
+			ecs.setCmd(affectedServerName, "LOCK_WRITE");
 			
 			
 			ecs.addOneLaunchedNodes(newNode);
@@ -188,15 +189,21 @@ public class ECSClient implements IECSClient {
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSip, cacheStrategy, cacheSize);
 			run_script();
 			ecs.waitAck("launched", 1, 50); // new node launched
-			
-			ecs.broadast("LOCK_WRITE");
 			ecs.waitAckSetup("migrate");
-			ecs.unlock(); // allow effected node to migrate\
-			
-			ecs.waitAck("migrate", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
+			ecs.unlock(); // allow effected node to migrate
+			ecs.waitAck("migrate", 1, 50); // internal unlock -> new nodes migrated
 			ecs.waitAckSetup("sync");
 			ecs.broadast("SYNC"); // Including launched new server
-			ecs.waitAck("sync", launchedNodes.size(), 50);
+			ecs.waitAck("sync", launchedNodes.size(), 50); 
+			
+			
+			
+			ecs.waitAck("launched", 1, 50); // new node launched
+			
+			ecs.broadast("REPLICA_MIGRATE");
+			ecs.waitAckSetup("remove_shuffle");
+			
+			ecs.waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
 			if(new_MD.getServerLocations().size() != launchedNodes.size()) {
 				echo("soft assert failed: (new_MD.getServerLocations().size() != launchedNodes.size())");
 			}
@@ -401,7 +408,7 @@ public class ECSClient implements IECSClient {
     	return false;
     }
     
-    private ServiceLocation getReturnedSlot(String name) {
+    public ServiceLocation getReturnedSlot(String name) {
     	for(int i = 0; i < launchedNodes.size(); i++) {
     		if(launchedNodes.get(i).getNodeName().equals(name)) {
     			IECSNode toBeRemoved = launchedNodes.get(i);
@@ -413,7 +420,7 @@ public class ECSClient implements IECSClient {
     	return null;
     }
     
-    private int indexServiceLocation(List<ServiceLocation> target, String name) {
+    public int indexServiceLocation(List<ServiceLocation> target, String name) {
     	for(int i = 0; i < target.size(); i++) {
     		if(target.get(i).serviceName.equals(name)) {
     			return i;

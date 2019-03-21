@@ -604,7 +604,7 @@ public class ECS {
 
 		public void lock() {
 			String n = lock_create(lockDir); // full path
-			echo("n = " + n);
+			// echo("n = " + n);
 			while (true) {
 				List<String> raceList = returnDirList(lockDir);
 				int array[] = new int[raceList.size()];
@@ -1013,7 +1013,7 @@ public class ECS {
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
-			
+			//ackLock.lock();
 			try {
 				if (zk.exists("/nodes", true) == null) {
 					echo("detects reset -all");
@@ -1025,16 +1025,36 @@ public class ECS {
 			String crushed_server = diffNodes(liveNodeList, returnDirList("/nodes"));
 			if(crushed_server.equals("more than 1 server!")) {
 				echo("failed to detect crushed_server");
-			}
-			if(crushed_server.equals("")) {
+				//ackLock.unlock();
+			} else if(crushed_server.equals("")) {
+				//ackLock.unlock();
 			} else {
-				// leader election
-				//ackLock.lock();
-				// recheck, make sure it is ok
+				
 				// do something here
 				echo("detected " + crushed_server + " crushed");
+				
+//		    	ServiceLocation returnedSlot = ECSClientInterface.getReturnedSlot(crushed_server);
+//		    	
+//		    	InfraMetadata new_MD = getMD();
+//		    	List<ServiceLocation> tmp = new_MD.getServerLocations();
+//		    	int deleteIndex = ECSClientInterface.indexServiceLocation(tmp, returnedSlot.serviceName);
+//		    	if(deleteIndex == -1) {
+//		    		System.out.println("Warning delete error");
+//		    	}
+//		    	ConsistentHash oldHash = new ConsistentHash();
+//		    	oldHash.addNodesFromInfraMD(new_MD);
+//		    	
+//		    	
+//		    	hashRing.removeAllServerNodes();
+//		    	tmp.remove(deleteIndex);
+//		    	new_MD.setServerLocations(tmp);
+//		    	hashRing.addNodesFromInfraMD(new_MD);
+//		    
+//		    	lock();
+//		    	
+//		    	unlock();
 				// ECSClientInterface.removeNode(crushed_server);
-				// ackLock.unlock();
+				//ackLock.unlock();
 				break;
 			}
 		}
