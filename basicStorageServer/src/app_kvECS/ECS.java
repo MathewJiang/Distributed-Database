@@ -745,6 +745,10 @@ public class ECS {
 				return KVAdminMessageType.LOCK_WRITE_REMOVE_SENDER;
 			case "RESTORE":
 				return KVAdminMessageType.RESTORE;
+			case "REPLICA_MIGRATE":
+				return KVAdminMessageType.REPLICA_MIGRATE;
+			case "REREPLICATION":
+				return KVAdminMessageType.REREPLICATION;
 		}
 		return null;
 	}
@@ -772,6 +776,10 @@ public class ECS {
 			return "LOCK_WRITE_REMOVE_SENDER";
 		} else if(a == KVAdminMessageType.RESTORE) {
 			return "RESTORE";
+		} else if(a == KVAdminMessageType.REPLICA_MIGRATE) {
+			return "REPLICA_MIGRATE";
+		} else if(a == KVAdminMessageType.REREPLICATION) {
+			return "REREPLICATION";
 		}
 		return "INVALID KVAdminMessageType";
 	}
