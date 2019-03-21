@@ -34,7 +34,8 @@ public class KVAdminMessage {
     	 							   (note: itself is the node to be removed) */
     	RESTORE,         /* dedicated server read from last archive */
     	REPLICA_MIGRATE, /* only performs replica migrate on this server */
-    	REREPLICATION    /* re-forward server data to replicas */
+    	REREPLICATION,    /* re-forward server data to replicas */
+    	KILL  /*shutdown server without backup*/
     }
     
     public InfraMetadata MD;

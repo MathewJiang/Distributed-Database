@@ -437,6 +437,7 @@ public class ECSClient implements IECSClient {
     	ConsistentHash oldHash = new ConsistentHash();
     	oldHash.addNodesFromInfraMD(new_MD);
     	
+    	
     	hashRing.removeAllServerNodes();
     	tmp.remove(deleteIndex);
     	new_MD.setServerLocations(tmp);
@@ -453,18 +454,39 @@ public class ECSClient implements IECSClient {
 			// MOD for m3: ecs.waitAck("computedNewMD", 1, 50);
 			// MOD for m3: ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
 		
-			ecs.waitAckSetup("removeOneNode");
-			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER"); // since shutDown assumes everyone shutdown because of restore logic
-			ecs.waitAck("removeOneNode", 1, 50);
-			ecs.refreshHash(hashRing);
-			ecs.waitAckSetup("migrate");
-			ecs.broadast("LOCK_WRITE");
+			ecs.waitAckSetup("killed");
+			ecs.setCmd(returnedSlot.serviceName, "KILL"); // since shutDown assumes everyone shutdown because of restore logic
+			ecs.waitAck("killed", 1, 50);
 			
-			ecs.unlock();
-			ecs.waitAck("migrate", new_MD.getServerLocations().size(), 50); // internal unlock
-			ecs.waitAckSetup("sync");
 			
 			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
+			
+			ecs.waitAckSetup("replica_shuffle");
+			ecs.setCmd(oldHash.getSuccessor(returnedSlot).serviceName, "REPLICA_MIGRATE");
+			ecs.waitAck("replica_shuffle", 1, 50);
+			ecs.waitAckSetup("replica_shuffle");
+			ecs.setCmd(oldHash.getPredeccessor(returnedSlot).serviceName, "REREPLICATION");
+			ecs.waitAck("replica_shuffle", 1, 50);
+			ecs.waitAckSetup("replica_shuffle");
+			ecs.setCmd(oldHash.getPredeccessor(oldHash.getPredeccessor(returnedSlot)).serviceName, "REREPLICATION");
+			ecs.waitAck("replica_shuffle", 1, 50);
+			
+
+
+			
+			ecs.refreshHash(hashRing);
+			// ecs.waitAckSetup("migrate");
+			// ecs.broadast("LOCK_WRITE");
+			
+			
+			
+			
+			ecs.unlock();
+			// ecs.waitAck("migrate", new_MD.getServerLocations().size(), 50); // internal unlock
+			
+			ecs.waitAckSetup("sync");
+			
+			
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50);
 			

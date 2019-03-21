@@ -749,6 +749,8 @@ public class ECS {
 				return KVAdminMessageType.REPLICA_MIGRATE;
 			case "REREPLICATION":
 				return KVAdminMessageType.REREPLICATION;
+			case "KILL":
+				return KVAdminMessageType.KILL;
 		}
 		return null;
 	}
@@ -780,7 +782,9 @@ public class ECS {
 			return "REPLICA_MIGRATE";
 		} else if(a == KVAdminMessageType.REREPLICATION) {
 			return "REREPLICATION";
-		}
+		} else if(a == KVAdminMessageType.KILL) {
+			return "KILL";
+		} 
 		return "INVALID KVAdminMessageType";
 	}
 
