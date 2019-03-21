@@ -460,35 +460,29 @@ public class ECSClient implements IECSClient {
 			
 			
 			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
+
+			// Make sure system is ready to shuffle in new metadata state.
+			ecs.waitAckSetup("sync");
 			
-			ecs.waitAckSetup("replica_shuffle");
-			ecs.setCmd(oldHash.getSuccessor(returnedSlot).serviceName, "REPLICA_MIGRATE");
-			ecs.waitAck("replica_shuffle", 1, 50);
-			ecs.waitAckSetup("replica_shuffle");
+			ecs.broadast("SYNC");
+			ecs.waitAck("sync", launchedNodes.size(), 50);
+			
+			// ecs.waitAckSetup("remove_shuffle");
+			// ecs.setCmd(oldHash.getSuccessor(returnedSlot).serviceName, "REPLICA_MIGRATE");
+			// ecs.waitAck("remove_shuffle", 1, 50);
+			ecs.waitAckSetup("remove_shuffle");
 			ecs.setCmd(oldHash.getPredeccessor(returnedSlot).serviceName, "REREPLICATION");
-			ecs.waitAck("replica_shuffle", 1, 50);
-			ecs.waitAckSetup("replica_shuffle");
+			ecs.waitAck("remove_shuffle", 1, 50);
+			ecs.waitAckSetup("remove_shuffle");
 			ecs.setCmd(oldHash.getPredeccessor(oldHash.getPredeccessor(returnedSlot)).serviceName, "REREPLICATION");
-			ecs.waitAck("replica_shuffle", 1, 50);
-			
-
-
+			ecs.waitAck("remove_shuffle", 1, 50);
 			
 			ecs.refreshHash(hashRing);
 			// ecs.waitAckSetup("migrate");
 			// ecs.broadast("LOCK_WRITE");
-			
-			
-			
-			
+						
 			ecs.unlock();
 			// ecs.waitAck("migrate", new_MD.getServerLocations().size(), 50); // internal unlock
-			
-			ecs.waitAckSetup("sync");
-			
-			
-			ecs.broadast("SYNC");
-			ecs.waitAck("sync", launchedNodes.size(), 50);
 			
 			if(new_MD.getServerLocations().size() != launchedNodes.size()) {
 				echo("soft assert failed: (new_MD.getServerLocations().size() != launchedNodes.size())");
