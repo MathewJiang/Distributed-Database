@@ -32,7 +32,9 @@ public class KVAdminMessage {
     	 							   its predecessor is
     	 							   the node that inherit all its keys
     	 							   (note: itself is the node to be removed) */
-    	RESTORE         /* dedicated server read from last archive*/
+    	RESTORE,         /* dedicated server read from last archive */
+    	REPLICA_MIGRATE, /* only performs replica migrate on this server */
+    	REREPLICATION    /* re-forward server data to replicas */
     }
     
     public InfraMetadata MD;
@@ -44,6 +46,6 @@ public class KVAdminMessage {
     }
 
     public void setKVAdminMessageType(KVAdminMessageType adminMessageType) {
-    	this.adminMessageType = adminMessageType;
-    }
+		this.adminMessageType = adminMessageType;
+	}
 }

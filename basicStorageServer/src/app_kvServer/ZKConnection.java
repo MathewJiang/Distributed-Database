@@ -184,6 +184,17 @@ public class ZKConnection implements Runnable {
 						isOpen = false;
 						break;
 					
+					case REPLICA_MIGRATE:
+						logger.info("Migrating stored replica data on " + callingServer.getServerName());
+						
+						break;
+						
+					case REREPLICATION:
+						logger.info("Forwarding data to replicas, " + callingServer.getServerName());
+						// callingServer
+						break;
+						
+						
 					default:
 						logger.error("[ZKConnection.java/run()]Unknown type of AdminMessage");
 						break;
