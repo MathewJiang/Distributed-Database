@@ -452,7 +452,10 @@ public class ECSClient implements IECSClient {
 			// MOD for m3: ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
 			// MOD for m3: ecs.waitAck("computedNewMD", 1, 50);
 			// MOD for m3: ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
-			
+		
+			ecs.waitAckSetup("removeOneNode");
+			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER"); // since shutDown assumes everyone shutdown because of restore logic
+			ecs.waitAck("removeOneNode", 1, 50);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("migrate");
 			ecs.broadast("LOCK_WRITE");
