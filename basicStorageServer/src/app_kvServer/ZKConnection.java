@@ -186,12 +186,22 @@ public class ZKConnection implements Runnable {
 					
 					case REPLICA_MIGRATE:
 						logger.info("Migrating stored replica data on " + callingServer.getServerName());
-						
+						// Get new metadata without dead node.
+						callingServer.setClusterMD(ecs.getMD());
+						// Following methods operate on the assumption that callingServer's metadata
+						// variable has been updated and local data state is stale.
+						// callingServer.replicaMigrate();
+						ecs.ack(callingServer.getServerName(), "remove_shuffle");
 						break;
 						
 					case REREPLICATION:
 						logger.info("Forwarding data to replicas, " + callingServer.getServerName());
-						// callingServer
+						// Get new metadata without dead node.
+						callingServer.setClusterMD(ecs.getMD());
+						// Following methods operate on the assumption that callingServer's metadata
+						// variable has been updated and local data state is stale.
+						callingServer.replicate();
+						ecs.ack(callingServer.getServerName(), "remove_shuffle");
 						break;
 						
 						
