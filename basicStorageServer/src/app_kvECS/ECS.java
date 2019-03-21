@@ -682,8 +682,10 @@ public class ECS {
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-			zk.create("/register", ("false").getBytes(StandardCharsets.UTF_8),
+			if (zk.exists("/register", true) == null) {
+				zk.create("/register", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			}
 		} catch (KeeperException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -954,6 +956,7 @@ public class ECS {
 	public void register(String myName) { // must register before ack server started
 		try {
 			if (zk.exists("/register", true) == null) {
+			    // may race condition
 				create("/register", null, "-p");
 			}
 			create("/register/" + myName, null, "-s");
