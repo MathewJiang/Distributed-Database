@@ -293,6 +293,9 @@ public class KVServer extends Thread implements IKVServer {
 		running = false;
 		try {
 			Storage.flush();
+			Disk.removeAllFiles();
+			ReplicaStore.removeAllFiles();
+			ecs.ack(getServerName(), "killed");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -756,6 +759,7 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void replicate() {
 		try {
+			serverLock.lock();
 			Storage.flush();
 			for (String key : Disk.getAllKeys()) {
 				// Prepare replication message.
@@ -778,7 +782,9 @@ public class KVServer extends Thread implements IKVServer {
 							replicaMessage);
 					CommMessage response = conn.receiveCommMessage(socket
 							.getInputStream());
-					if (response.getStatus() == StatusType.PUT_ERROR) {
+					// Replication failed.
+					if (response.getStatus() != StatusType.PUT_SUCCESS
+							&& response.getStatus() != StatusType.PUT_UPDATE) {
 						logger.error("Error replicating message to replica 1: "
 								+ response);
 					} else {
@@ -791,6 +797,8 @@ public class KVServer extends Thread implements IKVServer {
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+			serverLock.unlock();
 		}
 	}
 }
