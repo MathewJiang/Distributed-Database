@@ -444,26 +444,30 @@ public class ECSClient implements IECSClient {
     
     	ecs.lock();
 		
-		String affectedServerName;
+		// MOD for m3: String affectedServerName;
 		try {
-			affectedServerName = oldHash.getSuccessor(returnedSlot).serviceName;
+			// MOD for m3: affectedServerName = oldHash.getSuccessor(returnedSlot).serviceName;
 			
-			ecs.waitAckSetup("computedNewMD");
-			ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
-			ecs.waitAck("computedNewMD", 1, 50);
-			ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
+			// MOD for m3: ecs.waitAckSetup("computedNewMD");
+			// MOD for m3: ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
+			// MOD for m3: ecs.waitAck("computedNewMD", 1, 50);
+			// MOD for m3: ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
 			
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("migrate");
+			ecs.broadast("LOCK_WRITE");
+			
 			ecs.unlock();
-			ecs.waitAck("migrate", 1, 50); // internal unlock
+			ecs.waitAck("migrate", new_MD.getServerLocations().size(), 50); // internal unlock
 			ecs.waitAckSetup("sync");
 			
 			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50);
 			
-			
+			if(new_MD.getServerLocations().size() != launchedNodes.size()) {
+				echo("soft assert failed: (new_MD.getServerLocations().size() != launchedNodes.size())");
+			}
 	    	avaliableSlots.add(returnedSlot);
 	    	return true;
 		} catch (Exception e) {
