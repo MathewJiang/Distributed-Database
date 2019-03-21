@@ -255,11 +255,12 @@ public class KVServer extends Thread implements IKVServer {
 		Storage.set_mode(strategy);
 		Storage.init(cacheSize);
 		serverOn = true;
-		
+
 		// Replication only directory handler.
-		ReplicaStore.setDbName("/kvdb/" + this.serverMD.serviceName + "-replica");
+		ReplicaStore.setDbName("/kvdb/" + this.serverMD.serviceName
+				+ "-replica");
 		ReplicaStore.init();
-		
+
 		ZKConnection zkConnection = new ZKConnection(this);
 		Thread newZKConnection = new Thread(zkConnection);
 		newZKConnection.start();
@@ -373,14 +374,16 @@ public class KVServer extends Thread implements IKVServer {
 		return clusterHash.getServer(key).serviceName
 				.equals(serverMD.serviceName);
 	}
-	
+
 	public boolean hasReplicaKey(String key) {
 		ServiceLocation keyCoordinator = clusterHash.getServer(key);
-		
-		try { 
-			ServiceLocation successorFirst = clusterHash.getSuccessor(keyCoordinator);
-			ServiceLocation successorSecond = clusterHash.getSuccessor(successorFirst);
-			
+
+		try {
+			ServiceLocation successorFirst = clusterHash
+					.getSuccessor(keyCoordinator);
+			ServiceLocation successorSecond = clusterHash
+					.getSuccessor(successorFirst);
+
 			if (successorFirst.serviceName.equals(this.getServerName())
 					|| successorSecond.serviceName.equals(this.getServerName())) {
 				return true;
@@ -392,14 +395,14 @@ public class KVServer extends Thread implements IKVServer {
 			return false;
 		}
 	}
-	
+
 	public boolean hasReplicaKey(ConsistentHash ch, String key) {
 		ServiceLocation keyCoordinator = ch.getServer(key);
-		
-		try { 
+
+		try {
 			ServiceLocation successorFirst = ch.getSuccessor(keyCoordinator);
 			ServiceLocation successorSecond = ch.getSuccessor(successorFirst);
-			
+
 			if (successorFirst.serviceName.equals(this.getServerName())
 					|| successorSecond.serviceName.equals(this.getServerName())) {
 				return true;
@@ -435,7 +438,7 @@ public class KVServer extends Thread implements IKVServer {
 
 		// Compute server side consistent hash.
 		ecs.connect(ecsIP, ECS_PORT);
-		
+
 		setClusterMD(ecs.getMD());
 	}
 
@@ -522,8 +525,7 @@ public class KVServer extends Thread implements IKVServer {
 			ConsistentHash newHash = new ConsistentHash();
 			newHash.addNodesFromInfraMD(newMD);
 			List<String> migrants = new ArrayList<String>();
-			
-			
+
 			for (String key : Disk.getAllKeys()) {
 				// Key stays on this server.
 				if (newHash.getServer(key).serviceName
@@ -602,7 +604,7 @@ public class KVServer extends Thread implements IKVServer {
 		Disk.init();
 
 		InfraMetadata md = temp.ecs.getMD();
-		
+
 		try {
 			// Generate a temporary new consistent hash ring and
 			// provision all keys to migrate.
@@ -641,9 +643,6 @@ public class KVServer extends Thread implements IKVServer {
 			temp.ecs.ack("restore_service", "backupRestored");
 		}
 	}
-	
-
-
 
 	public static KVServer initServerFromECS(String[] args) throws Exception {
 		// Coordinate and initialize server w.r.t ECS metadata.
@@ -658,7 +657,6 @@ public class KVServer extends Thread implements IKVServer {
 
 		server.cacheSize = Integer.parseInt(args[2]);
 		server.strategy = parseCacheStrategy(args[3]);
-		
 
 		return server;
 	}
@@ -668,10 +666,8 @@ public class KVServer extends Thread implements IKVServer {
 	 * 
 	 * @param args
 	 *            0: ECS IP address for normal server start ups or '0' + ECS IP
-	 *            address for restore process.
-	 *            1: server name.
-	 *            2: server cache size.
-	 *            3: server cache strategy (LFU, LRU, FIFO or None).
+	 *            address for restore process. 1: server name. 2: server cache
+	 *            size. 3: server cache strategy (LFU, LRU, FIFO or None).
 	 */
 	public static void main(String[] args) throws Exception {
 		try {
@@ -690,20 +686,20 @@ public class KVServer extends Thread implements IKVServer {
 						.println("Usage: Server <port>! || Server <ECS_port> <serverName> <cacheSize> <cacheStrategy>");
 				return;
 			}
-			
+
 			// This server is a one-time restore service.
 			if (args[0].charAt(0) == '0') {
 				restoreProcess(args[0].substring(1));
 				return;
 			}
-			
+
 			KVServer server = initServerFromECS(args);
 			resetServerLogger(server.getServerName());
 			logger.info("Service: " + server.serverMD.serviceName
 					+ " will listen on " + server.serverMD.host + ":"
 					+ server.serverMD.port);
-			
-		    // ADD registry
+
+			// ADD registry
 			server.ecs.register(server.serverName);
 			// Start server.
 			server.start();
@@ -745,17 +741,56 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("Error removing kvdb directory - not empty");
 		}
 	}
-	
-	public void removeReplicaStore(){
-		if(!ReplicaStore.removeAllFiles()) {
+
+	public void removeReplicaStore() {
+		if (!ReplicaStore.removeAllFiles()) {
 			logger.warn("Error removing all files");
 		}
 	}
-	
-	public void removeKVDBAll(){
-		if(!Disk.removeAllFiles()) {
+
+	public void removeKVDBAll() {
+		if (!Disk.removeAllFiles()) {
 			logger.warn("Error removing all files");
 		}
 	}
-	
+
+	public void replicate() {
+		try {
+			Storage.flush();
+			for (String key : Disk.getAllKeys()) {
+				// Prepare replication message.
+				CommMessage replicaMessage = new CommMessageBuilder()
+						.setKey(key).setValue(Disk.getKV(key))
+						.setStatus(StatusType.PUT).build();
+				replicaMessage.setFromServer(true);
+				replicaMessage.setIsReplicaMessage(true);
+
+				// Prepare replica locations.
+				List<ServiceLocation> replicas = new ArrayList<ServiceLocation>();
+				replicas.add(clusterHash.getSuccessor(serverMD));
+				replicas.add(clusterHash.getSuccessor(clusterHash
+						.getSuccessor(serverMD)));
+
+				for (ServiceLocation replica : replicas) {
+					ConnectionUtil conn = new ConnectionUtil();
+					Socket socket = new Socket(replica.host, replica.port);
+					conn.sendCommMessage(socket.getOutputStream(),
+							replicaMessage);
+					CommMessage response = conn.receiveCommMessage(socket
+							.getInputStream());
+					if (response.getStatus() == StatusType.PUT_ERROR) {
+						logger.error("Error replicating message to replica 1: "
+								+ response);
+					} else {
+						logger.info("Successfully replicated message with response: "
+								+ response);
+					}
+					socket.close();
+				}
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }
