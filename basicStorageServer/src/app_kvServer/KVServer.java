@@ -9,7 +9,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import logger.LogSetup;
@@ -596,7 +595,148 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
+	
+	/*********************************************************************
+	 * 2019/03/21: Added by Zheping
+	 * replica migration methods for M3
+	 * 
+	 * if the replica does not belong to the current server
+	 * migrate it to the correct server
+	 * 
+	 * !Note: if the replica does belong to the current server,
+	 * 		  no action is performed
+	 ********************************************************************/
+	public void replicaMigrationWithNewMD(InfraMetadata newMD) {
+		serverLock.lock();
+		
+		try {
+			// FIXME: assume always call after migrationWithNewMD
+			// FIXME: may not need to flush again
+			Storage.flush();
 
+			ConsistentHash newHash = new ConsistentHash();
+			newHash.addNodesFromInfraMD(newMD);
+			setClusterMD(newMD);
+			
+			// 2. if replicas are not in range
+			List<String> allReplicaKeys = ReplicaStore.getAllKeys();
+			ConnectionUtil conn = new ConnectionUtil();
+			
+			for(String rKey : allReplicaKeys) {
+				List<ServiceLocation> replicaServers = newHash.getReplicaServers(rKey);
+				boolean isReplicaServer = false;
+				
+				if(replicaServers.size() != 2) {
+					logger.error("[replicaMigrationWithNewMD/KVServer.java]" +
+							"replicaServers.size != 2;" +
+							" Only 1 replication has been replicated");
+				}
+				logger.info("[replicaMigrationWithNewMD]replicaServers[0]: " + replicaServers.get(0).serviceName);
+				logger.info("[replicaMigrationWithNewMD]replicaServers[1]: " + replicaServers.get(1).serviceName);
+				
+				for (ServiceLocation sl : replicaServers) {
+					if(sl.serviceName.equals(this.serverName)) {
+						isReplicaServer = true;
+						break;
+					}
+				}
+				logger.info("[migrate]rKey: " + rKey + " belongs to: " + newHash.getServer(rKey));
+				logger.info("[migrate]replicaServers[0]: " + replicaServers.get(0).serviceName);
+				logger.info("[migrate]replicaServers[1]: " + replicaServers.get(1).serviceName);
+				
+				if (isReplicaServer) {
+					continue;
+				}
+				
+				ServiceLocation coordinator = newHash.getServer(rKey);
+				CommMessage msg = new CommMessageBuilder().setKey(rKey)
+						.setValue(ReplicaStore.getKV(rKey)).setStatus(StatusType.PUT)
+						.build();
+				msg.setFromServer(true);
+				msg.setIsReplicaMessage(false);
+				msg.isMigrationMessage = false;	// let the coordinator replicate again
+
+
+				logger.info("!!!!!!!!!!!!!!!!start sending to coordinator: " + coordinator.serviceName);
+				try { 
+				Socket socket = new Socket(coordinator.host, coordinator.port);
+				conn.sendCommMessage(socket.getOutputStream(), msg);
+				
+				CommMessage serverResponse = conn.receiveCommMessage(socket
+						.getInputStream());
+				if (serverResponse.getStatus() == StatusType.PUT_ERROR) {
+					logger.error("[replicaMigrationWithNewMD/KVServer.java]" +
+							"Error migrating replication message " + msg
+							+ " from server " + serverName + " to server "
+							+ coordinator.serviceName + "\nResponse: "
+							+ serverResponse);
+				}
+				socket.close();
+				} catch (Exception e) {
+					logger.error("[replicaMigrationWithNewMD] Exception has been raised!");
+					logger.error(e);
+					System.exit(1);
+				}
+			}
+			
+		} catch (IOException e) {
+			logger.error("[replicaMigrationWithNewMD/KVServer.java]IOException: " + e.toString());
+		} catch (Exception e) {
+			logger.error("[replicaMigrationWithNewMD/KVServer.java]Exception: " + e.toString());
+		} finally {
+			serverLock.unlock();
+		}
+	}
+	
+	/*********************************************************************
+	 * 2019/03/21: Added by Zheping
+	 * replica clean-up methods for M3
+	 * 
+	 * if the replica does not belong to the current server
+	 * delete the entry within ReplicaStore
+	 * 
+	 * !Note: if the replica does belong to the current server,
+	 * 		  no action is performed
+	 ********************************************************************/
+	public void removeReplicaKeys(InfraMetadata newMD) {
+		serverLock.lock();
+		try {
+			Storage.flush();
+
+			setClusterMD(newMD);
+			List<String> allReplicaKeys = ReplicaStore.getAllKeys();
+			for(String rKey : allReplicaKeys) {
+				List<ServiceLocation> replicaServers = clusterHash.getReplicaServers(rKey);
+				boolean isReplicaServer = false;
+				
+				if(replicaServers.size() != 2) {
+					logger.error("[replicaMigrationWithNewMD/KVServer.java]" +
+							"replicaServers.size != 2;" +
+							" Only 1 replication has been replicated");
+				}
+				logger.info("rKey: " + rKey + " belongs to: " + clusterHash.getServer(rKey));
+				logger.info("replicaServers[0]: " + replicaServers.get(0).serviceName);
+				logger.info("replicaServers[1]: " + replicaServers.get(1).serviceName);
+				
+				for (ServiceLocation sl : replicaServers) {
+					if(sl.serviceName.equals(this.serverName)) {
+						isReplicaServer = true;
+						break;
+					}
+				}
+				
+				if(!isReplicaServer) {
+					ReplicaStore.putKV(rKey, null);
+				}
+			}
+		} catch (IOException e) {
+			logger.error("[]Error remving migrants on server " + getServerName()
+					+ ": " + e.toString());
+		} finally {
+			serverLock.unlock();
+		}
+	}
+	
 	// This server is a pure restore process.
 	private static void restoreProcess(String ecsIP) throws Exception {
 		KVServer temp = new KVServer();

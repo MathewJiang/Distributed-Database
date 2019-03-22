@@ -105,6 +105,9 @@ public class ClientConnection implements Runnable {
 								.getClusterMD());
 						responseMsg
 								.setStatus(StatusType.SERVER_NOT_RESPONSIBLE);
+						
+						responseMsg.setFromServer(true);
+						conn.sendCommMessage(output, responseMsg);
 					} else {
 						switch (op) {
 						case PUT:
@@ -114,22 +117,41 @@ public class ClientConnection implements Runnable {
 								StatusType status = null;
 								if (latestMsg.getIsReplicaMessage()) {
 									// Server only responsible for keeping replica.
-									status = ReplicaStore.putKV(key, value);
+									try {
+										status = ReplicaStore.putKV(key, value);
+										
+										responseMsg.setKey(key);
+										responseMsg.setValue(value);
+										responseMsg.setStatus(status);
+										responseMsg.setFromServer(true);
+										conn.sendCommMessage(output, responseMsg);
+									} finally {
+										KVServer.serverLock.unlock();
+									}
 								} else {
+									try {
 									// This server is the coordinator of latestMsg.
 									status = handlePUT(key, value);
+									
+									responseMsg.setKey(key);
+									responseMsg.setValue(value);
+									responseMsg.setStatus(status);
+									responseMsg.setFromServer(true);
+									conn.sendCommMessage(output, responseMsg);
+									} finally {
+										KVServer.serverLock.unlock();
+									}
+									
 									performReplication(latestMsg,
 											callingServer.getClusterMD(),
 											callingServer.getServerInfo());
 								}
 
-								responseMsg.setKey(key);
-								responseMsg.setValue(value);
-								responseMsg.setStatus(status);
+								
 							} catch (IOException e) {
 								responseMsg.setStatus(StatusType.PUT_ERROR);
 							} finally {
-								KVServer.serverLock.unlock();
+								// KVServer.serverLock.unlock();
 							}
 							break;
 
@@ -147,6 +169,9 @@ public class ClientConnection implements Runnable {
 							} finally {
 								KVServer.serverLock.unlock();
 							}
+							
+							responseMsg.setFromServer(true);
+							conn.sendCommMessage(output, responseMsg);
 							break;
 
 						default:
@@ -154,8 +179,8 @@ public class ClientConnection implements Runnable {
 							throw new IOException();
 						}
 					}
-					responseMsg.setFromServer(true);
-					conn.sendCommMessage(output, responseMsg);
+//					responseMsg.setFromServer(true);
+//					conn.sendCommMessage(output, responseMsg);
 				}
 
 				/*
@@ -228,10 +253,12 @@ public class ClientConnection implements Runnable {
 	 * performReplication do the replication mechanism after data has been
 	 * modified by user
 	 * 
-	 * @param conn
-	 *            connectionUtil
-	 * @param output
-	 *            outputStream
+	 * @param latestMsg
+	 *            latestMsg
+	 * @param clusterMD
+	 *            current MD for the server
+	 * @param serverInfo
+	 * 			  serverInfo
 	 * 
 	 ***********************************************************************/
 	private void performReplication(CommMessage latestMsg,
