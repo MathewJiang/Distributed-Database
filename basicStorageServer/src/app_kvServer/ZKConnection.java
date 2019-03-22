@@ -188,9 +188,14 @@ public class ZKConnection implements Runnable {
 					
 					case REPLICA_MIGRATE:
 						logger.info("Migrating stored replica data on " + callingServer.getServerName());
-						// callingServer.replicaMigrate();
-						callingServer.replicaMigrationWithNewMD(callingServer.getClusterMD());
-						callingServer.removeReplicaKeys(callingServer.getClusterMD());
+						callingServer.replicaMigration();
+						callingServer.removeReplicaKeys();
+						ecs.ack(callingServer.getServerName(), "remove_shuffle");
+						break;
+						
+					case REPLICA_LOCAL_MIGRATE:
+						logger.info("Migrating stored replica data locally on " + callingServer.getServerName());
+						callingServer.replicaMigrationLocal();
 						ecs.ack(callingServer.getServerName(), "remove_shuffle");
 						break;
 						

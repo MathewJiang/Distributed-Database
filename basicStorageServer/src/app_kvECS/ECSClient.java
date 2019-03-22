@@ -196,10 +196,7 @@ public class ECSClient implements IECSClient {
 			ecs.broadast("SYNC"); // Including launched new server
 			ecs.waitAck("sync", launchedNodes.size(), 50); 
 			
-			
-			
-			// ecs.waitAck("launched", 1, 50); // new node launched
-			
+			// Replica storage migration based on new metadata server received.
 			ecs.broadast("REPLICA_MIGRATE");
 			ecs.waitAckSetup("remove_shuffle");
 			ecs.waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
@@ -473,9 +470,9 @@ public class ECSClient implements IECSClient {
 			ecs.broadast("SYNC");
 			ecs.waitAck("sync", launchedNodes.size(), 50);
 			
-			// ecs.waitAckSetup("remove_shuffle");
-			// ecs.setCmd(oldHash.getSuccessor(returnedSlot).serviceName, "REPLICA_MIGRATE");
-			// ecs.waitAck("remove_shuffle", 1, 50);
+			ecs.waitAckSetup("remove_shuffle");
+			ecs.setCmd(oldHash.getSuccessor(returnedSlot).serviceName, "REPLICA_LOCAL_MIGRATE");
+			ecs.waitAck("remove_shuffle", 1, 50);
 			ecs.waitAckSetup("remove_shuffle");
 			ecs.setCmd(oldHash.getPredeccessor(returnedSlot).serviceName, "REREPLICATION");
 			ecs.waitAck("remove_shuffle", 1, 50);
