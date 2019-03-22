@@ -997,11 +997,13 @@ public class ECS {
 		echo("monitor_registry started");
 		List<String> liveNodeList = null;
 		ECSClient ECSClientInterface = new ECSClient();
-		final CountDownLatch monitorLatch = new CountDownLatch(1);
+		
 		while (true) {
+			final CountDownLatch monitorLatch = new CountDownLatch(1);
 			 try {
 				liveNodeList = zk.getChildren("/register", new Watcher() {
 				public void process(WatchedEvent e) {
+					// System.out.println(e.getType());
 					monitorLatch.countDown();
 					}
 				});
@@ -1013,11 +1015,10 @@ public class ECS {
 			} catch (InterruptedException e1) {
 				e1.printStackTrace();
 			}
-			//ackLock.lock();
+			ackLock.lock();
 			try {
 				if (zk.exists("/nodes", true) == null) {
 					echo("detects reset -all");
-					break;
 				}
 			} catch (KeeperException | InterruptedException e) {
 				e.printStackTrace();
@@ -1025,37 +1026,18 @@ public class ECS {
 			String crushed_server = diffNodes(liveNodeList, returnDirList("/nodes"));
 			if(crushed_server.equals("more than 1 server!")) {
 				echo("failed to detect crushed_server");
-				//ackLock.unlock();
+				ackLock.unlock();
 			} else if(crushed_server.equals("")) {
-				//ackLock.unlock();
+				ackLock.unlock();
 			} else {
 				
 				// do something here
 				echo("detected " + crushed_server + " crushed");
-				
-//		    	ServiceLocation returnedSlot = ECSClientInterface.getReturnedSlot(crushed_server);
-//		    	
-//		    	InfraMetadata new_MD = getMD();
-//		    	List<ServiceLocation> tmp = new_MD.getServerLocations();
-//		    	int deleteIndex = ECSClientInterface.indexServiceLocation(tmp, returnedSlot.serviceName);
-//		    	if(deleteIndex == -1) {
-//		    		System.out.println("Warning delete error");
-//		    	}
-//		    	ConsistentHash oldHash = new ConsistentHash();
-//		    	oldHash.addNodesFromInfraMD(new_MD);
-//		    	
-//		    	
-//		    	hashRing.removeAllServerNodes();
-//		    	tmp.remove(deleteIndex);
-//		    	new_MD.setServerLocations(tmp);
-//		    	hashRing.addNodesFromInfraMD(new_MD);
-//		    
-//		    	lock();
-//		    	
-//		    	unlock();
-				// ECSClientInterface.removeNode(crushed_server);
-				//ackLock.unlock();
-				break;
+		    
+		    	lock();
+		    	deleteHeadRecursive("/nodes/" + crushed_server);
+		    	unlock();
+				ackLock.unlock();
 			}
 		}
 	}
