@@ -13,8 +13,10 @@
 package shared;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -324,6 +326,32 @@ public class ConsistentHash {
 		
 		return sl;
 	}
+	
+	/*****************************************************************************
+	 * getReplicaServers
+	 * get where the replica server info for a given key
+	 * @param key	key pending search
+	 * 
+	 * Note: need to make sure the size of the list always be 2
+	 *****************************************************************************/
+	public List<ServiceLocation> getReplicaServers(String key) {
+		List<ServiceLocation> replicaServers = new ArrayList<ServiceLocation>();
+		ServiceLocation coordinatorServer = getServer(key);
+		ServiceLocation firstSuccessor = null;
+		ServiceLocation secondSuccessor = null;
+		
+		try {
+			firstSuccessor = getSuccessor(coordinatorServer);
+			replicaServers.add(firstSuccessor);
+			secondSuccessor = getSuccessor(firstSuccessor);
+			replicaServers.add(secondSuccessor);
+		} catch (Exception e) {
+			logger.error("[getReplicaServers/ConsistentHash.java]" + e.toString());
+		}
+		
+		return replicaServers;
+	}
+	
 	
 	/*****************************************************************************
 	 * printHashRing

@@ -107,7 +107,7 @@ public class ZKConnection implements Runnable {
 						break;
 
 					case LOCK_WRITE:
-						logger.info("[ZKConnection.java/run()]UPDATE!");
+						logger.info("[ZKConnection.java/run()]LOCK_WRITE!");
 						callingServer.setWriteLock(true);
 
 						// Await ECS to finish updating metadata.
@@ -117,6 +117,7 @@ public class ZKConnection implements Runnable {
 						// 1. Does not replace current metadata.
 						// 2. Only sending copies of migrating keys.
 						callingServer.migrateWithNewMD(ecs.getMD());
+						// FIXME: To Walter: sometimes migrate will hang
 
 						ecs.ack(callingServer.getServerName(), "migrate");
 						break;
@@ -128,6 +129,7 @@ public class ZKConnection implements Runnable {
 
 					case SYNC:
 						callingServer.removeMigratedKeys(ecs.getMD());
+						// callingServer.removeReplicaKeys(ecs.getMD());
 						callingServer.setWriteLock(false);
 						callingServer.setSuspended(false);
 
@@ -187,6 +189,8 @@ public class ZKConnection implements Runnable {
 					case REPLICA_MIGRATE:
 						logger.info("Migrating stored replica data on " + callingServer.getServerName());
 						// callingServer.replicaMigrate();
+						callingServer.replicaMigrationWithNewMD(callingServer.getClusterMD());
+						callingServer.removeReplicaKeys(callingServer.getClusterMD());
 						ecs.ack(callingServer.getServerName(), "remove_shuffle");
 						break;
 						

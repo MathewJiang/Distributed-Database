@@ -198,11 +198,10 @@ public class ECSClient implements IECSClient {
 			
 			
 			
-			ecs.waitAck("launched", 1, 50); // new node launched
+			// ecs.waitAck("launched", 1, 50); // new node launched
 			
 			ecs.broadast("REPLICA_MIGRATE");
 			ecs.waitAckSetup("remove_shuffle");
-			
 			ecs.waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
 			if(new_MD.getServerLocations().size() != launchedNodes.size()) {
 				echo("soft assert failed: (new_MD.getServerLocations().size() != launchedNodes.size())");
