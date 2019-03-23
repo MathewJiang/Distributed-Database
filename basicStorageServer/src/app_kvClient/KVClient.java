@@ -171,7 +171,7 @@ public class KVClient implements IKVClient {
 					}
 
 					// FIXME: should we just retry once???
-					logger.info("[debug]Retry round " + i);
+					logger.info("Retry round " + i);
 					i++;
 
 					backend.resetClusterHash(latestMsg.getInfraMetadata());
@@ -206,7 +206,7 @@ public class KVClient implements IKVClient {
 					}
 
 					// FIXME: should we just retry once???
-					logger.info("[debug]Round " + i);
+					logger.info("Retry round " + i);
 					i++;
 
 					backend.resetClusterHash(latestMsg.getInfraMetadata());
