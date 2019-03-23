@@ -170,8 +170,15 @@ public class ClientConnection implements Runnable {
 							} finally {
 								KVServer.serverLock.unlock();
 							}
-
 							responseMsg.setFromServer(true);
+							if (responseMsg.getStatus() == StatusType.GET_ERROR) {
+								// Last resort, check replica store for get key.
+								if (ReplicaStore.getKV(key)!= null) {
+									responseMsg.setKey(key);
+									responseMsg.setValue(ReplicaStore.getKV(key));
+									responseMsg.setStatus(StatusType.GET_SUCCESS);
+								}
+							}
 							conn.sendCommMessage(output, responseMsg);
 							break;
 

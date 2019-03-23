@@ -163,8 +163,15 @@ public class KVClient implements IKVClient {
 						&& latestMsg.getStatus().equals(
 								StatusType.SERVER_NOT_RESPONSIBLE)
 						&& latestMsg.getInfraMetadata() != null) {
+					if (backend.isRunning()) {
+						logger.info("Server not responsible for key "
+								+ key
+								+ ". Disconnecting backend to retry with auto routing.");
+						backend.disconnect();
+					}
+
 					// FIXME: should we just retry once???
-					System.out.println("[debug]Round " + i);
+					logger.info("[debug]Retry round " + i);
 					i++;
 
 					backend.resetClusterHash(latestMsg.getInfraMetadata());
@@ -191,8 +198,15 @@ public class KVClient implements IKVClient {
 						&& latestMsg.getStatus().equals(
 								StatusType.SERVER_NOT_RESPONSIBLE)
 						&& latestMsg.getInfraMetadata() != null) {
+					if (backend.isRunning()) {
+						logger.info("Server not responsible for key "
+								+ key
+								+ ". Disconnecting backend to retry with auto routing.");
+						backend.disconnect();
+					}
+
 					// FIXME: should we just retry once???
-					System.out.println("[debug]Round " + i);
+					logger.info("[debug]Round " + i);
 					i++;
 
 					backend.resetClusterHash(latestMsg.getInfraMetadata());
@@ -203,7 +217,7 @@ public class KVClient implements IKVClient {
 						+ e.toString());
 			}
 			break;
-			
+
 		case "runScript":
 			File file = new File(tokens[1]);
 
