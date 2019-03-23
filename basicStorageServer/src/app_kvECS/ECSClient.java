@@ -722,12 +722,14 @@ public class ECSClient implements IECSClient {
 		case "quit":
 			stop = true;
 			System.out.println(PROMPT + "Application exit!");
-			monitorThread.stop();
+			if(monitorThread != null)
+				monitorThread.stop();
 			break;
 		case "exit":
 			stop = true;
 			System.out.println(PROMPT + "Application exit!");
-			monitorThread.stop();
+			if(monitorThread != null)
+				monitorThread.stop();
 			break;
 
 		case "addNodes":
