@@ -106,7 +106,7 @@ public class ReplicaStore {
 		return keyList;
 	}
 
-	public static String getKV(String key) throws Exception {
+	public static String getKV(String key) throws IOException {
 
 		String src = db_dir + "/" + key;
 		File search = new File(src);
@@ -114,9 +114,7 @@ public class ReplicaStore {
 			// we have this key
 
 		} else {
-			// we don't have this key
-			echo("Trying to search");
-			throw new Exception();
+			return null;
 		}
 
 		FileReader fr = new FileReader(src);

@@ -9,6 +9,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import app_kvServer.KVServer;
+
 import shared.messages.KVMessage.StatusType;
 
 public class Disk {
@@ -78,7 +80,7 @@ public class Disk {
 		// mkdir at local dir if not being created
 		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
-		if (db.exists()) {
+		if (db.exists() && !KVServer.isRestoreProcess) {
 			echo("db exists, deleting all db files");
 			for (File f : db.listFiles()) {
 				f.delete();
