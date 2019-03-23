@@ -25,6 +25,8 @@ public class AllTests {
 	
 	
 	public static Test suite() {
+		// Note: need to clean up processes after running the tests
+		
 		TestSuite clientSuite = new TestSuite("Basic Storage ServerTest-Suite");
 		// M1 test cases (deprecated after infrastructure change)
 //		clientSuite.addTestSuite(ConnectionTest.class);
@@ -35,13 +37,17 @@ public class AllTests {
 																//has its own setup procedure
 		
 		// M2 tests
-		clientSuite.addTestSuite(AckTest.class);
-		clientSuite.addTestSuite(LockTest.class);
+//		clientSuite.addTestSuite(AckTest.class);	// pass for M3
+//		clientSuite.addTestSuite(LockTest.class);	// pass for M3
 		clientSuite.addTestSuite(ECSTest.class);
-		clientSuite.addTestSuite(MD5Test.class);
-		clientSuite.addTestSuite(MigrationTest.class);
-		clientSuite.addTestSuite(ConsistentHashTest.class);
-		clientSuite.addTestSuite(M1Test.class);
+//		clientSuite.addTestSuite(MD5Test.class);	// pass for M3
+//		clientSuite.addTestSuite(MigrationTest.class);
+//		clientSuite.addTestSuite(ConsistentHashTest.class);	// pass for M3
+//		clientSuite.addTestSuite(M1Test.class);		// pass for M3
+		
+		// M3 Test
+//		clientSuite.addTestSuite(ReplicationTest.class);
+		
 		return clientSuite;
 	}
 

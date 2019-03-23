@@ -606,8 +606,7 @@ public class KVServer extends Thread implements IKVServer {
 	 * performed
 	 ********************************************************************/
 	public void replicaMigration() {
-		serverLock.lock();
-
+		// serverLock.lock();
 		try {
 			// FIXME: assume always call after migrationWithNewMD
 			// FIXME: may not need to flush again
@@ -618,38 +617,61 @@ public class KVServer extends Thread implements IKVServer {
 			ConnectionUtil conn = new ConnectionUtil();
 
 			for (String rKey : allReplicaKeys) {
-				List<ServiceLocation> replicaServers = clusterHash
-						.getReplicaServers(rKey);
-				boolean isReplicaServer = false;
-
-				if (replicaServers.size() != 2) {
-					logger.error("[replicaMigrationWithNewMD/KVServer.java]"
-							+ "replicaServers.size != 2;"
-							+ " Only 1 replication has been replicated");
-				}
-				logger.info("[replicaMigrationWithNewMD]replicaServers[0]: "
-						+ replicaServers.get(0).serviceName);
-				logger.info("[replicaMigrationWithNewMD]replicaServers[1]: "
-						+ replicaServers.get(1).serviceName);
-
-				for (ServiceLocation sl : replicaServers) {
-					if (sl.serviceName.equals(this.serverName)) {
-						isReplicaServer = true;
-						break;
+				try {
+					serverLock.lock();
+					List<ServiceLocation> replicaServers = clusterHash
+							.getReplicaServers(rKey);
+					
+					boolean isReplicaServer = false;
+	
+					if (replicaServers.size() != 2) {
+						logger.error("[replicaMigrationWithNewMD/KVServer.java]"
+								+ "replicaServers.size != 2;"
+								+ " Only 1 replication has been replicated");
 					}
+					logger.info("[replicaMigrationWithNewMD]replicaServers[0]: "
+							+ replicaServers.get(0).serviceName);
+					logger.info("[replicaMigrationWithNewMD]replicaServers[1]: "
+							+ replicaServers.get(1).serviceName);
+	
+					for (ServiceLocation sl : replicaServers) {
+						if (sl.serviceName.equals(this.serverName)) {
+							isReplicaServer = true;
+							break;
+						}
+					}
+					logger.info("[migrate]rKey: " + rKey + " belongs to: "
+							+ clusterHash.getServer(rKey));
+					logger.info("[migrate]replicaServers[0]: "
+							+ replicaServers.get(0).serviceName);
+					logger.info("[migrate]replicaServers[1]: "
+							+ replicaServers.get(1).serviceName);
+	
+					if (isReplicaServer) {
+						continue;
+					}
+				} finally {
+					serverLock.unlock();
 				}
-				logger.info("[migrate]rKey: " + rKey + " belongs to: "
-						+ clusterHash.getServer(rKey));
-				logger.info("[migrate]replicaServers[0]: "
-						+ replicaServers.get(0).serviceName);
-				logger.info("[migrate]replicaServers[1]: "
-						+ replicaServers.get(1).serviceName);
-
-				if (isReplicaServer) {
+				
+				
+				
+				serverLock.lock();	
+				ServiceLocation coordinator = clusterHash.getServer(rKey);
+				serverLock.unlock();
+				
+				if(coordinator.serviceName.equals(this.serverName)) {
+					serverLock.lock();
+					String value = ReplicaStore.getKV(rKey);
+					Disk.putKV(rKey, value);
+					// Remove data from replica store.
+					ReplicaStore.putKV(rKey, null);
+					serverLock.unlock();
+					
+					replicateMessage(rKey, value);
 					continue;
 				}
-
-				ServiceLocation coordinator = clusterHash.getServer(rKey);
+				
 				CommMessage msg = new CommMessageBuilder().setKey(rKey)
 						.setValue(ReplicaStore.getKV(rKey))
 						.setStatus(StatusType.PUT).build();
@@ -680,20 +702,16 @@ public class KVServer extends Thread implements IKVServer {
 					}
 					socket.close();
 				} catch (Exception e) {
-					logger.error("[replicaMigrationWithNewMD] Exception has been raised!");
+					logger.error("[replicaMigrationWithNewMD] Socket Exception has been raised!");
 					logger.error(e);
-					System.exit(1);
 				}
 			}
-
 		} catch (IOException e) {
 			logger.error("[replicaMigrationWithNewMD/KVServer.java]IOException: "
 					+ e.toString());
 		} catch (Exception e) {
 			logger.error("[replicaMigrationWithNewMD/KVServer.java]Exception: "
 					+ e.toString());
-		} finally {
-			serverLock.unlock();
 		}
 	}
 

@@ -202,8 +202,8 @@ public class KVClient implements IKVClient {
 				printError("Error getting key " + tokens[1] + ": "
 						+ e.toString());
 			}
-
 			break;
+			
 		case "runScript":
 			File file = new File(tokens[1]);
 

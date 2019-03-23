@@ -77,7 +77,7 @@ public class ECSTest extends TestCase {
 		ecsClient.getECS().reset();
 	}
 	
-	@Test()
+	@Test(timeout = 1000)
 	public void testAwaitNodes() {
 		ecsClient.getECS().reset();
 		ecsClient.setupNodes(1, "None", 0);
