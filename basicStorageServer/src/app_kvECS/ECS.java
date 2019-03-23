@@ -1034,6 +1034,11 @@ public class ECS {
 			} catch (KeeperException | InterruptedException e) {
 				e.printStackTrace();
 			}
+			try {
+				liveNodeList = zk.getChildren("/register", null);
+			} catch (KeeperException | InterruptedException e1) {
+				e1.printStackTrace();
+			} // just recheck
 			String crushed_server = diffNodes(liveNodeList, returnDirList("/nodes"));
 			if(crushed_server.equals("more than 1 server!")) {
 				echo("failed to detect crushed_server");

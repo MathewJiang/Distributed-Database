@@ -149,7 +149,7 @@ public class ECSClient implements IECSClient {
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
     	info("addNode(cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
-    	ecs.ackLock.lock();
+    	// ecs.ackLock.lock();
     	hashRing.removeAllServerNodes();
     	String name = getNewServerName();
     	
@@ -204,7 +204,7 @@ public class ECSClient implements IECSClient {
 			if(new_MD.getServerLocations().size() != launchedNodes.size()) {
 				echo("soft assert failed: (new_MD.getServerLocations().size() != launchedNodes.size())");
 			}
-			ecs.ackLock.unlock();
+			// ecs.ackLock.unlock();
 			return newNode;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
