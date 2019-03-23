@@ -47,7 +47,6 @@ public class AllTests {
 		
 		// M3 Test
 //		clientSuite.addTestSuite(ReplicationTest.class);
-		
 		return clientSuite;
 	}
 

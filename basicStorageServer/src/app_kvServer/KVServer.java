@@ -31,16 +31,20 @@ import app_kvServer.storage.Storage;
 
 public class KVServer extends Thread implements IKVServer {
 	private static Logger logger = Logger.getRootLogger();
-
+	
+	// Test environment only variables.
 	private static final String RESTORE_DB_NAME = "/kvdb/restore-kvdb";
 	private static final String TEST_DB_NAME = "/kvdb/test-kvdb";
+	private static final String TEST_REP_NAME = "/kvdb/test-replica";
+	private static final String TEST_SERVER_NAME = "test-only";
+	public static final ServiceLocation TEST_SERVER_MD = new ServiceLocation(TEST_SERVER_NAME, "test-host", 0);
 
 	private static final Integer ECS_PORT = 39678;
 	private ECS ecs = null;
 	private InfraMetadata clusterMD = null;
 	private ConsistentHash clusterHash = null;
 	private ServiceLocation serverMD = null;
-	
+
 	public static boolean isRestoreProcess;
 
 	private String serverName = null;
@@ -83,10 +87,12 @@ public class KVServer extends Thread implements IKVServer {
 	public void initTestOnly() throws IOException, InterruptedException {
 		ecs = new ECS();
 		ecs.connect("localhost", 39678);
-		serverName = "test-only";
-		serverMD = new ServiceLocation(serverName, "test-host", 0);
+		serverName = TEST_SERVER_NAME;
+		serverMD = TEST_SERVER_MD;
 		Disk.setDbName(TEST_DB_NAME);
 		Disk.init();
+		ReplicaStore.setDbName(TEST_REP_NAME);
+		ReplicaStore.init();
 		isTestEnv = true;
 	}
 
@@ -504,9 +510,11 @@ public class KVServer extends Thread implements IKVServer {
 	// Test Only Methods & Variables.
 	public static boolean isTestEnv = false;
 	public static int testMigrateCount = 0;
+	public static int testReplicationCount = 0;
 
 	public void resetMigrateResourcesTestOnly() {
 		testMigrateCount = 0;
+		testReplicationCount = 0;
 		removeKVDB();
 	}
 
@@ -623,9 +631,9 @@ public class KVServer extends Thread implements IKVServer {
 					serverLock.lock();
 					List<ServiceLocation> replicaServers = clusterHash
 							.getReplicaServers(rKey);
-					
+
 					boolean isReplicaServer = false;
-	
+
 					if (replicaServers.size() != 2) {
 						logger.error("[replicaMigrationWithNewMD/KVServer.java]"
 								+ "replicaServers.size != 2;"
@@ -635,7 +643,7 @@ public class KVServer extends Thread implements IKVServer {
 							+ replicaServers.get(0).serviceName);
 					logger.info("[replicaMigrationWithNewMD]replicaServers[1]: "
 							+ replicaServers.get(1).serviceName);
-	
+
 					for (ServiceLocation sl : replicaServers) {
 						if (sl.serviceName.equals(this.serverName)) {
 							isReplicaServer = true;
@@ -648,32 +656,30 @@ public class KVServer extends Thread implements IKVServer {
 							+ replicaServers.get(0).serviceName);
 					logger.info("[migrate]replicaServers[1]: "
 							+ replicaServers.get(1).serviceName);
-	
+
 					if (isReplicaServer) {
 						continue;
 					}
 				} finally {
 					serverLock.unlock();
 				}
-				
-				
-				
-				serverLock.lock();	
+
+				serverLock.lock();
 				ServiceLocation coordinator = clusterHash.getServer(rKey);
 				serverLock.unlock();
-				
-				if(coordinator.serviceName.equals(this.serverName)) {
+
+				if (coordinator.serviceName.equals(this.serverName)) {
 					serverLock.lock();
 					String value = ReplicaStore.getKV(rKey);
 					Disk.putKV(rKey, value);
 					// Remove data from replica store.
 					ReplicaStore.putKV(rKey, null);
 					serverLock.unlock();
-					
+
 					replicateMessage(rKey, value);
 					continue;
 				}
-				
+
 				CommMessage msg = new CommMessageBuilder().setKey(rKey)
 						.setValue(ReplicaStore.getKV(rKey))
 						.setStatus(StatusType.PUT).build();
@@ -724,7 +730,6 @@ public class KVServer extends Thread implements IKVServer {
 		serverLock.lock();
 		try {
 			Storage.flush();
-
 			for (String key : ReplicaStore.getAllKeys()) {
 				// Server is responsible for this data, move it to true storage.
 				if (clusterHash.getServer(key).serviceName
@@ -888,7 +893,7 @@ public class KVServer extends Thread implements IKVServer {
 						.println("Usage: Server <port>! || Server <ECS_port> <serverName> <cacheSize> <cacheStrategy>");
 				return;
 			}
-
+			
 			// This server is a one-time restore service.
 			if (args[0].charAt(0) == '0') {
 				isRestoreProcess = true;
@@ -940,7 +945,10 @@ public class KVServer extends Thread implements IKVServer {
 	}
 
 	public void removeKVDB() {
-		if (!Disk.remove_db()) {
+		if (!Disk.removeAllFiles()) {
+			logger.warn("Error removing kvdb directory - not empty");
+		}
+		if (!ReplicaStore.removeAllFiles()) {
 			logger.warn("Error removing kvdb directory - not empty");
 		}
 	}
@@ -956,7 +964,7 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("Error removing all files");
 		}
 	}
-	
+
 	// Replicate data to this server's replicas (server n + 1 and server n + 2).
 	public void replicateMessage(String key, String value) throws Exception {
 		// Prepare replication message.
@@ -967,11 +975,19 @@ public class KVServer extends Thread implements IKVServer {
 
 		// Prepare replica locations.
 		List<ServiceLocation> replicas = new ArrayList<ServiceLocation>();
-		replicas.add(clusterHash.getSuccessor(serverMD));
-		replicas.add(clusterHash.getSuccessor(clusterHash
-				.getSuccessor(serverMD)));
-
+		if (isTestEnv) {
+			replicas.add(new ServiceLocation("test1", "127.0.0.1", 1000));
+			replicas.add(new ServiceLocation("test2", "127.0.0.1", 2000));
+		} else {
+			replicas.add(clusterHash.getSuccessor(serverMD));
+			replicas.add(clusterHash.getSuccessor(clusterHash
+					.getSuccessor(serverMD)));
+		}
 		for (ServiceLocation replica : replicas) {
+			if (isTestEnv) {
+				testReplicationCount++;
+				continue;
+			}
 			ConnectionUtil conn = new ConnectionUtil();
 			Socket socket = new Socket(replica.host, replica.port);
 			conn.sendCommMessage(socket.getOutputStream(), replicaMessage);
@@ -989,7 +1005,7 @@ public class KVServer extends Thread implements IKVServer {
 			socket.close();
 		}
 	}
-	
+
 	// Manually replicate all data stored on this server.
 	public void replicate() {
 		try {
