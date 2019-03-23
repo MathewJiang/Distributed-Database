@@ -277,7 +277,26 @@ public class ECS {
 			}
 		}
 	}
-
+	public void deleteHeadRecursiveKeepHead(String target) {
+		echo("delete " + target);
+		List<String> curr_children = returnDirList(target);
+		Iterator<String> it = curr_children.iterator();
+		while (it.hasNext()) {
+			String curr = it.next();
+			if (target.equals("/")) {
+				continue;
+			}
+			if (target.endsWith("/")) {
+				target = target.substring(0, target.length() - 1);
+			}
+			if (returnDirList(target).size() != 0) {
+				if (!target.endsWith("/")) {
+					target += "/";
+				}
+				deleteHeadRecursive(target + curr);
+			}
+		}
+	}
 	public boolean configured() {
 		try {
 			if (zk.exists("/configureStatus", false) == null) {
@@ -676,17 +695,20 @@ public class ECS {
 
 	public void init() {
 		try {
-			zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8),
+			if (zk.exists("/lock", true) == null) {
+				zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			}
 			zk.create("/lock/globalLock",
 					("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			zk.create("/lock/ackLock",
 					("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-
-			zk.create("/nodes", ("false").getBytes(StandardCharsets.UTF_8),
+			if (zk.exists("/nodes", true) == null) {
+				zk.create("/nodes", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			}
 			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			if (zk.exists("/register", true) == null) {

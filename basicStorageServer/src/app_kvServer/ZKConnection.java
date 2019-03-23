@@ -17,7 +17,7 @@ public class ZKConnection implements Runnable {
 
 	private KVServer callingServer;
 	private boolean isOpen = false;
-
+	
 	public ZKConnection(KVServer callingServer) {
 		this.callingServer = callingServer;
 		isOpen = true;
@@ -25,7 +25,7 @@ public class ZKConnection implements Runnable {
 
 	@Override
 	public void run() {
-		ECS ecs = callingServer.getECS();
+		final ECS ecs = callingServer.getECS();
 		String serverName = callingServer.getServerName();
 
 		ecs.ack(serverName, "launched");
@@ -53,6 +53,7 @@ public class ZKConnection implements Runnable {
 						logger.info("[ZKConnection.java/run()]STOP!");
 						callingServer.setSuspended(true);
 						ecs.ack(serverName, "stop");
+						
 						break;
 
 					case SHUTDOWN:

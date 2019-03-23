@@ -116,10 +116,14 @@ public class ECSClient implements IECSClient {
     	ecs.setConfigured(false);
     	//ecs.reset();
     	
-    	ecs.deleteHeadRecursive("/nodes");
-    	ecs.deleteHeadRecursive("/lock");
-    	ecs.deleteHeadRecursive("/ack");
-    	ecs.deleteHeadRecursive("/register");
+    	
+    	ecs.deleteHeadRecursiveKeepHead("/nodes");
+    	List<String> locks = ecs.returnDirList("/lock");
+    	for(int i = 0; i < locks.size(); i++) {
+    		ecs.deleteHeadRecursiveKeepHead("/lock/" + locks.get(i));
+    	}
+    	ecs.deleteHeadRecursiveKeepHead("/ack");
+    	ecs.deleteHeadRecursiveKeepHead("/register");
     	ecs.init();
         return true;
     }
@@ -319,7 +323,7 @@ public class ECSClient implements IECSClient {
     		ecs.create("/nodes", null, "-p");
     	}
     	
-    	
+    	ecs.ackLock.lock();
     	
     	ecs.waitAckSetup("launched");
     	loadECSconfigFromFile();
@@ -371,6 +375,7 @@ public class ECSClient implements IECSClient {
     		echo("fresh startup");
     	}
         
+        ecs.ackLock.unlock();
 		return aliased;
     }
     
