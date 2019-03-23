@@ -280,7 +280,7 @@ public class ECSClient implements IECSClient {
 		}
 		
     }
-    private void launch(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
+    public void launch(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
     	Runtime run = Runtime.getRuntime();
     	Process proc;
     	info("launch(ip = " + remoteIP + " port = " + ECSip + ")");
@@ -547,7 +547,7 @@ public class ECSClient implements IECSClient {
     			+ " " + "&& java -jar ./m2-server.jar " + ECSport + " "+  serverName +" "  + cache_size +" " + strategy + " &" + "\'");
     }
     
-    private String ssh_launch_array(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
+    public String ssh_launch_array(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
     	String[] cmd = new String[6];
     	cmd[0] = "ssh";
     	cmd[1] = "-n";
@@ -565,7 +565,7 @@ public class ECSClient implements IECSClient {
     	echo(debug_ssh);
     	return debug_ssh;
     }
-    private String[] nossh_launch_array(String serverName, String ECSip, String strategy, int cache_size) {
+    public String[] nossh_launch_array(String serverName, String ECSip, String strategy, int cache_size) {
     	String[] cmd = new String[3];
     	cmd[0] = "sh";
     	cmd[1] = "-c";
@@ -694,7 +694,7 @@ public class ECSClient implements IECSClient {
 		logger.error("[ECSClient.java]: " + line);
 	}
 	
-	private void info(String line) {
+	public void info(String line) {
 		//System.out.println("[ECSClient.java]Info: " + line);
 		logger.info("[ECSClient.java]Info: " + line);
 	}

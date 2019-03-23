@@ -1074,7 +1074,7 @@ public class ECS {
 				
 				broadast("SYNC");
 				waitAck("sync", MD.getServerLocations().size(), 50);
-				
+				try {
 				waitAckSetup("remove_shuffle");
 				setCmd(oldHash.getSuccessor(crushed_server_rebuilt).serviceName, "REPLICA_LOCAL_MIGRATE");
 				waitAck("remove_shuffle", 1, 50);
@@ -1084,8 +1084,13 @@ public class ECS {
 				waitAckSetup("remove_shuffle");
 				setCmd(oldHash.getPredeccessor(oldHash.getPredeccessor(crushed_server_rebuilt)).serviceName, "REREPLICATION");
 				waitAck("remove_shuffle", 1, 50);
-		    	
-		    	// sync
+				} catch (Exception e) {}	
+				
+				refreshHash(hashRing);
+				// ecs.waitAckSetup("migrate");
+				// ecs.broadast("LOCK_WRITE");
+							
+				// unlock(); // keep locking as well needed
 		    	
 		    	// addNode from pool
 		    	
@@ -1099,16 +1104,18 @@ public class ECS {
 				tmp.add(spot);
 				new_MD.setServerLocations(tmp);
 				hashRing.addNodesFromInfraMD(new_MD);
-				
+			
+				try {
 				String affectedServerName = hashRing.getSuccessor(spot).serviceName;
 				setCmd(affectedServerName, "LOCK_WRITE");
+				} catch (Exception e) {}
 				
 				
 				refreshHash(hashRing);
 				waitAckSetup("launched");
 				
 				String cacheStrategy = "None";
-				String cacheSize = "0";
+				int cacheSize = 0;
 				
 				clear_script();
 				launch(spot.host, spot.serviceName, ECSip, cacheStrategy, cacheSize);
@@ -1126,11 +1133,38 @@ public class ECS {
 				waitAckSetup("remove_shuffle");
 				waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
 		    	
-		    	unlock();
 				ackLock.unlock();
 			}
 		}
 	}
+	public void launch(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
+    	Runtime run = Runtime.getRuntime();
+    	Process proc;
+    	ECSClient ECSClientInterface = new ECSClient();
+    	ECSClientInterface.info("launch(ip = " + remoteIP + " port = " + ECSip + ")");
+    	if(remoteIP.equals("127.0.0.1") || remoteIP.equals("localhost")) {
+    		try {
+				proc = Runtime.getRuntime().exec(ECSClientInterface.nossh_launch_array(serverName, ECSip, strategy, cache_size));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	} else {
+    		
+    		/*try {
+    			proc = Runtime.getRuntime().exec(ssh_launch_array(remoteIP, serverName, ECSport, strategy, cache_size));
+    		} catch (IOException e) {
+    			e.printStackTrace();
+    		}*/
+    		String cmd = ECSClientInterface.ssh_launch_array(remoteIP, serverName, ECSip, strategy, cache_size);
+    		/*try {
+				Thread.sleep(2);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}*/
+    		ssh_content += cmd + "\nsleep 3 \n";
+    	}
+    }
 	private void clear_script() {
 		ssh_content = "";
 	}
