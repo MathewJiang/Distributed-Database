@@ -79,14 +79,18 @@ public class Disk {
 		db_dir = path + DB_NAME;
 		File db = new File(db_dir);
 		if (db.exists()) {
-			echo("db exists");
-		} else {
-			echo("db does not exist, making a new db");
-			if (db.mkdir()) {
-				echo("Mkdir success");
-			} else {
-				echo("Mkdir failed");
+			echo("db exists, deleting all db files");
+			for (File f : db.listFiles()) {
+				f.delete();
 			}
+			return;
+		}
+		
+		echo("db does not exist, making a new db");
+		if (db.mkdir()) {
+			echo("Mkdir success");
+		} else {
+			echo("Mkdir failed");
 		}
 		// this point, we have a db dir initialized
 	}
