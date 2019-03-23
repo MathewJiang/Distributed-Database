@@ -595,148 +595,187 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
-	
+
 	/*********************************************************************
-	 * 2019/03/21: Added by Zheping
-	 * replica migration methods for M3
+	 * 2019/03/21: Added by Zheping replica migration methods for M3
 	 * 
-	 * if the replica does not belong to the current server
-	 * migrate it to the correct server
+	 * if the replica does not belong to the current server migrate it to the
+	 * correct server
 	 * 
-	 * !Note: if the replica does belong to the current server,
-	 * 		  no action is performed
+	 * !Note: if the replica does belong to the current server, no action is
+	 * performed
 	 ********************************************************************/
-	public void replicaMigrationWithNewMD(InfraMetadata newMD) {
+	public void replicaMigration() {
 		serverLock.lock();
-		
+
 		try {
 			// FIXME: assume always call after migrationWithNewMD
 			// FIXME: may not need to flush again
 			Storage.flush();
 
-			ConsistentHash newHash = new ConsistentHash();
-			newHash.addNodesFromInfraMD(newMD);
-			setClusterMD(newMD);
-			
 			// 2. if replicas are not in range
 			List<String> allReplicaKeys = ReplicaStore.getAllKeys();
 			ConnectionUtil conn = new ConnectionUtil();
-			
-			for(String rKey : allReplicaKeys) {
-				List<ServiceLocation> replicaServers = newHash.getReplicaServers(rKey);
+
+			for (String rKey : allReplicaKeys) {
+				List<ServiceLocation> replicaServers = clusterHash
+						.getReplicaServers(rKey);
 				boolean isReplicaServer = false;
-				
-				if(replicaServers.size() != 2) {
-					logger.error("[replicaMigrationWithNewMD/KVServer.java]" +
-							"replicaServers.size != 2;" +
-							" Only 1 replication has been replicated");
+
+				if (replicaServers.size() != 2) {
+					logger.error("[replicaMigrationWithNewMD/KVServer.java]"
+							+ "replicaServers.size != 2;"
+							+ " Only 1 replication has been replicated");
 				}
-				logger.info("[replicaMigrationWithNewMD]replicaServers[0]: " + replicaServers.get(0).serviceName);
-				logger.info("[replicaMigrationWithNewMD]replicaServers[1]: " + replicaServers.get(1).serviceName);
-				
+				logger.info("[replicaMigrationWithNewMD]replicaServers[0]: "
+						+ replicaServers.get(0).serviceName);
+				logger.info("[replicaMigrationWithNewMD]replicaServers[1]: "
+						+ replicaServers.get(1).serviceName);
+
 				for (ServiceLocation sl : replicaServers) {
-					if(sl.serviceName.equals(this.serverName)) {
+					if (sl.serviceName.equals(this.serverName)) {
 						isReplicaServer = true;
 						break;
 					}
 				}
-				logger.info("[migrate]rKey: " + rKey + " belongs to: " + newHash.getServer(rKey));
-				logger.info("[migrate]replicaServers[0]: " + replicaServers.get(0).serviceName);
-				logger.info("[migrate]replicaServers[1]: " + replicaServers.get(1).serviceName);
-				
+				logger.info("[migrate]rKey: " + rKey + " belongs to: "
+						+ clusterHash.getServer(rKey));
+				logger.info("[migrate]replicaServers[0]: "
+						+ replicaServers.get(0).serviceName);
+				logger.info("[migrate]replicaServers[1]: "
+						+ replicaServers.get(1).serviceName);
+
 				if (isReplicaServer) {
 					continue;
 				}
-				
-				ServiceLocation coordinator = newHash.getServer(rKey);
+
+				ServiceLocation coordinator = clusterHash.getServer(rKey);
 				CommMessage msg = new CommMessageBuilder().setKey(rKey)
-						.setValue(ReplicaStore.getKV(rKey)).setStatus(StatusType.PUT)
-						.build();
+						.setValue(ReplicaStore.getKV(rKey))
+						.setStatus(StatusType.PUT).build();
 				msg.setFromServer(true);
 				msg.setIsReplicaMessage(false);
-				msg.isMigrationMessage = false;	// let the coordinator replicate again
+				msg.isMigrationMessage = false; // let the coordinator replicate
+												// again
 
+				logger.info("!!!!!!!!!!!!!!!!start sending to coordinator: "
+						+ coordinator.serviceName);
+				try {
+					Socket socket = new Socket(coordinator.host,
+							coordinator.port);
+					conn.sendCommMessage(socket.getOutputStream(), msg);
 
-				logger.info("!!!!!!!!!!!!!!!!start sending to coordinator: " + coordinator.serviceName);
-				try { 
-				Socket socket = new Socket(coordinator.host, coordinator.port);
-				conn.sendCommMessage(socket.getOutputStream(), msg);
-				
-				CommMessage serverResponse = conn.receiveCommMessage(socket
-						.getInputStream());
-				if (serverResponse.getStatus() == StatusType.PUT_ERROR) {
-					logger.error("[replicaMigrationWithNewMD/KVServer.java]" +
-							"Error migrating replication message " + msg
-							+ " from server " + serverName + " to server "
-							+ coordinator.serviceName + "\nResponse: "
-							+ serverResponse);
-				}
-				socket.close();
+					CommMessage serverResponse = conn.receiveCommMessage(socket
+							.getInputStream());
+					if (serverResponse.getStatus() == StatusType.PUT_ERROR) {
+						logger.error("[replicaMigrationWithNewMD/KVServer.java]"
+								+ "Error migrating replication message "
+								+ msg
+								+ " from server "
+								+ serverName
+								+ " to server "
+								+ coordinator.serviceName
+								+ "\nResponse: "
+								+ serverResponse);
+					}
+					socket.close();
 				} catch (Exception e) {
 					logger.error("[replicaMigrationWithNewMD] Exception has been raised!");
 					logger.error(e);
 					System.exit(1);
 				}
 			}
-			
+
 		} catch (IOException e) {
-			logger.error("[replicaMigrationWithNewMD/KVServer.java]IOException: " + e.toString());
+			logger.error("[replicaMigrationWithNewMD/KVServer.java]IOException: "
+					+ e.toString());
 		} catch (Exception e) {
-			logger.error("[replicaMigrationWithNewMD/KVServer.java]Exception: " + e.toString());
+			logger.error("[replicaMigrationWithNewMD/KVServer.java]Exception: "
+					+ e.toString());
 		} finally {
 			serverLock.unlock();
 		}
 	}
-	
-	/*********************************************************************
-	 * 2019/03/21: Added by Zheping
-	 * replica clean-up methods for M3
-	 * 
-	 * if the replica does not belong to the current server
-	 * delete the entry within ReplicaStore
-	 * 
-	 * !Note: if the replica does belong to the current server,
-	 * 		  no action is performed
-	 ********************************************************************/
-	public void removeReplicaKeys(InfraMetadata newMD) {
+
+	// Loop through all replica data kept locally and move any of them into
+	// storage folder & replicate to successor servers if this server became
+	// data's new coordinator.
+	public void replicaMigrationLocal() {
 		serverLock.lock();
 		try {
 			Storage.flush();
 
-			setClusterMD(newMD);
-			List<String> allReplicaKeys = ReplicaStore.getAllKeys();
-			for(String rKey : allReplicaKeys) {
-				List<ServiceLocation> replicaServers = clusterHash.getReplicaServers(rKey);
-				boolean isReplicaServer = false;
-				
-				if(replicaServers.size() != 2) {
-					logger.error("[replicaMigrationWithNewMD/KVServer.java]" +
-							"replicaServers.size != 2;" +
-							" Only 1 replication has been replicated");
-				}
-				logger.info("rKey: " + rKey + " belongs to: " + clusterHash.getServer(rKey));
-				logger.info("replicaServers[0]: " + replicaServers.get(0).serviceName);
-				logger.info("replicaServers[1]: " + replicaServers.get(1).serviceName);
-				
-				for (ServiceLocation sl : replicaServers) {
-					if(sl.serviceName.equals(this.serverName)) {
-						isReplicaServer = true;
-						break;
-					}
-				}
-				
-				if(!isReplicaServer) {
-					ReplicaStore.putKV(rKey, null);
+			for (String key : ReplicaStore.getAllKeys()) {
+				// Server is responsible for this data, move it to true storage.
+				if (clusterHash.getServer(key).serviceName
+						.equals(getServerName())) {
+					String value = ReplicaStore.getKV(key);
+					Disk.putKV(key, value);
+					replicateMessage(key, value);
+
+					// Remove data from replica store.
+					ReplicaStore.putKV(key, null);
 				}
 			}
-		} catch (IOException e) {
-			logger.error("[]Error remving migrants on server " + getServerName()
-					+ ": " + e.toString());
+		} catch (Exception e) {
+			logger.error("[replicaMigrationWithNewMD/KVServer.java]Exception: "
+					+ e.toString());
 		} finally {
 			serverLock.unlock();
 		}
 	}
-	
+
+	/*********************************************************************
+	 * 2019/03/21: Added by Zheping replica clean-up methods for M3
+	 * 
+	 * if the replica does not belong to the current server delete the entry
+	 * within ReplicaStore
+	 * 
+	 * !Note: if the replica does belong to the current server, no action is
+	 * performed
+	 ********************************************************************/
+	public void removeReplicaKeys() {
+		serverLock.lock();
+		try {
+			Storage.flush();
+
+			List<String> allReplicaKeys = ReplicaStore.getAllKeys();
+			for (String rKey : allReplicaKeys) {
+				List<ServiceLocation> replicaServers = clusterHash
+						.getReplicaServers(rKey);
+				boolean isReplicaServer = false;
+
+				if (replicaServers.size() != 2) {
+					logger.error("[replicaMigrationWithNewMD/KVServer.java]"
+							+ "replicaServers.size != 2;"
+							+ " Only 1 replication has been replicated");
+				}
+				logger.info("rKey: " + rKey + " belongs to: "
+						+ clusterHash.getServer(rKey));
+				logger.info("replicaServers[0]: "
+						+ replicaServers.get(0).serviceName);
+				logger.info("replicaServers[1]: "
+						+ replicaServers.get(1).serviceName);
+
+				for (ServiceLocation sl : replicaServers) {
+					if (sl.serviceName.equals(this.serverName)) {
+						isReplicaServer = true;
+						break;
+					}
+				}
+
+				if (!isReplicaServer) {
+					ReplicaStore.putKV(rKey, null);
+				}
+			}
+		} catch (IOException e) {
+			logger.error("[]Error remving migrants on server "
+					+ getServerName() + ": " + e.toString());
+		} finally {
+			serverLock.unlock();
+		}
+	}
+
 	// This server is a pure restore process.
 	private static void restoreProcess(String ecsIP) throws Exception {
 		KVServer temp = new KVServer();
@@ -896,43 +935,47 @@ public class KVServer extends Thread implements IKVServer {
 			logger.warn("Error removing all files");
 		}
 	}
+	
+	// Replicate data to this server's replicas (server n + 1 and server n + 2).
+	public void replicateMessage(String key, String value) throws Exception {
+		// Prepare replication message.
+		CommMessage replicaMessage = new CommMessageBuilder().setKey(key)
+				.setValue(value).setStatus(StatusType.PUT).build();
+		replicaMessage.setFromServer(true);
+		replicaMessage.setIsReplicaMessage(true);
 
+		// Prepare replica locations.
+		List<ServiceLocation> replicas = new ArrayList<ServiceLocation>();
+		replicas.add(clusterHash.getSuccessor(serverMD));
+		replicas.add(clusterHash.getSuccessor(clusterHash
+				.getSuccessor(serverMD)));
+
+		for (ServiceLocation replica : replicas) {
+			ConnectionUtil conn = new ConnectionUtil();
+			Socket socket = new Socket(replica.host, replica.port);
+			conn.sendCommMessage(socket.getOutputStream(), replicaMessage);
+			CommMessage response = conn.receiveCommMessage(socket
+					.getInputStream());
+			// Replication failed.
+			if (response.getStatus() != StatusType.PUT_SUCCESS
+					&& response.getStatus() != StatusType.PUT_UPDATE) {
+				logger.error("Error replicating message to replica 1: "
+						+ response);
+			} else {
+				logger.info("Successfully replicated message with response: "
+						+ response);
+			}
+			socket.close();
+		}
+	}
+	
+	// Manually replicate all data stored on this server.
 	public void replicate() {
 		try {
 			serverLock.lock();
 			Storage.flush();
 			for (String key : Disk.getAllKeys()) {
-				// Prepare replication message.
-				CommMessage replicaMessage = new CommMessageBuilder()
-						.setKey(key).setValue(Disk.getKV(key))
-						.setStatus(StatusType.PUT).build();
-				replicaMessage.setFromServer(true);
-				replicaMessage.setIsReplicaMessage(true);
-
-				// Prepare replica locations.
-				List<ServiceLocation> replicas = new ArrayList<ServiceLocation>();
-				replicas.add(clusterHash.getSuccessor(serverMD));
-				replicas.add(clusterHash.getSuccessor(clusterHash
-						.getSuccessor(serverMD)));
-
-				for (ServiceLocation replica : replicas) {
-					ConnectionUtil conn = new ConnectionUtil();
-					Socket socket = new Socket(replica.host, replica.port);
-					conn.sendCommMessage(socket.getOutputStream(),
-							replicaMessage);
-					CommMessage response = conn.receiveCommMessage(socket
-							.getInputStream());
-					// Replication failed.
-					if (response.getStatus() != StatusType.PUT_SUCCESS
-							&& response.getStatus() != StatusType.PUT_UPDATE) {
-						logger.error("Error replicating message to replica 1: "
-								+ response);
-					} else {
-						logger.info("Successfully replicated message with response: "
-								+ response);
-					}
-					socket.close();
-				}
+				replicateMessage(key, Disk.getKV(key));
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block

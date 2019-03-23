@@ -105,7 +105,7 @@ public class ClientConnection implements Runnable {
 								.getClusterMD());
 						responseMsg
 								.setStatus(StatusType.SERVER_NOT_RESPONSIBLE);
-						
+
 						responseMsg.setFromServer(true);
 						conn.sendCommMessage(output, responseMsg);
 					} else {
@@ -116,38 +116,39 @@ public class ClientConnection implements Runnable {
 
 								StatusType status = null;
 								if (latestMsg.getIsReplicaMessage()) {
-									// Server only responsible for keeping replica.
+									// Server only responsible for keeping
+									// replica.
 									try {
 										status = ReplicaStore.putKV(key, value);
-										
-										responseMsg.setKey(key);
-										responseMsg.setValue(value);
-										responseMsg.setStatus(status);
-										responseMsg.setFromServer(true);
-										conn.sendCommMessage(output, responseMsg);
 									} finally {
 										KVServer.serverLock.unlock();
 									}
-								} else {
-									try {
-									// This server is the coordinator of latestMsg.
-									status = handlePUT(key, value);
-									
 									responseMsg.setKey(key);
 									responseMsg.setValue(value);
 									responseMsg.setStatus(status);
 									responseMsg.setFromServer(true);
 									conn.sendCommMessage(output, responseMsg);
+
+								} else {
+									try {
+										// This server is the coordinator of
+										// latestMsg.
+										status = handlePUT(key, value);
 									} finally {
 										KVServer.serverLock.unlock();
 									}
-									
+
+									responseMsg.setKey(key);
+									responseMsg.setValue(value);
+									responseMsg.setStatus(status);
+									responseMsg.setFromServer(true);
+									conn.sendCommMessage(output, responseMsg);
+
 									performReplication(latestMsg,
 											callingServer.getClusterMD(),
 											callingServer.getServerInfo());
 								}
 
-								
 							} catch (IOException e) {
 								responseMsg.setStatus(StatusType.PUT_ERROR);
 							} finally {
@@ -169,7 +170,7 @@ public class ClientConnection implements Runnable {
 							} finally {
 								KVServer.serverLock.unlock();
 							}
-							
+
 							responseMsg.setFromServer(true);
 							conn.sendCommMessage(output, responseMsg);
 							break;
@@ -179,8 +180,8 @@ public class ClientConnection implements Runnable {
 							throw new IOException();
 						}
 					}
-//					responseMsg.setFromServer(true);
-//					conn.sendCommMessage(output, responseMsg);
+					// responseMsg.setFromServer(true);
+					// conn.sendCommMessage(output, responseMsg);
 				}
 
 				/*
@@ -258,16 +259,16 @@ public class ClientConnection implements Runnable {
 	 * @param clusterMD
 	 *            current MD for the server
 	 * @param serverInfo
-	 * 			  serverInfo
+	 *            serverInfo
 	 * 
 	 ***********************************************************************/
 	private void performReplication(CommMessage latestMsg,
 			InfraMetadata clusterMD, ServiceLocation serverInfo) {
-		
-		if(latestMsg.isMigrationMessage) {
+
+		if (latestMsg.isMigrationMessage) {
 			return;
 		}
-		
+
 		ConnectionUtil conn = new ConnectionUtil();
 
 		ConsistentHash ch = new ConsistentHash();
