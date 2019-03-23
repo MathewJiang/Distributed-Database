@@ -27,6 +27,7 @@ public class KVClient implements IKVClient {
 
 	private static Logger logger = Logger.getRootLogger();
 	private static final String PROMPT = "m1-client> ";
+	public static String PROMPT_POSTFIX = "";
 	private static final int RETRY_LIMIT = 10; // Controls how many times client
 												// should retry if receives
 												// SERVER_NOT_RESPONSIBLE.
@@ -54,7 +55,7 @@ public class KVClient implements IKVClient {
 	public void run() {
 		while (!stop) {
 			stdin = new BufferedReader(new InputStreamReader(System.in));
-			System.out.print(PROMPT);
+			System.out.print(PROMPT + PROMPT_POSTFIX);
 
 			try {
 				String cmdLine = stdin.readLine();
@@ -171,7 +172,7 @@ public class KVClient implements IKVClient {
 					}
 
 					// FIXME: should we just retry once???
-					logger.info("[debug]Retry round " + i);
+					logger.info("Retry round " + i);
 					i++;
 
 					backend.resetClusterHash(latestMsg.getInfraMetadata());
@@ -206,7 +207,7 @@ public class KVClient implements IKVClient {
 					}
 
 					// FIXME: should we just retry once???
-					logger.info("[debug]Round " + i);
+					logger.info("Retry round " + i);
 					i++;
 
 					backend.resetClusterHash(latestMsg.getInfraMetadata());

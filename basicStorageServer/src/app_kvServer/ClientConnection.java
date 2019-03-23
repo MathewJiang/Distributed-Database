@@ -55,6 +55,15 @@ public class ClientConnection implements Runnable {
 				&& msg.getStatus() == StatusType.PUT;
 	}
 
+	private boolean shouldinformServerNotResponsible(CommMessage msg) {
+		if (msg.getStatus() == StatusType.GET) {
+			return !callingServer.hasKey(msg.getKey())
+					&& !callingServer.hasReplicaKey(msg.getKey());
+		}
+		// PUT ignores replica store.
+		return !callingServer.hasKey(msg.getKey());
+	}
+
 	/**
 	 * Initializes and starts the client connection. Loops until the connection
 	 * is closed or aborted by the client.
@@ -98,8 +107,8 @@ public class ClientConnection implements Runnable {
 					// If request key is not in server range. Issue an
 					// update message to requesting client.
 
-					if (!callingServer.hasKey(key)
-							&& !callingServer.hasReplicaKey(key)) {
+					if (!latestMsg.getIsReplicaMessage()
+							&& shouldinformServerNotResponsible(latestMsg)) {
 						logger.error("[run/ClientConnection.java]KEY NOT IN RANGE");
 						responseMsg.setInfraMetadata(callingServer
 								.getClusterMD());
@@ -173,10 +182,12 @@ public class ClientConnection implements Runnable {
 							responseMsg.setFromServer(true);
 							if (responseMsg.getStatus() == StatusType.GET_ERROR) {
 								// Last resort, check replica store for get key.
-								if (ReplicaStore.getKV(key)!= null) {
+								if (ReplicaStore.getKV(key) != null) {
 									responseMsg.setKey(key);
-									responseMsg.setValue(ReplicaStore.getKV(key));
-									responseMsg.setStatus(StatusType.GET_SUCCESS);
+									responseMsg.setValue(ReplicaStore
+											.getKV(key));
+									responseMsg
+											.setStatus(StatusType.GET_SUCCESS);
 								}
 							}
 							conn.sendCommMessage(output, responseMsg);
