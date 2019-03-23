@@ -57,7 +57,7 @@ public class ECS {
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
 	spinlock globalLock = new spinlock("globalLock");
-	spinlock ackLock = new spinlock("ackLock");
+	public spinlock ackLock = new spinlock("ackLock");
 	String prevCmd = "null";
 	private static Logger logger = Logger.getRootLogger();
 	String ECSip = "";
@@ -1094,7 +1094,7 @@ public class ECS {
 		    	
 		    	// addNode from pool
 		    	
-		    	String recoverServerName = ECSClientInterface.getNewServerName();
+		    	String recoverServerName = getNewServerName();
 		    	System.out.println("recoverServerName = " + recoverServerName);
 		    	
 		    	ServiceLocation spot = get_a_slot();
@@ -1109,38 +1109,66 @@ public class ECS {
 				String affectedServerName = hashRing.getSuccessor(spot).serviceName;
 				setCmd(affectedServerName, "LOCK_WRITE");
 				} catch (Exception e) {}
+			
+				try {
+					IECSNode newNode = new ECSNode(spot.serviceName, spot.host, spot.port, hashRing.getHashRange(spot));
+					addOneLaunchedNodes(newNode);
+					refreshHash(hashRing);
+					waitAckSetup("launched");
+					
+					String cacheStrategy = "None";
+					int cacheSize = 0;
+					
+					clear_script();
+					launch(spot.host, spot.serviceName, ECSip, cacheStrategy, cacheSize);
+					run_script();
+					waitAck("launched", 1, 50); // new node launched
+					waitAckSetup("migrate");
+					unlock(); // allow effected node to migrate
+					waitAck("migrate", 1, 50); // internal unlock -> new nodes migrated
+					waitAckSetup("sync");
+					broadast("SYNC"); // Including launched new server
+					waitAck("sync", new_MD.getServerLocations().size(), 50); 
+					
+					// Replica storage migration based on new metadata server received.
+					broadast("REPLICA_MIGRATE");
+					waitAckSetup("remove_shuffle");
+					waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
+			    	
+					ackLock.unlock();
+				} catch (Exception e){}
 				
-				
-				refreshHash(hashRing);
-				waitAckSetup("launched");
-				
-				String cacheStrategy = "None";
-				int cacheSize = 0;
-				
-				clear_script();
-				launch(spot.host, spot.serviceName, ECSip, cacheStrategy, cacheSize);
-				run_script();
-				waitAck("launched", 1, 50); // new node launched
-				waitAckSetup("migrate");
-				unlock(); // allow effected node to migrate
-				waitAck("migrate", 1, 50); // internal unlock -> new nodes migrated
-				waitAckSetup("sync");
-				broadast("SYNC"); // Including launched new server
-				waitAck("sync", new_MD.getServerLocations().size(), 50); 
-				
-				// Replica storage migration based on new metadata server received.
-				broadast("REPLICA_MIGRATE");
-				waitAckSetup("remove_shuffle");
-				waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
-		    	
-				ackLock.unlock();
 			}
 		}
 	}
+	public String getNewServerName() {
+    	List<String> serverList = returnDirList("/nodes");
+    	serverList.size();
+    	String alias = "server_";
+    	int[] serverNumbers = new int[serverList.size()];
+    	for(int i = 0; i < serverList.size(); i++) {
+    		serverNumbers[i] = Integer.parseInt(serverList.get(i).substring(7));
+    	}
+    	Arrays.sort(serverNumbers);
+    	for(int i = 0; i < serverList.size(); i++) {
+    		
+    		if(serverNumbers[i] != i) {
+    			String curr = alias + i;
+        		echo("curr is " + curr);
+    			// inconsistency
+    			return curr;
+    		}
+    	}
+    	
+    	int serial = getMD().getServerLocations().size();
+    	String name = "server_" + serial;
+    	return name;
+    }
 	public void launch(String remoteIP, String serverName, String ECSip, String strategy, int cache_size) {
     	Runtime run = Runtime.getRuntime();
     	Process proc;
     	ECSClient ECSClientInterface = new ECSClient();
+    	ECSClientInterface.set_workDir();
     	ECSClientInterface.info("launch(ip = " + remoteIP + " port = " + ECSip + ")");
     	if(remoteIP.equals("127.0.0.1") || remoteIP.equals("localhost")) {
     		try {
@@ -1223,10 +1251,10 @@ public class ECS {
 					if(slotTaken.get(i).host.equals(totalPool.get(j).host)){
 						if((int)slotTaken.get(i).port == (int)totalPool.get(j).port) {
 							// taken
-							System.out.println("Hit");
+							//System.out.println("Hit");
 							aliasedSlotTaken.add(totalPool.get(j));
 						} else {
-							System.out.println(slotTaken.get(i).port +" " + totalPool.get(j).port);
+							//System.out.println(slotTaken.get(i).port +" " + totalPool.get(j).port);
 						}
 					}
 				}

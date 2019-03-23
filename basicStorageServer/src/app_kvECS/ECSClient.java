@@ -119,7 +119,7 @@ public class ECSClient implements IECSClient {
     	ecs.deleteHeadRecursive("/nodes");
     	ecs.deleteHeadRecursive("/lock");
     	ecs.deleteHeadRecursive("/ack");
-    	ecs.deleteHead("/register");
+    	ecs.deleteHeadRecursive("/register");
     	ecs.init();
         return true;
     }
@@ -149,7 +149,7 @@ public class ECSClient implements IECSClient {
     @Override
     public IECSNode addNode(String cacheStrategy, int cacheSize) {
     	info("addNode(cacheStrategy=" + cacheStrategy + ",cacheSize=" + cacheSize + ")");
-    	
+    	ecs.ackLock.lock();
     	hashRing.removeAllServerNodes();
     	String name = getNewServerName();
     	
@@ -181,7 +181,7 @@ public class ECSClient implements IECSClient {
 			String affectedServerName = hashRing.getSuccessor(spot).serviceName;
 			ecs.setCmd(affectedServerName, "LOCK_WRITE");
 			
-			
+			ecs.ackLock.lock();
 			ecs.addOneLaunchedNodes(newNode);
 			ecs.refreshHash(hashRing);
 			ecs.waitAckSetup("launched");
@@ -189,6 +189,7 @@ public class ECSClient implements IECSClient {
 			launch(newNode.getNodeHost(), newNode.getNodeName(), ECSip, cacheStrategy, cacheSize);
 			run_script();
 			ecs.waitAck("launched", 1, 50); // new node launched
+			ecs.ackLock.unlock();
 			ecs.waitAckSetup("migrate");
 			ecs.unlock(); // allow effected node to migrate
 			ecs.waitAck("migrate", 1, 50); // internal unlock -> new nodes migrated
@@ -203,6 +204,7 @@ public class ECSClient implements IECSClient {
 			if(new_MD.getServerLocations().size() != launchedNodes.size()) {
 				echo("soft assert failed: (new_MD.getServerLocations().size() != launchedNodes.size())");
 			}
+			ecs.ackLock.unlock();
 			return newNode;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -222,7 +224,6 @@ public class ECSClient implements IECSClient {
         	float seconds = timeElapsed.toMillis() / 1000;
     		echo("addNoding " + i + " takes " + seconds);
         }
-        
 		
         return null;
     }
@@ -456,14 +457,15 @@ public class ECSClient implements IECSClient {
 			// MOD for m3: ecs.setCmd(affectedServerName, "LOCK_WRITE_REMOVE_RECEVIER");
 			// MOD for m3: ecs.waitAck("computedNewMD", 1, 50);
 			// MOD for m3: ecs.setCmd(returnedSlot.serviceName, "LOCK_WRITE_REMOVE_SENDER");
-		
+			
+			ecs.ackLock.lock();
 			ecs.waitAckSetup("killed");
 			ecs.setCmd(returnedSlot.serviceName, "KILL"); // since shutDown assumes everyone shutdown because of restore logic
 			ecs.waitAck("killed", 1, 50);
 			
 			
 			ecs.deleteHeadRecursive("/nodes/" + returnedSlot.serviceName);
-
+			ecs.ackLock.unlock();
 			// Make sure system is ready to shuffle in new metadata state.
 			ecs.waitAckSetup("sync");
 			
@@ -577,7 +579,7 @@ public class ECSClient implements IECSClient {
     	return cmd;
     }
     
-	private void set_workDir () {
+	public void set_workDir () {
 		workDir = System.getProperty("user.dir");
 		info("work directory is: " + workDir);
 	}
@@ -720,10 +722,12 @@ public class ECSClient implements IECSClient {
 		case "quit":
 			stop = true;
 			System.out.println(PROMPT + "Application exit!");
+			monitorThread.stop();
 			break;
 		case "exit":
 			stop = true;
 			System.out.println(PROMPT + "Application exit!");
+			monitorThread.stop();
 			break;
 
 		case "addNodes":
