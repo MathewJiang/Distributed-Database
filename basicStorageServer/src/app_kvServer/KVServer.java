@@ -40,6 +40,8 @@ public class KVServer extends Thread implements IKVServer {
 	private InfraMetadata clusterMD = null;
 	private ConsistentHash clusterHash = null;
 	private ServiceLocation serverMD = null;
+	
+	public static boolean isRestoreProcess;
 
 	private String serverName = null;
 	private int port;
@@ -889,6 +891,7 @@ public class KVServer extends Thread implements IKVServer {
 
 			// This server is a one-time restore service.
 			if (args[0].charAt(0) == '0') {
+				isRestoreProcess = true;
 				restoreProcess(args[0].substring(1));
 				return;
 			}
