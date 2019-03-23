@@ -124,7 +124,7 @@ public class ECSClient implements IECSClient {
         return true;
     }
 
-    private String getNewServerName() {
+    public String getNewServerName() {
     	List<String> serverList = ecs.returnDirList("/nodes");
     	serverList.size();
     	String alias = "server_";
@@ -1043,6 +1043,11 @@ public class ECSClient implements IECSClient {
 			case "monitor_no_thread":
 				if(ecs != null) {
 					ecs.monitor_registry();
+				}
+			    break;
+			case "get_a_slot":
+				if(ecs != null) {
+					echo(ecs.get_a_slot().host + ":" + ecs.get_a_slot().port);
 				}
 			    break;
 		default:

@@ -1037,9 +1037,55 @@ public class ECS {
 		    	lock();
 		    	deleteHeadRecursive("/nodes/" + crushed_server);
 		    	unlock();
+		    	
+		    	// migration
+		    	
+		    	// sync
+		    	
+		    	// addNode from pool
+		    	
+		    	String recoverServerName = ECSClientInterface.getNewServerName();
+		    	
+		    	
 				ackLock.unlock();
 			}
 		}
+	}
+	public ServiceLocation get_a_slot() {
+		ServiceLocation slot = null;
+		String ecs_config = "./resources/config/ecs.config";
+	    InfraMetadata latestMD = getMD();
+    	List<ServiceLocation> slotTaken = latestMD.getServerLocations();
+    	
+    	try {
+			List<ServiceLocation> totalPool = InfraMetadata.fromConfigFile(ecs_config).getServerLocations();
+			List<ServiceLocation> aliasedSlotTaken = new ArrayList<ServiceLocation>();
+			for(int i = 0; i < slotTaken.size();i++) {
+				System.out.println("host: " + slotTaken.get(i).host + " port: " + slotTaken.get(i).port);
+				for(int j = 0; j < totalPool.size();j++) {
+					if(slotTaken.get(i).host.equals(totalPool.get(j).host)){
+						if((int)slotTaken.get(i).port == (int)totalPool.get(j).port) {
+							// taken
+							System.out.println("Hit");
+							aliasedSlotTaken.add(totalPool.get(j));
+						} else {
+							System.out.println(slotTaken.get(i).port +" " + totalPool.get(j).port);
+						}
+					}
+				}
+			}
+			System.out.println("totalPool[" + totalPool.size() + "]");
+			System.out.println("unaliasedSlotTaken[" + aliasedSlotTaken.size() + "]");
+			totalPool.removeAll(aliasedSlotTaken);
+			System.out.println("totalPool[" + totalPool.size() + "]");
+			if(slotTaken.get(0)!=null) {
+				slot = totalPool.get(0);
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return slot;
 	}
 	
 
