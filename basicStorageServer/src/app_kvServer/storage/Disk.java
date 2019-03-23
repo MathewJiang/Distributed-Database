@@ -9,6 +9,8 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import app_kvServer.KVServer;
 
 import shared.messages.KVMessage.StatusType;
@@ -152,6 +154,7 @@ public class Disk {
 			System.out.println("[debug]Disk.java: putKV: key is NULL!");
 			throw new IOException();
 		}
+		
 		String dest = db_dir + "/" + key;
 		File search = new File(dest);
 		boolean foundEntry = false;
@@ -178,11 +181,7 @@ public class Disk {
 		try {
 			PrintWriter key_file = new PrintWriter(dest);
 
-			key_file.println(value);
-			key_file.close();
-
 			if (foundEntry) {
-
 				FileReader fr = new FileReader(dest);
 				BufferedReader fh = new BufferedReader(fr);
 
@@ -194,13 +193,21 @@ public class Disk {
 
 				fh.close();
 				fr.close();
-
 				if (result.equals(value)) {
+
+					key_file.println(value);
+					key_file.close();
 					return StatusType.PUT_SUCCESS;
 				} else {
+
+					key_file.println(value);
+					key_file.close();
 					return StatusType.PUT_UPDATE;
 				}
 			} else {
+
+				key_file.println(value);
+				key_file.close();
 				return StatusType.PUT_SUCCESS;
 			}
 		} catch (FileNotFoundException e) {
