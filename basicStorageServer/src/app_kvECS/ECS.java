@@ -6,7 +6,10 @@
 
 package app_kvECS;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -49,12 +52,15 @@ import ecs.IECSNode;
 
 public class ECS {
 
+	private String ssh_content = "";
+	private String ssh_location = "./ssh.cmd";
 	private ZooKeeper zk;
 	CountDownLatch connectionLatch = new CountDownLatch(1);
 	spinlock globalLock = new spinlock("globalLock");
 	spinlock ackLock = new spinlock("ackLock");
 	String prevCmd = "null";
 	private static Logger logger = Logger.getRootLogger();
+	String ECSip = "";
 
 	// String logConfigFileLocation = "./";
 
@@ -97,6 +103,7 @@ public class ECS {
 
 		connectionLatch.await();
 		echo("Connected to " + host + ":" + port);
+		ECSip = host;
 		return zk;
 	}
 
@@ -1039,21 +1046,133 @@ public class ECS {
 				echo("detected " + crushed_server + " crushed");
 		    
 		    	lock();
-		    	deleteHeadRecursive("/nodes/" + crushed_server);
-		    	unlock();
+		    	ConsistentHash oldHash = new ConsistentHash();
+		    	InfraMetadata oldMD = getMD();
+		    	oldHash.addNodesFromInfraMD(oldMD);
 		    	
+		    	ServiceLocation crushed_server_rebuilt = null;
+		    	for(int i = 0; i < oldMD.getServerLocations().size(); i++) {
+		    		if(oldMD.getServerLocations().get(i).serviceName.equals(crushed_server)) {
+		    			crushed_server_rebuilt = oldMD.getServerLocations().get(i);
+		    			break;
+		    		}
+		    	}
+		    	
+		    	// changing MD
+		    	deleteHeadRecursive("/nodes/" + crushed_server);
+		    	
+		    	ConsistentHash hashRing = new ConsistentHash();	
+		    	InfraMetadata MD = getMD();
+		    	hashRing.addNodesFromInfraMD(MD); // hash ring up to data
+		    	refreshHash(hashRing); // ECS completely updated
 		    	// migration
+		    	// Make sure system is ready to shuffle in new metadata state.
+		    	
+		    	
+		    	
+				waitAckSetup("sync");
+				
+				broadast("SYNC");
+				waitAck("sync", MD.getServerLocations().size(), 50);
+				
+				waitAckSetup("remove_shuffle");
+				setCmd(oldHash.getSuccessor(crushed_server_rebuilt).serviceName, "REPLICA_LOCAL_MIGRATE");
+				waitAck("remove_shuffle", 1, 50);
+				waitAckSetup("remove_shuffle");
+				setCmd(oldHash.getPredeccessor(crushed_server_rebuilt).serviceName, "REREPLICATION");
+				waitAck("remove_shuffle", 1, 50);
+				waitAckSetup("remove_shuffle");
+				setCmd(oldHash.getPredeccessor(oldHash.getPredeccessor(crushed_server_rebuilt)).serviceName, "REREPLICATION");
+				waitAck("remove_shuffle", 1, 50);
 		    	
 		    	// sync
 		    	
 		    	// addNode from pool
 		    	
 		    	String recoverServerName = ECSClientInterface.getNewServerName();
+		    	System.out.println("recoverServerName = " + recoverServerName);
 		    	
+		    	ServiceLocation spot = get_a_slot();
+		    	spot.serviceName = recoverServerName; // aliasing
+		    	InfraMetadata new_MD = getMD();
+				List<ServiceLocation> tmp = new_MD.getServerLocations();
+				tmp.add(spot);
+				new_MD.setServerLocations(tmp);
+				hashRing.addNodesFromInfraMD(new_MD);
+				
+				String affectedServerName = hashRing.getSuccessor(spot).serviceName;
+				setCmd(affectedServerName, "LOCK_WRITE");
+				
+				
+				refreshHash(hashRing);
+				waitAckSetup("launched");
+				
+				String cacheStrategy = "None";
+				String cacheSize = "0";
+				
+				clear_script();
+				launch(spot.host, spot.serviceName, ECSip, cacheStrategy, cacheSize);
+				run_script();
+				waitAck("launched", 1, 50); // new node launched
+				waitAckSetup("migrate");
+				unlock(); // allow effected node to migrate
+				waitAck("migrate", 1, 50); // internal unlock -> new nodes migrated
+				waitAckSetup("sync");
+				broadast("SYNC"); // Including launched new server
+				waitAck("sync", new_MD.getServerLocations().size(), 50); 
+				
+				// Replica storage migration based on new metadata server received.
+				broadast("REPLICA_MIGRATE");
+				waitAckSetup("remove_shuffle");
+				waitAck("remove_shuffle", new_MD.getServerLocations().size(), 50); // internal unlock -> new nodes migrated
 		    	
+		    	unlock();
 				ackLock.unlock();
 			}
 		}
+	}
+	private void clear_script() {
+		ssh_content = "";
+	}
+	private void run_script() {
+		String cmdFile = ssh_location;
+		File search = new File(cmdFile);
+		if (search.exists()) {
+		} else {
+			try {
+				search.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+
+		PrintWriter key_file;
+		try {
+			key_file = new PrintWriter(cmdFile);
+			key_file.print(ssh_content);
+			key_file.flush();
+			key_file.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+    	String[] cmdScript = new String[]{"/bin/bash", cmdFile}; 
+		echo("Running " + cmdFile);
+		Process procScript;
+		try {
+			procScript = Runtime.getRuntime().exec(cmdScript);
+			try {
+				procScript.waitFor();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
 	}
 	public ServiceLocation get_a_slot() {
 		ServiceLocation slot = null;
