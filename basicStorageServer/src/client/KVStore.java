@@ -15,6 +15,7 @@ import shared.messages.KVMessage;
 import shared.messages.KVMessage.StatusType;
 import shared.metadata.InfraMetadata;
 import shared.metadata.ServiceLocation;
+import app_kvClient.KVClient;
 import app_kvECS.ECS;
 
 public class KVStore extends Thread implements KVCommInterface {
@@ -94,6 +95,7 @@ public class KVStore extends Thread implements KVCommInterface {
 		logger.info("Connecting to target server " + target);
 		srvSocket = new Socket(target.host, target.port);
 		srvSocket.setSoTimeout(KVCLIENT_TIMEOUT);
+		KVClient.PROMPT_POSTFIX = " on " + target +"> ";
 	}
 
 	// Disconnect from host and reset target location to null.
@@ -103,6 +105,7 @@ public class KVStore extends Thread implements KVCommInterface {
 			srvSocket.close();
 			target = null;
 			setRunning(false);
+			KVClient.PROMPT_POSTFIX = "";
 		} catch (IOException e) {
 			logger.error("Error closing server socket");
 			e.printStackTrace();
@@ -111,17 +114,14 @@ public class KVStore extends Thread implements KVCommInterface {
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
-		boolean sessionTemporary = false;
 		try {
 			// Resolve KV server destination and try to establish a connection.
 			if (target == null) {
 				resolveKVServer(key);
 				connect();
-				sessionTemporary = true; // Session needs to be disconnected at
-											// the end of the method because
-											// this is a one-time auto routed
-											// action.
 				logger.info("Connection established!");
+			} else {
+				logger.info("Requsted routed to connected server " + target);
 			}
 
 			CommMessage cm = new CommMessageBuilder()
@@ -144,26 +144,21 @@ public class KVStore extends Thread implements KVCommInterface {
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
 		} finally {
-			if (sessionTemporary) {
-				disconnect();
-			}
+			disconnect();
 		}
 		return null;
 	}
 
 	@Override
 	public KVMessage get(String key) throws Exception {
-		boolean sessionTemporary = false;
 		try {
 			// Resolve KV server destination and try to establish a connection.
 			if (target == null) {
 				resolveKVServer(key);
 				connect();
-				sessionTemporary = true; // Session needs to be disconnected at
-											// the end of the method because
-											// this is a one-time auto routed
-											// action.
 				logger.info("Connection established!");
+			} else {
+				logger.info("Requsted routed to connected server " + target);
 			}
 
 			CommMessage cm = new CommMessage(StatusType.GET, key.toString(),
@@ -184,9 +179,7 @@ public class KVStore extends Thread implements KVCommInterface {
 		} catch (IOException ioe) {
 			logger.error("Connection lost!");
 		} finally {
-			if (sessionTemporary) {
-				disconnect();
-			}
+			disconnect();
 		}
 		return null;
 	}
