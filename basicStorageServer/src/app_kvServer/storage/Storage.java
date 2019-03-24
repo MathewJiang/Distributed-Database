@@ -31,7 +31,6 @@ public class Storage {
 		default:
 			return;
 		}
-
 	}
 
 	public static boolean set_mode(CacheStrategy strategy) {
@@ -53,7 +52,7 @@ public class Storage {
 	}
 
 	public static String getKV(String key) throws Exception {
-		
+
 		if (key.length() > 20) {
 			throw new Exception();
 		}

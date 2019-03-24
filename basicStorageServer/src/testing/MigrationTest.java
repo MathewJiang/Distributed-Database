@@ -55,5 +55,4 @@ public class MigrationTest extends TestCase {
 		
 		server.resetMigrateResourcesTestOnly();
 	}
-	
 }
