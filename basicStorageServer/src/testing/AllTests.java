@@ -28,7 +28,7 @@ public class AllTests {
 		// Note: need to clean up processes after running the tests
 		TestSuite clientSuite = new TestSuite("Basic Storage ServerTest-Suite");
 		
-		// M1 test cases
+		// M1 tests
 		clientSuite.addTestSuite(M1Test.class);		// pass for M3
 		
 		// M2 tests
@@ -39,7 +39,7 @@ public class AllTests {
 		clientSuite.addTestSuite(ConsistentHashTest.class);	// pass for M3
 		clientSuite.addTestSuite(M1Test.class);		// pass for M3
 		
-		// M3 Test
+		// M3 tests
 		clientSuite.addTestSuite(ECSTest.class);
 		clientSuite.addTestSuite(ReplicationTest.class);
 		clientSuite.addTestSuite(ReplicaStoreTest.class);
