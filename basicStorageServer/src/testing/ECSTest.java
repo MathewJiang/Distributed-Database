@@ -2,6 +2,7 @@ package testing;
 
 import junit.framework.TestCase;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import ecs.ECSNode;
@@ -23,6 +24,7 @@ public class ECSTest extends TestCase {
 	@Test(timeout = 1000)
 	public void testConnection() {
 		ecsClient.getECS().reset();
+		ecsClient.getECS().init();
 		ecsClient.setupNodes(1, "None", 0);
 		
 		InfraMetadata md = ecsClient.getECS().getMD();
@@ -66,6 +68,7 @@ public class ECSTest extends TestCase {
 	@Test(timeout = 1000)
 	public void testGetNodesByKey(){
 		ecsClient.getECS().reset();
+		ecsClient.getECS().init();
 		ecsClient.setupNodes(1, "None", 0);
 		
 		ecsClient.getECS().printHash();
@@ -80,6 +83,7 @@ public class ECSTest extends TestCase {
 	@Test(timeout = 1000)
 	public void testAwaitNodes() {
 		ecsClient.getECS().reset();
+		ecsClient.getECS().init();
 		ecsClient.setupNodes(1, "None", 0);
 		
 		try {
@@ -94,6 +98,17 @@ public class ECSTest extends TestCase {
 		ecsClient.shutdown();
 		ecsClient.getECS().reset();
 	}
+	
+	@After
+	public void cleanup() {
+		ecsClient.getECS().broadast("SHUTDOWN");
+		ecsClient.getECS().reset();
+		ecsClient.getECS().deleteHeadRecursive("/nodes");
+		// ecsClient.getECS().deleteHeadRecursive("/configureStatus");
+		// ecsClient.shutdown();
+		// ecsClient.initECS();
+	}
+	
 	
 //	@Test
 //	public void testTemplate() {

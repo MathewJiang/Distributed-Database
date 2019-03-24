@@ -228,6 +228,25 @@ public class KVServer extends Thread implements IKVServer {
 			serverLock.unlock();
 		}
 	}
+	
+	/*******************************************************************
+	 * Junit test purposes only
+	 * 
+	 *******************************************************************/
+	public void putReplicaKV(String key, String value) throws Exception {
+		if (!ReplicaStore.if_init()) {
+			logger.warn("[ClientConnection]handlePUT: DB not initalized during Server startup");
+			ReplicaStore.init(); // FIXME: should raise a warning/error
+		}
+
+		try {
+			serverLock.lock();
+			ReplicaStore.putKV(key, value);
+		} finally {
+			serverLock.unlock();
+		}
+	}
+	
 
 	@Override
 	public void clearCache() {
@@ -676,7 +695,15 @@ public class KVServer extends Thread implements IKVServer {
 					ReplicaStore.putKV(rKey, null);
 					serverLock.unlock();
 
+					if (onKeyMigrationTestOnly()) {
+						continue;
+					}
+					
 					replicateMessage(rKey, value);
+					continue;
+				}
+				
+				if (onKeyMigrationTestOnly()) {
 					continue;
 				}
 
@@ -790,6 +817,7 @@ public class KVServer extends Thread implements IKVServer {
 				}
 
 				if (!isReplicaServer) {
+					onKeyMigrationTestOnly();
 					ReplicaStore.putKV(rKey, null);
 				}
 			}

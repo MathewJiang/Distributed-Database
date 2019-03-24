@@ -32,6 +32,7 @@ public class M1Test extends TestCase {
 		ecsClient = new ECSClient();
 		ecsClient.initECS();
 		ecsClient.getECS().reset();
+		ecsClient.getECS().init();
 		ecsClient.setupNodes(1, "None", 0);
 		
 		md = new InfraMetadata();
@@ -69,30 +70,30 @@ public class M1Test extends TestCase {
 		}
 	}
 	
-	@Test(timeout=100)
-	public void testServer() {
-		try {
-			client = new KVStore();
-			client.resetClusterHash(md);
-			
-			server = new KVServer(5000, 3, "FIFO");
-			server.setClusterMD(md);
-			server.setServerInfo(new ServiceLocation("server_0", "127.0.0.1", 5000));
-			server.start();
-			
-			Thread.sleep(10);
-			server.setSuspended(false);
-			
-			assertTrue(client.put("key1", null).getStatus().equals(StatusType.DELETE_SUCCESS));
-			assertTrue(client.get("key1").getStatus().equals(StatusType.GET_ERROR));
-		} catch (IOException e){
-			fail("[testM1]IOException");
-		} catch (InterruptedException e) {
-			fail("[testM1]InterrupedException");
-		} catch (Exception e) {
-			fail("[testM1]Exception");
-		}
-	}
+//	@Test(timeout=100)
+//	public void testServer() {
+//		try {
+//			client = new KVStore();
+//			client.resetClusterHash(md);
+//			
+//			server = new KVServer(5000, 3, "FIFO");
+//			server.setClusterMD(md);
+//			server.setServerInfo(new ServiceLocation("server_0", "127.0.0.1", 5000));
+//			server.start();
+//			
+//			Thread.sleep(10);
+//			server.setSuspended(false);
+//			
+//			assertTrue(client.put("key1", null).getStatus().equals(StatusType.DELETE_SUCCESS));
+//			assertTrue(client.get("key1").getStatus().equals(StatusType.GET_ERROR));
+//		} catch (IOException e){
+//			fail("[testM1]IOException");
+//		} catch (InterruptedException e) {
+//			fail("[testM1]InterrupedException");
+//		} catch (Exception e) {
+//			fail("[testM1]Exception");
+//		}
+//	}
 	
 	@Test(timeout=100)
 	public void testRetry() {
@@ -125,7 +126,6 @@ public class M1Test extends TestCase {
 			
 			Thread.sleep(10);
 			server.setSuspended(false);
-			
 			
 			assertTrue(client.put("key1", "value1").getStatus().equals(StatusType.PUT_SUCCESS));
 			assertTrue(client.get("key1").getStatus().equals(StatusType.GET_SUCCESS));
