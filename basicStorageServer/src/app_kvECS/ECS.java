@@ -699,18 +699,24 @@ public class ECS {
 				zk.create("/lock", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			}
-			zk.create("/lock/globalLock",
+			if (zk.exists("/lock/globalLock", true) == null) {
+				zk.create("/lock/globalLock",
 					("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-			zk.create("/lock/ackLock",
+			}
+			if(zk.exists("/lock/ackLock", true) == null) {
+				zk.create("/lock/ackLock",
 					("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			}
 			if (zk.exists("/nodes", true) == null) {
 				zk.create("/nodes", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			}
-			zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8),
+			if(zk.exists("/nodes", true) == null) {
+				zk.create("/ack", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			}
 			if (zk.exists("/register", true) == null) {
 				zk.create("/register", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
