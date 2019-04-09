@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -105,6 +107,59 @@ public class ECS {
 		echo("Connected to " + host + ":" + port);
 		ECSip = host;
 		return zk;
+	}
+	
+	public String screen(int start, int end, boolean attack) {
+		String host = "127.0.0.1";
+		int port = end;
+		String connectString = "";
+		final boolean[] valid = new boolean[1];
+		valid[0] = false;
+		while(port >= start) {
+			connectString = host + ":" + port;
+			System.out.println("Trying " + connectString);
+			
+			try {
+				Watcher watch = new Watcher() {
+					@Override
+					public void process(WatchedEvent event) {
+						if (event.getState() == KeeperState.SyncConnected) {
+							connectionLatch.countDown();
+							valid[0] = true;
+						} else {
+							System.out.println(event);
+						}
+					}
+				};
+				zk = new ZooKeeper(connectString, 500, watch);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			try {
+				connectionLatch.await(25, TimeUnit.MILLISECONDS);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				zk.close();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			if(valid[0]) {
+				break;
+			} else {
+				port--;
+			}
+		}
+		if(valid[0]) {
+			echo("Connected to " + host + ":" + port);
+			ECSip = host;
+		} else {
+			System.out.println("not found");
+			connectString = "";
+		}
+		return connectString;
 	}
 
 	/*****************************************************************************
@@ -1304,6 +1359,26 @@ public class ECS {
 			e.printStackTrace();
 		}
     	return slot;
+	}
+	public void Squeeze() {
+		while(true) {
+			byte[] array = new byte[100];
+		    new Random().nextBytes(array);
+		    try {
+				if (zk.exists("/hot", true) == null) {
+					create("/hot", array, "-p");
+				}
+			} catch (KeeperException | InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			try {
+				zk.setData("/hot", array, -1);
+			} catch (KeeperException | InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 

@@ -593,14 +593,19 @@ public class ECSClient implements IECSClient {
      * run():
      * execute the command shell
      */
-	public void run() {
+	public void run(String connectString, boolean attack) {
 		ecs = new ECS();
 		set_workDir();
 		hashRing = new ConsistentHash();
 	    loadECSconfigFromFile();
 	    ecsLocation = ECSip;
 		try {
-			ecs.connect(ecsLocation, 39678);
+			if(connectString != "") {
+				String [] split = connectString.split(":");
+				ecs.connect(split[0], Integer.parseInt(split[1]));
+			} else {
+				ecs.connect(ecsLocation, 39678);
+			}
 			if(ecs.configured()) {
 	    		restoreFromECS();
 	    	}
@@ -614,6 +619,11 @@ public class ECSClient implements IECSClient {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		
+		if(attack) {
+			ecs.Squeeze();
+		}
+		
 		while (!stop) {
 			stdin = new BufferedReader(new InputStreamReader(System.in));
 			System.out.print(PROMPT+":"+currDir + "$ ");
@@ -1058,6 +1068,8 @@ public class ECSClient implements IECSClient {
 					echo(ecs.get_a_slot().host + ":" + ecs.get_a_slot().port);
 				}
 			    break;
+			case "screen": {
+			}
 		default:
 			printError("Unknown command");
 			printHelp();
@@ -1181,14 +1193,50 @@ public class ECSClient implements IECSClient {
 			System.out.println("Using default logger from skeleton code.");
 			new LogSetup("logs/client-default.log", Level.ALL);
 		}*/
-		ECSClient app = new ECSClient();
-		try {
-			setUpESCClientLogger();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		String connectString = "";
+		if(args.length != 0) {
+			if(args[0].equals("hack") || args[0].equals("hack_and_attack")) {
+				ECS ecs = new ECS();
+				if(args.length == 3) {
+					if(args[0].equals("hack")) {
+						connectString = ecs.screen(Integer.parseInt(args[1]), Integer.parseInt(args[2]), false);
+					} else {
+						connectString = ecs.screen(Integer.parseInt(args[1]), Integer.parseInt(args[2]), true);
+					}
+				} else {
+					if(args[0].equals("hack")) {
+						connectString = ecs.screen(1024, 65535, false);
+					} else {
+						connectString = ecs.screen(1024, 65535, true);
+					}
+				}
+				if(connectString.equals("")) {
+					return;
+				}
+				ECSClient app = new ECSClient();
+				try {
+					setUpESCClientLogger();
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				if(args[0].equals("hack")) {
+					app.run(connectString, false);
+				} else {
+					app.run(connectString, true);
+				}
+			}
+		} else {
+		
+			ECSClient app = new ECSClient();
+			try {
+				setUpESCClientLogger();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			app.run(connectString, false);
 		}
-		app.run();
     }
     
 }

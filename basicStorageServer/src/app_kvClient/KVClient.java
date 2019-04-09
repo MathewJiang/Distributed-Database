@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.UnknownHostException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -227,6 +229,8 @@ public class KVClient implements IKVClient {
 				br = new BufferedReader(new FileReader(file));
 				String st;
 				try {
+					Instant start = Instant.now();
+					int count = 0;
 					while ((st = br.readLine()) != null) {
 						String lines[] = st.split("\\s+");
 						if (lines[0].equals("get")) {
@@ -242,7 +246,13 @@ public class KVClient implements IKVClient {
 								put(lines[1], value);
 							}
 						}
+						count ++;
 					}
+					Instant end = Instant.now();
+    	    		Duration timeElapsed = Duration.between(start, end);
+    	        	float miliTime = timeElapsed.toMillis();
+    	        	System.out.println("total time: " + miliTime);
+    	        	System.out.println("Avg. latency: " + miliTime/count);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
