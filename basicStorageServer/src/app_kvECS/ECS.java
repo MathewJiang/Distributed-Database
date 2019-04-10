@@ -44,7 +44,10 @@ import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 
+import client.KVStore;
+
 import shared.ConsistentHash;
+import shared.MD5;
 import shared.messages.KVAdminMessage;
 import shared.messages.KVAdminMessage.KVAdminMessageType;
 import shared.metadata.InfraMetadata;
@@ -1409,7 +1412,20 @@ public class ECS {
 				localECS.watchStringDataChanged(znodeName + "/value"); // this is blocking
 				System.out.println("Key " + key + " changed");
 				// TODO, get something useful, probably need to port above code
-				System.out.println("Data on watch list is " + getData(znodeName + "/value"));
+				// String data = getData(znodeName + "/value");
+				KVStore localKV = new KVStore();
+				String data;
+				try {
+					data = localKV.get(key).getValue();
+					if(data == null){
+						System.out.println("Key " + key + " deleted but still watching");
+					} else {
+						// System.out.println("Data on watch list is " + getData(znodeName + "/value"));
+						System.out.println("value is " + data);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		} catch (IOException | InterruptedException e1) {
 			e1.printStackTrace();
@@ -1420,6 +1436,9 @@ public class ECS {
 	public void mark(String key, String value) {
 		// if it is in watch list, then mark it with something, doing value for now
 		List<String> watchedKeys = returnDirList("/watchlist");
+		if(!value.equals("")) {
+			value = MD5.getMD5String(value);
+		}
 		for(int i = 0; i < watchedKeys.size(); i++) {
 			if(watchedKeys.get(i).equals(key)) {
 				setData("/watchlist/" + key + "/value", value); // value makes sure it is never the same, which can trigger events
@@ -1427,6 +1446,5 @@ public class ECS {
 		}
 		return;
 	}
-	
 
 }

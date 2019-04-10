@@ -143,6 +143,11 @@ public class ClientConnection implements Runnable {
 										// This server is the coordinator of
 										// latestMsg.
 										status = handlePUT(key, value);
+										String stringValue = value;
+										if(value==null) {
+											stringValue = "";
+										}
+										callingServer.getECS().mark(key, stringValue);
 									} finally {
 										KVServer.serverLock.unlock();
 									}

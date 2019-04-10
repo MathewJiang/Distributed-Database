@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -61,10 +62,7 @@ public class ECSClient implements IECSClient {
 	private String ssh_content = "";
 	private Thread monitorThread = null;
 	Map<String,Thread> watchThreadMap = new HashMap<String, Thread>();
-	
-	private Thread testWatchThread0 = null;
-	private Thread testWatchThread1 = null;
-			
+
 	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
@@ -726,6 +724,13 @@ public class ECSClient implements IECSClient {
 		//System.out.println("[ECSClient.java]: " + line);
 		logger.info("[ECSClient.java]: " + line);
 	}
+	
+	private void removeAllWatchThread() {
+		Collection<Thread> threads = watchThreadMap.values();
+		for (Thread t : threads) {
+			t.stop();
+		}
+	}
 
 	private void handleCommand(String cmdLine) {
 		String[] tokens = cmdLine.split("\\s+");
@@ -745,12 +750,15 @@ public class ECSClient implements IECSClient {
 			System.out.println(PROMPT + "Application exit!");
 			if(monitorThread != null)
 				monitorThread.stop();
+			removeAllWatchThread();
 			break;
+			
 		case "exit":
 			stop = true;
 			System.out.println(PROMPT + "Application exit!");
 			if(monitorThread != null)
 				monitorThread.stop();
+			removeAllWatchThread();
 			break;
 
 		case "addNodes":
@@ -1092,30 +1100,6 @@ public class ECSClient implements IECSClient {
 							watchThreadMap.get(tokens_copy[2]).stop();
 							echo("Stopped watching key: " + tokens_copy[2]);
 						}
-					}
-					
-				}
-				break;
-			}
-			case "watchhardcode": {
-				if(tokens.length == 2) {
-					final String[] tokens_copy = tokens;
-					if(tokens[1].equals("start")) {
-						testWatchThread0 = new Thread(){
-							public void run(){
-								ecs.watch("a");
-							}
-						  };
-						testWatchThread1 = new Thread(){
-							public void run(){
-								ecs.watch("b");
-							}
-						  };
-					  testWatchThread0.start();
-					  testWatchThread1.start();
-					}
-					if(tokens[1].equals("stop")) {
-						echo("Stop both hardcode threads");
 					}
 					
 				}
