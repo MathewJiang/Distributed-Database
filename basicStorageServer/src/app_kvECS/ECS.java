@@ -776,6 +776,10 @@ public class ECS {
 				zk.create("/register", ("false").getBytes(StandardCharsets.UTF_8),
 					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 			}
+			if (zk.exists("/watchlist", true) == null) {
+				zk.create("/watchlist", ("false").getBytes(StandardCharsets.UTF_8),
+					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			}
 		} catch (KeeperException | InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -1379,6 +1383,49 @@ public class ECS {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	
+	public void watch(String key) {
+		System.out.println("Setting watch on: " + key);
+		ECS localECS = new ECS();
+		try {
+			localECS.connect(ECSip, 39678);
+			while(true) {
+				lock();
+				String znodeName = "/watchlist/" + key;
+				try {
+					if (zk.exists(znodeName, true) == null) {
+						create(znodeName, null, "-p");
+					}
+					if (zk.exists(znodeName + "/value", true) == null) {
+						create(znodeName + "/value", null, "-p");
+					}
+				} catch (KeeperException | InterruptedException e) {
+					e.printStackTrace();
+				}
+				unlock();
+				System.out.println("Set watch on: " + key);
+				localECS.watchStringDataChanged(znodeName + "/value"); // this is blocking
+				System.out.println("Key " + key + " changed");
+				// TODO, get something useful, probably need to port above code
+				System.out.println("Data on watch list is " + getData(znodeName + "/value"));
+			}
+		} catch (IOException | InterruptedException e1) {
+			e1.printStackTrace();
+		}
+		
+	}
+	
+	public void mark(String key, String value) {
+		// if it is in watch list, then mark it with something, doing value for now
+		List<String> watchedKeys = returnDirList("/watchlist");
+		for(int i = 0; i < watchedKeys.size(); i++) {
+			if(watchedKeys.get(i).equals(key)) {
+				setData("/watchlist/" + key + "/value", value); // value makes sure it is never the same, which can trigger events
+			}
+		}
+		return;
 	}
 	
 

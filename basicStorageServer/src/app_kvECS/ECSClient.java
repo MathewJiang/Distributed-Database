@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,11 @@ public class ECSClient implements IECSClient {
 	private String ssh_location = "./ssh.cmd";
 	private String ssh_content = "";
 	private Thread monitorThread = null;
+	Map<String,Thread> watchThreadMap = new HashMap<String, Thread>();
+	
+	private Thread testWatchThread0 = null;
+	private Thread testWatchThread1 = null;
+			
 	
 	//https://stackoverflow.com/questions/11208479/how-do-i-initialize-a-byte-array-in-java
 	public static byte[] hexStringToByteArray(String s) {
@@ -1068,7 +1074,58 @@ public class ECSClient implements IECSClient {
 					echo(ecs.get_a_slot().host + ":" + ecs.get_a_slot().port);
 				}
 			    break;
-			case "screen": {
+			case "watch": {
+				if(tokens.length == 3) {
+					final String[] tokens_copy = tokens;
+					if(tokens[1].equals("start")) {
+						Thread watchThread = new Thread(){
+							public void run(){
+								ecs.watch(tokens_copy[2]);
+							}
+						  };
+						watchThread.start();
+						watchThreadMap.put(tokens_copy[2], watchThread);
+					}
+					if(tokens[1].equals("stop")) {
+						if(watchThreadMap.containsKey(tokens_copy[2])) {
+							echo("Stopping watching key: " + tokens_copy[2]);
+							watchThreadMap.get(tokens_copy[2]).stop();
+							echo("Stopped watching key: " + tokens_copy[2]);
+						}
+					}
+					
+				}
+				break;
+			}
+			case "watchhardcode": {
+				if(tokens.length == 2) {
+					final String[] tokens_copy = tokens;
+					if(tokens[1].equals("start")) {
+						testWatchThread0 = new Thread(){
+							public void run(){
+								ecs.watch("a");
+							}
+						  };
+						testWatchThread1 = new Thread(){
+							public void run(){
+								ecs.watch("b");
+							}
+						  };
+					  testWatchThread0.start();
+					  testWatchThread1.start();
+					}
+					if(tokens[1].equals("stop")) {
+						echo("Stop both hardcode threads");
+					}
+					
+				}
+				break;
+			}
+			case "mark": {
+				if(tokens.length == 3) {
+					ecs.mark(tokens[1], tokens[2]);
+				}
+				break;
 			}
 		default:
 			printError("Unknown command");
